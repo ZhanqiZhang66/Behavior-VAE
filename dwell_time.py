@@ -141,7 +141,7 @@ for i in range(n_cluster):
     BD = motif_usage_cat[1,:,i].reshape(-1,1)
     s = stats.ttest_ind(CP, BD)
     print("motif  {}, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic[0], s.pvalue[0]))
-#%% Plot Violin
+#%% Plot Box
 states = []
 for i in range(n_cluster):
     states.append([i]*12)
@@ -158,12 +158,12 @@ ds = pd.DataFrame(np.concatenate((
     columns=['motif frequency','is_BD','state'])
 w = n_cluster/10 * 6
 fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-violin = sns.violinplot(y="motif frequency", x='state',hue='is_BD',
-               data=ds, palette="muted", split=True)
+violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
+               data=ds, orient="v")
 handles = violin.legend_.legendHandles
 dict_name = {0.0:'CP', 1.0:'BD'}
 labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
-sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+# sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
 x = np.arange(n_cluster)
 ax.legend(handles, labels)
 ax.set_xticks(x)
@@ -204,7 +204,7 @@ for epoch in range(1, 4):
         BD = np.vstack(motif_usage_[1])[:,i]
         s = stats.ttest_ind(CP, BD, nan_policy='omit')
         print("  motif  {}, t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
-#%% Plot Violin
+#%% Plot Box
 for epoch in range(1, 4):
     motif_usage_ = eval("Epoch{}_motif_usage".format(epoch))
     motif_usage_cat = np.asarray(motif_usage_)
@@ -224,12 +224,12 @@ for epoch in range(1, 4):
         columns=['motif frequency', 'is_BD', 'state'])
 
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-    violin = sns.violinplot(y="motif frequency", x='state',hue='is_BD',
-                   data=ds, palette="muted", split=True)
+    violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
+                   data=ds, orient="v")
     handles = violin.legend_.legendHandles
     dict_name = {0.0:'CP', 1.0:'BD'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
-    sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
     x = np.arange(n_cluster)
     ax.legend(handles, labels)
     ax.set_xticks(x)

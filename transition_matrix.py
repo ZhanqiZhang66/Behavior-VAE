@@ -94,6 +94,8 @@ def add_self_transition(transition_m, last_state):
         for idx in self_transition_i:
             if idx in set(zero_rows_i[0]):
                 transition[idx][idx] = 1
+    if np.sum(transition_m[last_state,:]) == 0 and np.sum(transition_m[:,last_state]) != 0:
+        transition[last_state][last_state] = 1
     if zero_rows_i[0].size != 0 or zero_cols_i[0].size != 0: # when there are rows or zeros, or colums of zeros
         zeros_rows_colums_i = list(set(zero_rows_i[0]) & set(zero_cols_i[0])) # remove them
         idx_to_keep = np.ones(len(transition_m), dtype=bool)
@@ -102,10 +104,10 @@ def add_self_transition(transition_m, last_state):
                 idx_to_keep[i] = False
         transition = transition[idx_to_keep]
         transition = transition[:, idx_to_keep]
-    len_reduced = np.sum(np.all(transition == 0, axis=1))
-    n_rows_removed = np.shape(transition_m)[0] - np.shape(transition)[0]
-    if len_reduced:
-        transition[last_state - n_rows_removed][last_state - n_rows_removed] = 1
+    # len_reduced = np.sum(np.all(transition == 0, axis=1))
+    # n_rows_removed = np.shape(transition_m)[0] - np.shape(transition)[0]
+    # if len_reduced:
+    #     transition[last_state - n_rows_removed][last_state - n_rows_removed] = 1
     return transition
 
 def compute_l0_entropy(transition_m, last_state):
@@ -413,46 +415,7 @@ for epoch in range(1,4):
         fig.savefig(os.path.join(pwd, fname))
 
 
-#%% Sliding window of 5 min analysis
 
-slide_window = {
-  "start_frame": [],
-  "is_BD": [],
-  "entropy": [],
-  "num_zero_row":[],
-  "num_one_item": [],
-  "num_zero_item":[]
-}
-for j, videos in enumerate([control_videos, BD_videos]):
-    for i in range(len(videos)):
-        v = videos[i]
-        print("Loading {} data...".format(v))
-        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-        label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
-        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
-
-        v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
-        door_close_time = start_frame.loc[v_index, 'door_close']
-        start_time = start_frame.loc[v_index, 'n']
-        window_size = int(3 * 60 * 30)
-        offset = int(door_close_time - start_time)
-
-        for k in range(len(label) - window_size + 1):
-            if k % 1000 == 0:
-                print(" Sliding window {} - {}...".format(offset + k, window_size + offset + k))
-            window_label = label[offset + k: window_size + offset + k]
-            window_motif_usage = get_motif_usage(window_label, n_cluster)
-            window_latent_vector = latent_vector[offset + k: window_size + offset + k]
-            window_transition_matrix = compute_transition_matrices([v], [window_label], n_cluster)
-            num_zero_row, num_one_item, num_zero_item = count_zeros(window_transition_matrix[0])
-            entropy = compute_l0_entropy(window_transition_matrix[0], window_label[-1])
-
-            slide_window["start_frame"].append(k)
-            slide_window["is_BD"].append(j)
-            slide_window["entropy"].append(entropy)
-            slide_window["num_zero_row"].append(num_zero_row)
-            slide_window["num_one_item"].append(num_one_item)
-            slide_window["num_zero_item"].append(num_zero_item)
 
 
 

@@ -319,10 +319,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
             ax2.set_xlim(-50, 50)
             ax2.set_ylim(-50, 50)
             ax2.set_zlim(-50, 50)
-            fig_pca_per_state.show()
+            #fig_pca_per_state.show()
             pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
             fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
-            fig_pca_per_state.savefig(os.path.join(pwd, fname))
+            #fig_pca_per_state.savefig(os.path.join(pwd, fname))
 
 
             #  state-population wise
@@ -374,10 +374,11 @@ fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 x = np.arange(10)
 ax.plot(x, K_var[:,0], '-o')
 ax.plot(x, K_var[:, 1],'-o')
-ax.set_title('Volume of state')
+ax.set_title('Volume of motif')
 ax.set_xticks(x)
-ax.set_xlabel('State')
+ax.set_xlabel('motif')
 ax.set_ylabel('volume of state')
+ax.set_ylim([-500, 2000])
 ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
 fig.show()
 # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual\epoch'
@@ -409,6 +410,7 @@ ani = FuncAnimation(fig, animation, frames = 240, interval = 500, blit = True)
 
 plt.show()
 #%%
+cmap = plt.get_cmap('tab20')
 for j, videos in enumerate([control_videos, BD_videos]):
     color = 'C{}'.format(j)
 
@@ -416,14 +418,15 @@ for j, videos in enumerate([control_videos, BD_videos]):
         sub_name = videos[sub]
         fig, ax = plt.subplots(1, 1, figsize=(6, 4))
         x = np.arange(10)
-        ax.scatter(x, K_var_all_subjects[sub,:,j], c=color)
+        ax.scatter(x, K_var_all_subjects[sub,:,j], norm=plt.Normalize(vmin=0, vmax=9), c=cmap(list(range(j,20,2))))
         ax.set_title('{} Volume of state'.format(sub_name))
         ax.set_xticks(x)
         ax.set_xlabel('State')
+        ax.set_ylim(-500, 2000)
         ax.set_ylabel('volume of state')
         ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
         fig.show()
-        pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+        pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\PCA_visual'
         fname = "{}_{}_volumn.png".format(sub_name, n_cluster)
         fig.savefig(os.path.join(pwd, fname))
 
