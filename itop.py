@@ -28,7 +28,7 @@ config = vame.init_new_project(project='BD20',
                                videotype='.mpg')
 #%% OR 1.2 load pre-defined config
 project_name = 'BD20-Jun5-2022'
-config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+config = 'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\config.yaml'.format(project_name)
 
 #%% Edit config file
 print("edit n_cluster, zdims, num_features=(#dlc labels x2), kmeans_loss=(n_cluster)")
@@ -300,7 +300,8 @@ for i in range(len(videos)):
     # fig, axs = plt.subplots(1, 2)
     # plt.sca(axs[0])
     plt.figure()
-    pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
+    pos = nx.circular_layout(G)
+    #pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
     # nx.draw(G, pos)
 
     # pos = nx.spring_layout(G)
@@ -322,6 +323,7 @@ for i in range(len(videos)):
     plt.title("{}-{}".format(t, v))
     plt.tight_layout()
     plt.box('off')
+    plt.savefig(os.path.join(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\graphs', "net_" + str(n_cluster) + v + '.png'))
 
 
     scc = nx.kosaraju_strongly_connected_components(G)
@@ -359,10 +361,10 @@ for i in range(len(videos)):
     #                         labels=dict(zip(nodelist, nodelist)),
     #                         font_color='white')
     # plt.title("DAG {}-{}".format(titles[j], v))
-    plt.tight_layout()
-    plt.box('off')
-    plt.savefig(os.path.join(cfg['project_path'], "tree_" + str(n_cluster) + v + '.png'))
-    plt.show()
+    # plt.tight_layout()
+    # plt.box('off')
+    # plt.savefig(os.path.join(cfg['project_path'], "tree_" + str(n_cluster) + v + '.png'))
+    # plt.show()
 #%% Plot community network
 import networkx as nx
 from matplotlib import cm

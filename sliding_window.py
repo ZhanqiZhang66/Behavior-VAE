@@ -69,7 +69,8 @@ if not load_precomputed_sliding_window:
         else:
             entropy = 0
         return entropy
-
+    def minimum_state_duration(labels, n_cluster):
+        return None
     #%% Sliding window of 5 min analysis
 
     project_name = 'BD20-Jun5-2022'
@@ -256,6 +257,67 @@ for i in range(num_metrics):
             pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\transtion_metrics'
             fname = "{}_{}.png".format(metric_names[i], sub_name)
             fig.savefig(os.path.join(pwd, fname))
+#%% Per patient, entropy, and latent volume per motif second half/ first half
+
+groups = ['CP', 'BD']
+entropy = []
+latent_volume0 = []
+latent_volume1 = []
+latent_volume2 = []
+latent_volume3 = []
+latent_volume4 = []
+latent_volume5 = []
+latent_volume6 = []
+latent_volume7 = []
+latent_volume8 = []
+latent_volume9 = []
+is_BD = []
+latent_d = []
+for j, videos in enumerate([control_videos, BD_videos]):
+    for sub in range(12):
+        sub_name = videos[sub]
+        df1 = ds[ds["subject"] == sub_name]
+        total_len = len(ds1)
+        df2 = df1["entropy"]
+        entropy_first_half = np.nanmean(df2[:total_len//2])
+        entropy_second_half = np.nanmean(df2[total_len //2:])
+
+        entropy.append(entropy_second_half-entropy_first_half)
+        is_BD.append(j)
+        for d in range(n_cluster):
+            y = df1['latent_volume_motif{}'.format(d)].to_numpy()
+            latent_v_first_half = np.nanmean(y[:total_len // 2])
+            latent_v_second_half = np.nanmean(y[total_len // 2:])
+            eval('latent_volume{}'.format(d)).append(latent_v_second_half - latent_v_first_half)
+entropy_df = pd.DataFrame(np.asarray([entropy, is_BD]).T, columns=['metric','is_BD'])
+
+fig, ax = plt.subplots(1, figsize=(10, 5))
+sns.boxplot(y="metric", x='is_BD', hue='is_BD', data=entropy_df, orient="v")
+ax.set_xticklabels(['CP','BD'])
+ax.set_title('change in entropy')
+ax.set_ylabel('second half - first half ')
+fig.show()
+pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\transtion_metrics'
+fname = "entropy_first_over_second.png"
+fig.savefig(os.path.join(pwd, fname))
+
+latent_df = pd.DataFrame(np.asarray([latent_volume0, latent_volume1, latent_volume2, latent_volume3, latent_volume4,
+                                     latent_volume5, latent_volume6, latent_volume7, latent_volume8, latent_volume9,
+                                     is_BD]).T,
+                         columns=['latent_volume0', 'latent_volume1', 'latent_volume2', 'latent_volume3', 'latent_volume4',
+                                  'latent_volume5', 'latent_volume6', 'latent_volume7', 'latent_volume8', 'latent_volume9','is_BD'])
+
+for d in range(n_cluster):
+    fig, ax = plt.subplots(1, figsize=(10, 5))
+    sns.boxplot(y="latent_volume{}".format(d), x='is_BD', hue='is_BD', data=latent_df, orient="v")
+    ax.set_xticklabels(['CP', 'BD'])
+    ax.set_ylabel('second half  - first half ')
+    ax.set_title('change in latent volume motif {}'.format(d))
+    ax.set_ylim([-900, 600])
+    fig.show()
+    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\latent_slide_window'
+    fname = "latent_volume_motif_{}_first_over_second.png".format(d)
+    fig.savefig(os.path.join(pwd, fname))
 #%% Plot per patient change of dwell time, and latent volume
 from itertools import zip_longest
 latent_d = 10

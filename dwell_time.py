@@ -142,6 +142,7 @@ for i in range(n_cluster):
     s = stats.ttest_ind(CP, BD)
     print("motif  {}, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic[0], s.pvalue[0]))
 #%% Plot Box
+
 states = []
 for i in range(n_cluster):
     states.append([i]*12)
@@ -170,6 +171,40 @@ ax.set_xticks(x)
 ax.set_title('15 min dwell frequency over {} motifs'.format(n_cluster))
 ax.set_xlabel('Motifs(States)')
 fig.show()
+
+
+
+#%% plot box dwell per video
+states = []
+for i in range(n_cluster):
+    states.append([i])
+states = np.asarray(states).flatten()
+
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for p in range(len(videos)):
+        v = videos[p]
+
+        idx = np.ones(n_cluster) * j
+
+        ds = pd.DataFrame(np.concatenate((
+            motif_usage_cat[j,p,:].T.flatten().reshape(-1, 1),
+            idx.reshape(-1, 1),
+            states.reshape(-1, 1)), 1),
+            columns=['motif frequency','is_BD','state'])
+        w = n_cluster/10 * 6
+        fig, ax = plt.subplots(1, 1, figsize=(w, 4))
+        violin = sns.barplot(y="motif frequency", x='state',hue='is_BD',
+                       data=ds, orient="v", facecolor='C{}'.format(j))
+        x = np.arange(n_cluster)
+        ax.set_xticks(x)
+        ax.set_title('{} 15 min dwell frequency over {} motifs'.format(v, n_cluster))
+        ax.set_xlabel('Motifs(States)')
+        ax.set_ylim([0, 1])
+        fig.show()
+        pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\motif_freq_each_video'
+        fname = "{}_{}_motif_freq.png".format(n_cluster, v)
+        fig.savefig(os.path.join(pwd, fname))
 #%% Plot histogram of averaged dwell frequency
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 from scipy import stats
@@ -236,6 +271,7 @@ for epoch in range(1, 4):
     ax.set_title('Epoch {} dwell frequency over {} motifs'.format(epoch, n_cluster))
     ax.set_xlabel('Motifs(States)')
     fig.show()
+
 #%% Plot histogram
 
 from scipy import stats
