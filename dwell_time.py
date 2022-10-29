@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+import scipy
 from scipy import stats
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
@@ -21,9 +22,15 @@ n_cluster = 10
 model_name = 'VAME'
 control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
 BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-start_frame = pd.read_csv('G:\start_frame.csv')
-
+start_frame = pd.read_csv('D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\start_frame_vic.csv')
+diagnosis_score = pd.read_csv('D:\OneDrive - UC San Diego\Bahavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
+YMRS = diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
+YMRS = YMRS.set_index('Subject ID').T.to_dict('list')
+HAM_D = diagnosis_score[['Subject ID','HAM-D']]
+HAM_D = HAM_D.set_index('Subject ID').T.to_dict('list')
 #%%
+YMRS_score = []
+HAM_D_score = []
 titles = ["CP", "BD"]
 N = [0, 0]
 Motif_usages = [[], []]
@@ -56,6 +63,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
         v = videos[i]
+        YMRS_score.append(YMRS[v][0])
+        HAM_D_score.append(HAM_D[v][0])
         print("Loading {} data...".format(v))
         label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
         transition_m = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(project_name, v,n_cluster, v))
@@ -133,7 +142,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Labels[j] = l
     TM[j] = tm/12
 #%% Population-wise analysis
-#%% between motif paired t test
+#%% between motif paired t test and score correltion
 motif_usage_cat = np.asarray(motif_usage_cat)
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 for i in range(n_cluster):
@@ -141,6 +150,8 @@ for i in range(n_cluster):
     BD = motif_usage_cat[1,:,i].reshape(-1,1)
     s = stats.ttest_ind(CP, BD)
     print("motif  {}, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic[0], s.pvalue[0]))
+corr_HAM_D_score, _ = scipy.stats.pearsonr(np.append(CP,BD), HAM_D_score)
+corr_YMRS_score, _ = scipy.stats.pearsonr(np.append(CP,BD), YMRS_score)
 #%% Plot Box
 
 states = []

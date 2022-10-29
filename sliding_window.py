@@ -12,13 +12,14 @@ import scipy
 import seaborn as sns
 from scipy import stats
 import time
+import math
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from sklearn.decomposition import PCA
 #%%
 load_precomputed_sliding_window = True
-
+#%%
 #%%
 if not load_precomputed_sliding_window:
     def count_zeros(transition_m):
@@ -71,17 +72,37 @@ if not load_precomputed_sliding_window:
         return entropy
     def minimum_state_duration(labels, n_cluster):
         return None
+
+    def calculate_distance(starting_x, starting_y, destination_x, destination_y):
+        distance = math.hypot(destination_x - starting_x,
+                              destination_y - starting_y)  # calculates Euclidean distance (straight-line) distance between two points
+        return distance
+    def compute_velocity(pose, window_size):
+
+        velocity = []
+        for i in range(int(pose.shape[1] / 3)):
+            temp = data_mat[:, i * 3:(i + 1) * 3]
+
+            x_s = j[0]
+            y_s = j[1]
+            dist_traveled = 0
+            for (x,y) in (x_s, y_s):
+                dist_seg = calculate_distance(x, y)
+                dist_traveled += dist_seg
+            velocity.append(dist_traveled/window_size)
+        return velocity
     #%% Sliding window of 5 min analysis
 
     project_name = 'BD20-Jun5-2022'
     config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
     cfg = read_config(config)
+    cluster_start = cfg['time_window'] / 2
     n_cluster = 10
     d_latent = 10
     model_name = 'VAME'
     control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
     BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-    start_frame = pd.read_csv('G:\start_frame.csv')
+    start_frame = pd.read_csv('D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\start_frame_vic.csv')
 
     titles = ["CP", "BD"]
 
@@ -115,6 +136,10 @@ if not load_precomputed_sliding_window:
       "latent_volume_motif8": [],
       "latent_volume_motif9": [],
     }
+
+    csv_path = r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\videos\pose_estimation'.format(project_name)
+
+
     #%%
 
     pca = PCA(n_components=3)
@@ -128,10 +153,18 @@ if not load_precomputed_sliding_window:
             latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
 
             v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
-            door_close_time = start_frame.loc[v_index, 'door_close']
+            door_close_time = int(start_frame.loc[v_index, 'door_close'])
             start_time = start_frame.loc[v_index, 'n']
             window_size = int(3 * 60 * 30)
             offset = int(door_close_time - start_time)
+
+
+
+            data = pd.read_csv(os.path.join(csv_path, v +'.csv'), skiprows=2)
+            data_mat = pd.DataFrame.to_numpy(data)
+            data_mat = data_mat[start_time:, 1:]
+
+            # get the coordinates for alignment from data table
 
             for k in range(len(label) - window_size + 1):
                 if k % 1000 == 0:
@@ -142,6 +175,7 @@ if not load_precomputed_sliding_window:
                 window_transition_matrix = compute_transition_matrices([v], [window_label], n_cluster)
                 num_zero_row, num_one_item, num_zero_item = count_zeros(window_transition_matrix[0])
                 entropy = compute_l0_entropy(window_transition_matrix[0], window_label[-1])
+                velocity = compute_velocity(data_mat[offset + k: window_size + offset + k], window_size)
 
                 slide_window["subject"].append(v)
                 slide_window["start_frame"].append(k)
@@ -191,10 +225,14 @@ if load_precomputed_sliding_window:
     control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
     BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
     start_frame = pd.read_csv('G:\start_frame.csv')
-
+    diagnosis_score = pd.read_csv(
+        'D:\OneDrive - UC San Diego\Bahavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs.csv',
+        encoding='windows-1252')
+    YMRS = diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
+    YMRS = YMRS.set_index('Subject ID').T.to_dict('list')
+    HAM_D = diagnosis_score[['Subject ID', 'HAM-D']]
+    HAM_D = HAM_D.set_index('Subject ID').T.to_dict('list')
 #%% plot average metric per population
-
-
 num_metrics = 5
 metric_names = ["entropy",
                 "num_zero_row",
@@ -257,6 +295,11 @@ for i in range(num_metrics):
             pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\transtion_metrics'
             fname = "{}_{}.png".format(metric_names[i], sub_name)
             fig.savefig(os.path.join(pwd, fname))
+
+#%% First half second half analysis
+
+
+
 #%% Per patient, entropy, and latent volume per motif second half/ first half
 
 groups = ['CP', 'BD']
@@ -277,7 +320,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     for sub in range(12):
         sub_name = videos[sub]
         df1 = ds[ds["subject"] == sub_name]
-        total_len = len(ds1)
+        total_len = len(df1)
         df2 = df1["entropy"]
         entropy_first_half = np.nanmean(df2[:total_len//2])
         entropy_second_half = np.nanmean(df2[total_len //2:])
@@ -290,6 +333,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             latent_v_second_half = np.nanmean(y[total_len // 2:])
             eval('latent_volume{}'.format(d)).append(latent_v_second_half - latent_v_first_half)
 entropy_df = pd.DataFrame(np.asarray([entropy, is_BD]).T, columns=['metric','is_BD'])
+
+
 
 fig, ax = plt.subplots(1, figsize=(10, 5))
 sns.boxplot(y="metric", x='is_BD', hue='is_BD', data=entropy_df, orient="v")
@@ -318,6 +363,20 @@ for d in range(n_cluster):
     pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\latent_slide_window'
     fname = "latent_volume_motif_{}_first_over_second.png".format(d)
     fig.savefig(os.path.join(pwd, fname))
+#%%
+from scipy import stats
+CP = entropy_df['metric'][:12].to_numpy()
+BD = entropy_df['metric'][12:].to_numpy()
+res = stats.ttest_ind(CP, BD)
+f= stats.f_oneway(CP, BD)
+
+F = np.var(CP) / np.var(BD)
+df1 = len(CP) - 1
+df2 = len(BD) - 1
+alpha = 0.05 #Or whatever you want your alpha to be.
+p_value = stats.f.cdf(F, df1, df2)
+
+
 #%% Plot per patient change of dwell time, and latent volume
 from itertools import zip_longest
 latent_d = 10
@@ -357,11 +416,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\latent_slide_window'
         fname = "{}_{}.png".format('latent_colume', sub_name)
-        fig.savefig(os.path.join(pwd, fname))
+        #fig.savefig(os.path.join(pwd, fname))
 
         pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\motif_freq_slide_window'
         fname = "{}_{}.png".format('motif_usage', sub_name)
-        fig1.savefig(os.path.join(pwd, fname))
+        #fig1.savefig(os.path.join(pwd, fname))
     if j == 0:
         CP_mean_motifs = [mean_motif_freq, mean_motif_volume]
     if j == 1:
@@ -391,10 +450,11 @@ for d in range(n_cluster):
     for j, videos in enumerate([control_videos, BD_videos]):
         group = groups[j]
         mean_motif_freq = CP_mean_motifs[0][d] if j == 0 else BD_mean_motifs[0][d]
-        y, error_y = tolerant_mean(mean_motif_volume)
+        z, error_z = tolerant_mean(mean_motif_freq)
+
 
         mean_motif_volume = CP_mean_motifs[1][d] if j == 0 else BD_mean_motifs[1][d]
-        z, error_z = tolerant_mean(mean_motif_freq)
+        y, error_y = tolerant_mean(mean_motif_volume)
 
         x = np.arange(len(y)) + 1
         ax.fill_between(x, y - error_y, y + error_y, norm=plt.Normalize(vmin=0, vmax=9),
@@ -420,11 +480,11 @@ for d in range(n_cluster):
     # plt.show()
     pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\latent_slide_window'
     fname = "{}_{}_motif{}.png".format('latent_volume', 'BD-CP', d)
-    fig.savefig(os.path.join(pwd, fname))
+    #fig.savefig(os.path.join(pwd, fname))
 
     pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\motif_freq_slide_window'
     fname = "{}_{}_motif{}.png".format('motif_usage', 'BD-CP', d)
-    fig1.savefig(os.path.join(pwd, fname))
+    #fig1.savefig(os.path.join(pwd, fname))
 #%%
 # num_metrics = 5
 # CP_idx = np.zeros(12)

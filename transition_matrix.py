@@ -23,9 +23,13 @@ n_cluster = 10
 model_name = 'VAME'
 control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
 BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-start_frame = pd.read_csv('G:\start_frame.csv')
+start_frame = pd.read_csv('G:\start_frame_vic.csv')
 
-
+diagnosis_score = pd.read_csv('D:\OneDrive - UC San Diego\Bahavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
+YMRS = diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
+YMRS = YMRS.set_index('Subject ID').T.to_dict('list')
+HAM_D = diagnosis_score[['Subject ID','HAM-D']]
+HAM_D = HAM_D.set_index('Subject ID').T.to_dict('list')
 titles = ["CP", "BD"]
 N = [0, 0]
 
@@ -125,10 +129,14 @@ def compute_l0_entropy(transition_m, last_state):
     return entropy
 
 #%% Load transition matrix in each video, and append into two classes (BD, CP)
+YMRS_score = []
+HAM_D_score = []
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
         v = videos[i]
+        YMRS_score.append(YMRS[v][0])
+        HAM_D_score.append(HAM_D[v][0])
         print("Loading {} data...".format(v))
 
         label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
@@ -272,6 +280,10 @@ for i in range(num_metrics):
                   color="white", edgecolor="gray", ax=axes[i])
     CP = np.asarray(latent_ds[metric_names[i]][:12])
     BD = np.asarray(latent_ds[metric_names[i]][12:])
+    corr_HAM_D_score, _ = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
+    corr_YMRS_score, _ = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
+    print("corr_HAM_D_score:", corr_HAM_D_score)
+    print("corr_YMRS_score:", corr_YMRS_score)
     s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
     print("{} t-stat: {:.2f}, p-val: {:.3f}".format(metric_names[i], s.statistic, s.pvalue))
     axes[i].set_xticklabels(['CP','BD'])
@@ -281,6 +293,8 @@ for i in range(num_metrics):
 
 plt.suptitle("15-min")
 plt.show()
+#%%
+
 #%% Plot L1, l2 distance
 from scipy.spatial.distance import cityblock
 def similarity_func(u, v):

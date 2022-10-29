@@ -24,16 +24,17 @@ for filename in os.listdir(video_dir):
 #%% 1.1 create new config
 config = vame.init_new_project(project='BD20',
                                videos=videos,
-                               working_directory='D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/',
+                               working_directory='D:/OneDrive - UC San Diego/Bahavior_VAE_data/',
                                videotype='.mpg')
 #%% OR 1.2 load pre-defined config
+#project_name = 'BD20-Oct20-2022'
 project_name = 'BD20-Jun5-2022'
 config = 'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\config.yaml'.format(project_name)
 
 #%% Edit config file
 print("edit n_cluster, zdims, num_features=(#dlc labels x2), kmeans_loss=(n_cluster)")
 
-#%% 1.5 load start frame (frame that person completely entered the room)
+#%% 1.5 load start frame (frame that person completely entered the room) Elizabeth label
 start_frame = pd.read_csv('G:\start_frame.csv')
 start_frame = start_frame.set_index('video_name').T.to_dict('list')
 #%% 2. egocentric alignment
