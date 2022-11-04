@@ -17,6 +17,7 @@ from vame.analysis.pose_segmentation import get_motif_usage
 #%%
 project_name = 'BD20-Jun5-2022'
 config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 cfg = read_config(config)
 n_cluster = 10
 model_name = 'VAME'
@@ -66,10 +67,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
         YMRS_score.append(YMRS[v][0])
         HAM_D_score.append(HAM_D[v][0])
         print("Loading {} data...".format(v))
-        label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
-        transition_m = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(project_name, v,n_cluster, v))
-        cluster_center = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(project_name, v,n_cluster, v))
-        motif_usage = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(project_name, v,n_cluster, v))
+        label = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
+        transition_m = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(project_name, v,n_cluster, v))
+        cluster_center = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(project_name, v,n_cluster, v))
+        motif_usage = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
         latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
 
@@ -150,8 +151,16 @@ for i in range(n_cluster):
     BD = motif_usage_cat[1,:,i].reshape(-1,1)
     s = stats.ttest_ind(CP, BD)
     print("motif  {}, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic[0], s.pvalue[0]))
-corr_HAM_D_score, _ = scipy.stats.pearsonr(np.append(CP,BD), HAM_D_score)
-corr_YMRS_score, _ = scipy.stats.pearsonr(np.append(CP,BD), YMRS_score)
+    corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP,BD), HAM_D_score)
+    corr_YMRS_score= scipy.stats.pearsonr(np.append(CP,BD), YMRS_score)
+    print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
+    print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
+
+    # only correlate with BD list
+    corr_HAM_D_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], HAM_D_score[12:])
+    corr_YMRS_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], YMRS_score[12:])
+    print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
+    print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
 #%% Plot Box
 
 states = []
@@ -250,6 +259,17 @@ for epoch in range(1, 4):
         BD = np.vstack(motif_usage_[1])[:,i]
         s = stats.ttest_ind(CP, BD, nan_policy='omit')
         print("  motif  {}, t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
+
+        corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
+        corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
+        print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
+        print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
+
+        # only correlate with BD list
+        corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[12:])
+        corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[12:])
+        print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
+        print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
 #%% Plot Box
 for epoch in range(1, 4):
     motif_usage_ = eval("Epoch{}_motif_usage".format(epoch))

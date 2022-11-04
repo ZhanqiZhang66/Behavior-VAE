@@ -1,12 +1,15 @@
 # Created by Victoria Zhang at 6/5/2022
 # File: analyze_dlc.py
-# Description: Look at skeleton from dlc, and its umap
+# Description: Look at skeleton from dlc, labels from Wendy, and dlc umap
 # Scenario:
 # Usage:
 #%%
 import umap
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 import os
 from vame.analysis.community_analysis import  read_config, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 import tqdm
@@ -24,8 +27,9 @@ project_name = 'BD20-Jun5-2022'
 path_to_file= 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
-
-start_frame = pd.read_csv('G:\start_frame.csv')
+control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
+BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
+start_frame = pd.read_csv('G:\start_frame_vic.csv')
 start_frame = start_frame.set_index('video_name').T.to_dict('list')
 #%% Read DLC readings
 csv_path = r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\videos\pose_estimation'.format(project_name)
@@ -33,6 +37,7 @@ confidence = 0.9
 
 for nf, filename in enumerate(os.listdir(csv_path)):
     f_start_frame = start_frame[filename[:-4]][0]
+
     data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', filename), skiprows=2)
     data_mat = pd.DataFrame.to_numpy(data)
     data_mat = data_mat[f_start_frame:, 1:]
@@ -45,12 +50,102 @@ for nf, filename in enumerate(os.listdir(csv_path)):
                 j[0], j[1] = np.nan, np.nan
         pose_list = temp[:,0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]],axis=1)
     pose_list1 = pose_list - np.nan_to_num(pose_list[0,:], nan=0)
-    #np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq.npy'), pose_list)
-    #np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_normalized.npy'), pose_list1)
+    np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq.npy'), pose_list)
+    np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_normalized.npy'), pose_list1)
     time_seq_cat = pose_list if nf == 0 else np.concatenate((time_seq_cat, pose_list),axis=0)
     time_seq_normalize_cat = pose_list1 if nf == 0 else np.concatenate((time_seq_normalize_cat, pose_list1), axis=0)
 np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'cat-90pct_seq.npy'), time_seq_cat)
 np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm-90pct_seq_normalized.npy'), time_seq_normalize_cat)
+#%% plot deeplabcut with motif usage
+project_name = 'BD20-Jun5-2022'
+path_to_file = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}'.format(project_name)
+csv_path = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\videos\pose_estimation'.format(project_name)
+confidence = 0.9
+n_cluster = 10
+
+load_presaved  = 1
+group = ['CP','BD']
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+        if not load_presaved:
+            f_start_frame = start_frame[v][0]
+            label = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v, n_cluster, n_cluster, v))
+            data = pd.read_csv(os.path.join(csv_path, v + '.csv'), skiprows=2)
+            frame_count = len(data)
+            f_start_frame = frame_count - len(label)  # the old f_start_frame by Victoria
+
+            data_mat = pd.DataFrame.to_numpy(data)
+            data_mat = data_mat[f_start_frame:, 1:]
+            # get the coordinates for alignment from data table
+            for i in range(int(data_mat.shape[1] / 3)):
+                temp = data_mat[:, i * 3:(i + 1) * 3]
+                for j in temp:
+                    if j[2] <= confidence:
+                        j[0], j[1] = np.nan, np.nan
+                pose_list = temp[:, 0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]], axis=1)
+            np.save(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'), pose_list)
+        else:
+            label = np.load(
+                r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
+                    project_name, v, n_cluster, n_cluster, v))
+            data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+            d = np.concatenate((label.reshape(-1, 1), data), axis=1)
+            df = pd.DataFrame(d, columns=['label', 'l-eyex',	'l-eyey'	,'r-eyex','r-eyey','l_earx','l_eary','r_earx',	'r_eary'	,
+                                          'mouthx',	'mouthy','center_neckx','center_necky',	'l_shox','l_shoy','r_shox',	'r_shoy',
+                                          'l-elbx',	'l-elby','r-elbx'	,'r-elby'	,'l-handx',	'l-handy',	'r-handx','r-handy',
+                                          'center_hipx','center_hipy','l-hipx','l-hipy','r-hipx','r-hipy','l-kneex','l-kneey',
+                                          'r-kneex','r-kneey','l-feetx','l-feety','r-feetx','r-feety','center_feetx','center_feety'])
+
+            for body_i in range(1,21):
+                x = df.iloc[:,body_i]
+                y = df.iloc[:, body_i+1]
+                fig, ax = plt.subplots(figsize=(10,5))
+                lx = ax.plot(x,label='x',color='b',)
+                ly = ax.plot(y,label='y',color='r')
+                ax.legend()
+                cmap = plt.get_cmap('tab20')
+                condition = df['label']
+                current_c = condition[0]
+                spans = [[0, 0]]
+                span_label = [current_c]
+                for i, c in enumerate(condition):
+                    if c != current_c:
+                        # change to i-1 if gap between two conditions is to be left empty
+                        spans[-1][-1] = i
+                        spans.append([i, None])
+                        span_label.append(c)
+                        current_c = c
+                # assumes that the last condition is not on its own but same as previous
+                spans[-1][-1] = len(condition) - 1
+                # span_label.append(condition[-1])
+                for i in range(len(spans)):
+                    span = spans[i]
+                    l = span_label[i]
+                    ax.axvspan(span[0], span[1], alpha=0.2,color=cmap.colors[int(l* 2 + j)])
+
+                X = np.arange(len(x))
+                legend = [Line2D(X, df.iloc[:,body_i], color='b',  label='x'),
+                          Line2D(X, df.iloc[:,body_i+1], color='r', label='y'),
+                          Patch(facecolor=cmap.colors[int(0 * 2 + j)], label=0),
+                          Patch(facecolor=cmap.colors[int(1* 2 + j)], label=1),
+                          Patch(facecolor=cmap.colors[int(2 * 2 + j)], label=2),
+                          Patch(facecolor=cmap.colors[int(3 * 2 + j)], label=3),
+                          Patch(facecolor=cmap.colors[int(4 * 2 + j)], label=4),
+                          Patch(facecolor=cmap.colors[int(5 * 2 + j)], label=5),
+                          Patch(facecolor=cmap.colors[int(6 * 2 + j)], label=6),
+                          Patch(facecolor=cmap.colors[int(7 * 2 + j)], label=7),
+                          Patch(facecolor=cmap.colors[int(8 * 2 + j)], label=8),
+                          Patch(facecolor=cmap.colors[int(9 * 2 + j)], label=9),
+                          ]
+                ax.legend(handles=legend)
+                plt.title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
+                plt.show()
+                pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell_time_n_dlc'
+                fname = "{}-{}_{}_{}_dwell_time_dlc.png".format(group[j],v, n_cluster, df.columns[body_i][:-1])
+                fig.savefig(os.path.join(pwd, fname))
+
 #%% Fit Kmeans to cluster 20 temporal sequences
 
 import numpy as np
