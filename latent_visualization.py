@@ -23,7 +23,7 @@ n_cluster = 10
 model_name = 'VAME'
 control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
 BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-start_frame = pd.read_csv('G:\start_frame.csv')
+start_frame = pd.read_csv('G:\start_frame_vic.csv')
 
 
 titles = ["CP", "BD"]
@@ -231,41 +231,54 @@ for j, videos in enumerate([control_videos, BD_videos]):
         t = np.arange(10)
         for g in np.unique(label):
             i = np.where(label == g)
-            cmap = plt.cm.Spectral
-            ax.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),c=label[i],cmap='Spectral', s=2, alpha=0.05, label='%d' % g)
-
+            cmap = plt.get_cmap('tab20')
+            ax.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                       color=cmap(g * 2 + j),
+                       cmap='Spectral', s=10, alpha=0.1, label='%d' % g)
+        leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+        # make simple, bare axis lines through space:
+        xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+        ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+        yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+        ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+        zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+        ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+        for lh in leg.legendHandles:
+            lh.set_alpha(1)
         ax.set_title("PCs of {}-{}\n Exp_Var:{:.2f}".format(titles[j], v, total_var))
-        ax.set_xlabel('PC 1')
-        ax.set_ylabel('PC 2')
-        ax.set_zlabel('PC 3')
+        ax.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
+        ax.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
+        ax.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
+
         ax.set_xlim(-55, 55)
-        ax.set_ylim(-55, 55)
+        ax.set_ylim(-30, 55)
         ax.set_zlim(-55, 55)
+        ax.grid(False)
         fig.show()
         pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
         fname = "PCs of {}-{}-3d.png".format(titles[j], v)
-        fig.savefig(os.path.join(pwd, fname))
+        #fig.savefig(os.path.join(pwd, fname), tranparent=True)
 
-        # 2D PCA
-        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-        for g in np.unique(label):
-            i = np.where(label == g)
-            cmap = plt.cm.Spectral
-            ax.scatter(components[i, 0], components[i, 1], norm=plt.Normalize(vmin=0, vmax=9),
-                          c=label[i], cmap='Spectral', s=2, alpha=0.05, label='%d' % g)
-
-        ax.set_title("PCs of {}-{}\n Exp_Var:{:.2f}".format(titles[j], v, pca.explained_variance_ratio_[:-2].sum() * 100))
-        ax.set_xlabel('PC 1')
-        ax.set_ylabel('PC 2')
-        ax.set_xlim(-55, 55)
-        ax.set_ylim(-55, 55)
-        ax.set_aspect('equal', 'box')
-
-        fig.show()
-        pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
-        fname = "PCs of {}-{}-2d.png".format(titles[j], v)
-        fig.savefig(os.path.join(pwd, fname))
-#%% Plot PCA of BD and CP population, for each state
+        # # 2D PCA
+        # fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+        # for g in np.unique(label):
+        #     i = np.where(label == g)
+        #     cmap = plt.cm.Spectral
+        #     ax.scatter(components[i, 0], components[i, 1], norm=plt.Normalize(vmin=0, vmax=9),
+        #                   c=label[i], cmap='Spectral', s=2, alpha=0.05, label='%d' % g)
+        #
+        # ax.set_title("PCs of {}-{}\n Exp_Var:{:.2f}".format(titles[j], v, pca.explained_variance_ratio_[:-2].sum() * 100))
+        # ax.set_xlabel('PC 1')
+        # ax.set_ylabel('PC 2')
+        # ax.set_xlim(-55, 55)
+        # ax.set_ylim(-55, 55)
+        # ax.set_aspect('equal', 'box')
+        #
+        # fig.show()
+        # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+        # fname = "PCs of {}-{}-2d.png".format(titles[j], v)
+        # fig.savefig(os.path.join(pwd, fname))
+#%% Plot PCA of BD and CP population, for all state
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
 fig_pca = plt.figure(figsize=(10,10))
@@ -280,7 +293,101 @@ for j, videos in enumerate([control_videos, BD_videos]):
     latent_vec_trim = latent_vec
     label = Labels[j]
     label_trim = Labels[j]
-    ax = fig_pca.add_subplot(2, 1, j+1,  projection='3d')
+    ax = fig_pca.add_subplot(2, 1, j + 1, projection='3d')
+    components = pca.fit_transform(latent_vec)
+    total_var = pca.explained_variance_ratio_.sum() * 100
+    t = np.arange(10)
+    for g in np.unique(label):
+        i = np.where(label == g)
+        cmap = plt.get_cmap('tab20')
+        ax.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                   color=cmap(g * 2 + j),
+                   cmap='Spectral', s=10, alpha=0.05, label='%d' % g)
+    leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+
+    for lh in leg.legendHandles:
+        lh.set_alpha(1)
+    ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j],  total_var))
+    ax.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
+    ax.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
+    ax.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
+
+    ax.set_xlim(-55, 55)
+    ax.set_ylim(-30, 55)
+    ax.set_zlim(-55, 55)
+    ax.grid(False)
+    # make simple, bare axis lines through space:
+    xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+    ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+    yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+    ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+    zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+    ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+fig_pca.show()
+# pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\PCA_visual'
+# fname = "PCs-of-BD-CP.png"
+# fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+# fname1 = "PCs-of-BD-CP.pdf"
+# fig_pca.savefig(os.path.join(pwd, fname1), transparent=True)
+#%% Plot PCA of BD and CP population, for each state
+cmap = plt.get_cmap('tab20')
+titles = ["CP", "BD"]
+
+pca = PCA(n_components=3)
+K_var = np.zeros((10, 2))
+
+for g in np.unique(label):
+    fig_pca = plt.figure(figsize=(10, 10))
+    ax = fig_pca.add_subplot(1, 1, 1, projection='3d')
+    for j, videos in enumerate([control_videos, BD_videos]):
+        n = N[j]
+        latent_vec = Latent_vectors[j]
+        latent_vec_trim = latent_vec
+        label = Labels[j]
+        label_trim = Labels[j]
+
+        components = pca.fit_transform(latent_vec)
+        total_var = pca.explained_variance_ratio_.sum() * 100
+        t = np.arange(10)
+
+        i = np.where(label == g)
+        cmap = plt.get_cmap('tab20')
+        ax.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                   color=cmap(g * 2 + j),
+                   cmap='Spectral', s=10, alpha=0.05, label=titles[j])
+    leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+    for lh in leg.legendHandles:
+        lh.set_alpha(1)
+    ax.set_title("PCs of state-{}-\n Exp_Var:{:.2f}".format(g,  total_var))
+    ax.set_xlabel('PC 1')
+    ax.set_ylabel('PC 2')
+    ax.set_zlabel('PC 3')
+
+    ax.set_xlim(-40, 40)
+    ax.set_ylim(-30, 30)
+    ax.set_zlim(-40, 40)
+    ax.grid(False)
+    # make simple, bare axis lines through space:
+    xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+    ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+    yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+    ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+    zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+    ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+    fig_pca.show()
+    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\PCA_visual'
+    fname = "PCs-of-BD-CP-STATE-{}.png".format(g)
+    fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+    fname1 = "PCs-of-BD-CP-STATE-{}.pdf".format(g)
+    fig_pca.savefig(os.path.join(pwd, fname1), transparent=True)
+#%% Plot PCA of BD and CP population, for each state, and each subject
+K_var_all_subjects = np.zeros((12, 10, 2))
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = N[j]
+    latent_vec = Latent_vectors[j]
+    latent_vec_trim = latent_vec
+    label = Labels[j]
+    label_trim = Labels[j]
     for sub in range(12):
         latent_vec_sub = latent_vec_trim[0: Latent_len[j][sub]]
         latent_vec_trim = latent_vec_trim[Latent_len[j][sub]:]
@@ -304,69 +411,76 @@ for j, videos in enumerate([control_videos, BD_videos]):
             else:
                 volume_of_group_sub = 0
                 K_var_all_subjects[sub][g][j] = volume_of_group_sub
-            fig_pca_per_state = plt.figure(figsize=(10, 10))
-            ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
-
-            ax.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                       color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
-            ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                        color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
-
-            ax2.set_title("PCs of {}-{}-State- {}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, total_var))
-            ax2.set_xlabel('PC 1')
-            ax2.set_ylabel('PC 2')
-            ax2.set_zlabel('PC 3')
-            ax2.set_xlim(-50, 50)
-            ax2.set_ylim(-50, 50)
-            ax2.set_zlim(-50, 50)
-            #fig_pca_per_state.show()
-            pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
-            fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
-            #fig_pca_per_state.savefig(os.path.join(pwd, fname))
+            # fig_pca_per_state = plt.figure(figsize=(10, 10))
+            # ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
+            # ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
+            #             color=cmap(g * 2 + j), s=10, alpha=0.1, label='%d' % g)
+            #
+            # # make simple, bare axis lines through space:
+            # xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+            # ax2.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+            # yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+            # ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+            # zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+            # ax2.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+            # for lh in leg.legendHandles:
+            #     lh.set_alpha(1)
+            # ax2.set_title("PCs of {}-{}-State- {}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, total_var))
+            # ax2.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
+            # ax2.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
+            # ax2.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
+            # ax2.set_xlim(-50, 50)
+            # ax2.set_ylim(-30, 50)
+            # ax2.set_zlim(-50, 50)
+            # fig_pca_per_state.show()
+            # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+            # fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
+            # #fig_pca_per_state.savefig(os.path.join(pwd, fname))
 
 
             #  state-population wise
-        #     i = np.where(label == g)
-        #     latent_g = latent_vec[i]
-        #     components = pca.fit_transform(latent_g)
-        #     total_var = pca.explained_variance_ratio_.sum() * 100
-        #     principalDf = pd.DataFrame(data=components)
-        #     finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
-        #     finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
-        #     K = np.cov(latent_g.T)
-        #     volume_of_group = np.trace(K)
-        #     K_var[g][j] = volume_of_group
-        #     fig_pca_per_state = plt.figure(figsize=(10, 10))
-        #     ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
-        #
-        #     ax.scatter(components[:, 0], components[:, 1], components[:, 2],norm=plt.Normalize(vmin=0, vmax=9),
-        #                       color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
-        #     ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
-        #                color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
-        #     ax2.set_title("PCs of {}-State {}\n Exp_Var:{:.2f}".format(titles[j], g, total_var))
-        #     ax2.set_xlabel('PC 1')
-        #     ax2.set_ylabel('PC 2')
-        #     ax2.set_zlabel('PC 3')
-        #     ax2.set_xlim(-50, 50)
-        #     ax2.set_ylim(-50, 50)
-        #     ax2.set_zlim(-50, 50)
-        #     fig_pca_per_state.show()
-        #     pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
-        #     fname = "PCs of {} State {}.png".format(titles[j], g)
-        #     fig_pca_per_state.savefig(os.path.join(pwd, fname))
-        #
-        # ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j], total_var))
-        # ax.set_xlabel('PC 1')
-        # ax.set_ylabel('PC 2')
-        # ax.set_zlabel('PC 3')
-        # ax.set_xlim(-50, 50)
-        # ax.set_ylim(-50, 50)
-        # ax.set_zlim(-50, 50)
-        # fig_pca.show()
-        # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
-        # fname = "PCs of BD-CP.png"
-        # fig_pca.savefig(os.path.join(pwd, fname))
-        # plt.close('all')
+            # i = np.where(label == g)
+            # latent_g = latent_vec[i]
+            # components = pca.fit_transform(latent_g)
+            # total_var = pca.explained_variance_ratio_.sum() * 100
+            # principalDf = pd.DataFrame(data=components)
+            # finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
+            # finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
+            # K = np.cov(latent_g.T)
+            # volume_of_group = np.trace(K)
+            # K_var[g][j] = volume_of_group
+            # fig_pca_per_state = plt.figure(figsize=(10, 10))
+            # ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
+            #
+            # ax.scatter(components[:, 0], components[:, 1], components[:, 2],norm=plt.Normalize(vmin=0, vmax=9),
+            #                   color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
+            # ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
+            #            color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
+            # ax2.set_title("PCs of {}-State {}\n Exp_Var:{:.2f}".format(titles[j], g, total_var))
+            # ax2.set_xlabel('PC 1')
+            # ax2.set_ylabel('PC 2')
+            # ax2.set_zlabel('PC 3')
+            # ax2.set_xlim(-50, 50)
+            # ax2.set_ylim(-50, 50)
+            # ax2.set_zlim(-50, 50)
+            # fig_pca_per_state.show()
+            # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+            # fname = "PCs of {} State {}.png".format(titles[j], g)
+            #fig_pca_per_state.savefig(os.path.join(pwd, fname))
+
+    # ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j], total_var))
+    # ax.set_xlabel('PC 1')
+    # ax.set_ylabel('PC 2')
+    # ax.set_zlabel('PC 3')
+    # ax.set_xlim(-50, 50)
+    # ax.set_ylim(-50, 50)
+    # ax.set_zlim(-50, 50)
+    # # leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+    # fig_pca.show()
+    # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+    # fname = "PCs of BD-CP.png"
+    #fig_pca.savefig(os.path.join(pwd, fname))
+    #plt.close('all')
 #
 #%%
 
@@ -507,9 +621,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 # ax2.set_xlabel('PC 1')
                 # ax2.set_ylabel('PC 2')
                 # ax2.set_zlabel('PC 3')
-                # ax2.set_xlim(-50, 50)
-                # ax2.set_ylim(-50, 50)
-                # ax2.set_zlim(-50, 50)
+                # # make simple, bare axis lines through space:
+                # xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+                # ax2.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+                # yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+                # ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+                # zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+                # ax2.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+                # ax2.set_xlim(-40, 40)
+                # ax2.set_ylim(-30, 30)
+                # ax2.set_zlim(-40, 40)
                 # fig_pca_per_state.show()
                 # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
                 # fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
@@ -524,25 +645,32 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 else:
                     volume_of_group = 0
                 K_var[j][g][epoch-1] = volume_of_group
-                # fig_pca_per_state = plt.figure(figsize=(10, 10))
-                # ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
-                #
-                # ax.scatter(components[i, 0], components[i, 1], components[i, 2],norm=plt.Normalize(vmin=0, vmax=9),
-                #                   color=cmap(g * 2 + j), s=3, alpha=0.1, label='%d' % g)
-                # ax2.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                #            color=cmap(g * 2 + j), s=3, alpha=0.1, label='%d' % g)
-                #
-                # ax2.set_title("PCs of {}-State-{}-Epoch-{} \n volume:{:.2f}".format(titles[j], g,epoch, volume_of_group))
-                # ax2.set_xlabel('PC 1')
-                # ax2.set_ylabel('PC 2')
-                # ax2.set_zlabel('PC 3')
-                # ax2.set_xlim(-50, 50)
-                # ax2.set_ylim(-50, 50)
-                # ax2.set_zlim(-50, 50)
-                # fig_pca_per_state.show()
-                # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual\epoch'
-                # fname = "PCs of {} State {} Epoch {}.png".format(titles[j], g, epoch)
-                # fig_pca_per_state.savefig(os.path.join(pwd, fname))
+                fig_pca_per_state = plt.figure(figsize=(10, 10))
+                ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
+
+                ax.scatter(components[i, 0], components[i, 1], components[i, 2],norm=plt.Normalize(vmin=0, vmax=9),
+                                  color=cmap(g * 2 + j), s=3, alpha=0.1, label='%d' % g)
+                ax2.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                           color=cmap(g * 2 + j), s=3, alpha=0.1, label='%d' % g)
+
+            ax2.set_title("PCs of {}-State-{}-Epoch-{} \n volume:{:.2f}".format(titles[j], g,epoch, volume_of_group))
+            ax2.set_xlabel('PC 1')
+            ax2.set_ylabel('PC 2')
+            ax2.set_zlabel('PC 3')
+            # make simple, bare axis lines through space:
+            xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+            ax2.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+            yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+            ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+            zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+            ax2.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+            ax2.set_xlim(-40, 40)
+            ax2.set_ylim(-30, 30)
+            ax2.set_zlim(-40, 40)
+            fig_pca_per_state.show()
+            pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual\epoch'
+            fname = "PCs of {} State {} Epoch {}.png".format(titles[j], g, epoch)
+            # fig_pca_per_state.savefig(os.path.join(pwd, fname))
 
 #%%
 for g in range(n_cluster):

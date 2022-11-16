@@ -18,7 +18,7 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 from vame.analysis.pose_segmentation import get_motif_usage
 from sklearn.decomposition import PCA
 #%%
-load_precomputed_sliding_window = True
+load_precomputed_sliding_window = False
 #%%
 #%%
 if not load_precomputed_sliding_window:
@@ -94,7 +94,7 @@ if not load_precomputed_sliding_window:
     #%% Sliding window of 5 min analysis
 
     project_name = 'BD20-Jun5-2022'
-    config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+    config = 'D:/OneDrive - UC San Diego/Bahavior_VAE_data/{}/config.yaml'.format(project_name)
     cfg = read_config(config)
     cluster_start = cfg['time_window'] / 2
     n_cluster = 10
@@ -149,7 +149,7 @@ if not load_precomputed_sliding_window:
             v = videos[i]
             print("Loading {} data...".format(v))
             folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-            label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
+            label = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
             latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
 
             v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
@@ -175,7 +175,7 @@ if not load_precomputed_sliding_window:
                 window_transition_matrix = compute_transition_matrices([v], [window_label], n_cluster)
                 num_zero_row, num_one_item, num_zero_item = count_zeros(window_transition_matrix[0])
                 entropy = compute_l0_entropy(window_transition_matrix[0], window_label[-1])
-                velocity = compute_velocity(data_mat[offset + k: window_size + offset + k], window_size)
+                #velocity = compute_velocity(data_mat[offset + k: window_size + offset + k], window_size)
 
                 slide_window["subject"].append(v)
                 slide_window["start_frame"].append(k)
@@ -187,7 +187,7 @@ if not load_precomputed_sliding_window:
                 for i in range(n_cluster):
                     slide_window['motif{}_usage_freq'.format(i)].append(window_motif_usage[i]/np.sum(window_motif_usage))
 
-                slide_window["motif_usage_freq"].append(window_motif_usage/np.sum(window_motif_usage))
+                # slide_window["motif_usage_freq"].append(window_motif_usage/np.sum(window_motif_usage))
 
                 K = np.cov(window_latent_vector.T)
                 volume_of_all = np.trace(K)
@@ -205,16 +205,16 @@ if not load_precomputed_sliding_window:
                     latent_volume_per_motif.append(volume_of_group_sub)
                     slide_window['latent_volume_motif{}'.format(g)].append(volume_of_group_sub)
 
-                slide_window["latent_volume_per_motif"].append(latent_volume_per_motif)
+                # slide_window["latent_volume_per_motif"].append(latent_volume_per_motif)
             end = time.time()
             print(f"Runtime of one video is {end - start}")
     #%%
-    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\data\slide_window2.csv'
+    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\data\slide_window3.csv'
     ds_new = pd.DataFrame.from_dict(slide_window)
     ds_new.to_csv(pwd)
 #%%
 if load_precomputed_sliding_window:
-    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\data\slide_window2.csv'
+    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\data\slide_window3.csv'
     ds = pd.read_csv(pwd)
 
 
@@ -243,12 +243,12 @@ metric_names = ["entropy",
                 "is_BD"
                 ]
 
-lims = [[0, 2.3], [-5, 15], [-4, 8], [30, 120]]
+lims = [[-0.5, 2.3], [-5, 15], [-4, 8], [30, 120]]
 
-sns.set_style('darkgrid')
+
 CP_idx = np.zeros(12)
 BD_idx = np.ones(12)
-sns.set_style('darkgrid')
+sns.set_style('white')
 for i in range(num_metrics):
     fig, axes = plt.subplots(1, figsize=(10, 5))
     t_max = ds["start_frame"].max()
@@ -265,6 +265,11 @@ for i in range(num_metrics):
         # axes[i].set_ylim(lims[i])
         axes.set_xlabel('population')
     plt.show()
+    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\transtion_metrics'
+    fname = 'average {}.png'.format(metric_names[i])
+    fname_pdf = 'average {}.pdf'.format(metric_names[i])
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 #plt.suptitle("sliding window")
 
@@ -272,12 +277,12 @@ for i in range(num_metrics):
 num_metrics = 1
 CP_idx = np.zeros(12)
 BD_idx = np.ones(12)
-
+color = sns.color_palette("tab10")
 for i in range(num_metrics):
     for j, videos in enumerate([control_videos, BD_videos]):
         for sub in range(12):
             fig, axes = plt.subplots(1, figsize=(10, 5))
-            sns.set_style('darkgrid')
+            sns.set_style('white')
             if sub == 1 or sub == 12:
                 leg = True
             else:
@@ -285,8 +290,8 @@ for i in range(num_metrics):
             sub_name = videos[sub]
             ds1 = ds[ds["subject"] == sub_name]
             line = sns.scatterplot(data=ds1, x="start_frame", y=metric_names[i],
-                                hue="is_BD", palette={0:'C0', 1:'C1'}, ax=axes, legend=leg,
-                                linewidth=0, alpha = 0.2, s=2)
+                                hue="is_BD",  ax=axes, legend=leg,
+                                linewidth=0, alpha=1, s=5, palette={0:color[0], 1:color[1]})#palette={0:'C0', 1:'C1'},
             axes.set_ylim(lims[i])
             axes.set_title('subject {}'.format(sub_name))
             axes.set_xlabel('population')
@@ -294,7 +299,9 @@ for i in range(num_metrics):
             plt.show()
             pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\transtion_metrics'
             fname = "{}_{}.png".format(metric_names[i], sub_name)
-            fig.savefig(os.path.join(pwd, fname))
+            fig.savefig(os.path.join(pwd, fname), transparent=True)
+            fname1 = "{}_{}.pdf".format(metric_names[i], sub_name)
+            fig.savefig(os.path.join(pwd, fname1), transparent=True)
 
 #%% First half second half analysis
 
@@ -325,7 +332,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         entropy_first_half = np.nanmean(df2[:total_len//2])
         entropy_second_half = np.nanmean(df2[total_len //2:])
 
-        entropy.append(entropy_second_half-entropy_first_half)
+        entropy.append(np.abs(entropy_second_half-entropy_first_half))
         is_BD.append(j)
         for d in range(n_cluster):
             y = df1['latent_volume_motif{}'.format(d)].to_numpy()
@@ -333,18 +340,17 @@ for j, videos in enumerate([control_videos, BD_videos]):
             latent_v_second_half = np.nanmean(y[total_len // 2:])
             eval('latent_volume{}'.format(d)).append(latent_v_second_half - latent_v_first_half)
 entropy_df = pd.DataFrame(np.asarray([entropy, is_BD]).T, columns=['metric','is_BD'])
-
-
-
 fig, ax = plt.subplots(1, figsize=(10, 5))
-sns.boxplot(y="metric", x='is_BD', hue='is_BD', data=entropy_df, orient="v")
+sns.boxplot(y="metric", x='is_BD', hue='is_BD', data=entropy_df, orient="v",palette=sns.color_palette("tab10"))
 ax.set_xticklabels(['CP','BD'])
 ax.set_title('change in entropy')
 ax.set_ylabel('second half - first half ')
 fig.show()
 pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\transtion_metrics'
 fname = "entropy_first_over_second.png"
-fig.savefig(os.path.join(pwd, fname))
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fname1 = "entropy_first_over_second.pdf"
+fig.savefig(os.path.join(pwd, fname1), transparent=True)
 
 latent_df = pd.DataFrame(np.asarray([latent_volume0, latent_volume1, latent_volume2, latent_volume3, latent_volume4,
                                      latent_volume5, latent_volume6, latent_volume7, latent_volume8, latent_volume9,
@@ -354,7 +360,7 @@ latent_df = pd.DataFrame(np.asarray([latent_volume0, latent_volume1, latent_volu
 
 for d in range(n_cluster):
     fig, ax = plt.subplots(1, figsize=(10, 5))
-    sns.boxplot(y="latent_volume{}".format(d), x='is_BD', hue='is_BD', data=latent_df, orient="v")
+    sns.boxplot(y="latent_volume{}".format(d), x='is_BD', hue='is_BD', data=latent_df, orient="v",palette=sns.color_palette("tab10"))
     ax.set_xticklabels(['CP', 'BD'])
     ax.set_ylabel('second half  - first half ')
     ax.set_title('change in latent volume motif {}'.format(d))
@@ -362,7 +368,9 @@ for d in range(n_cluster):
     fig.show()
     pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\latent_slide_window'
     fname = "latent_volume_motif_{}_first_over_second.png".format(d)
-    fig.savefig(os.path.join(pwd, fname))
+    # fig.savefig(os.path.join(pwd, fname))
+    fname1 = "latent_volume_motif_{}_first_over_second.pdf".format(d)
+    # fig.savefig(os.path.join(pwd, fname1), transparent=True)
 #%%
 from scipy import stats
 CP = entropy_df['metric'][:12].to_numpy()
@@ -416,15 +424,20 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\latent_slide_window'
         fname = "{}_{}.png".format('latent_colume', sub_name)
-        #fig.savefig(os.path.join(pwd, fname))
+        # fig.savefig(os.path.join(pwd, fname), transparent=True)
+        fname0 = "{}_{}.pdf".format('latent_colume', sub_name)
+        # fig.savefig(os.path.join(pwd, fname0), transparent=True)
 
         pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\motif_freq_slide_window'
         fname = "{}_{}.png".format('motif_usage', sub_name)
-        #fig1.savefig(os.path.join(pwd, fname))
+        # fig1.savefig(os.path.join(pwd, fname), transparent=True)
+        fname1 = "{}_{}.pdf".format('motif_usage', sub_name)
+        # fig1.savefig(os.path.join(pwd, fname1), transparent=True)
     if j == 0:
         CP_mean_motifs = [mean_motif_freq, mean_motif_volume]
     if j == 1:
         BD_mean_motifs = [mean_motif_freq, mean_motif_volume]
+
 #%% Plot per population change of dwell time, and latent volume
 def tolerant_mean(arrs):
     lens = [len(i) for i in arrs]
@@ -440,7 +453,7 @@ n_cluster= 10
 CP_idx = np.zeros(12)
 BD_idx = np.ones(12)
 cmap = plt.get_cmap('tab20')
-lims = [[-500, 2000],[-0.2, 1.2]]
+lims = [[-100, 1000],[-0.2, 1.2]]
 groups = ['CP', 'BD']
 
 
@@ -466,7 +479,7 @@ for d in range(n_cluster):
                          alpha=0.1, facecolor=cmap(d * 2 + j))
         ax1.plot(x, z, color=cmap(d * 2 + j), label='{}-{}'.format(group, d))
 
-    ax.axhline(0, color='white',linestyle="dashed")
+    ax.axhline(0, color='k',linestyle="dashed")
     ax.set_ylim(lims[0])
     ax.set_title('{}-{}-latent volume motif {}'.format('BD-CP', 'average', d))
     ax.set_xlabel('time (frames)')
@@ -477,14 +490,19 @@ for d in range(n_cluster):
     ax1.set_xlabel('time (frames)')
     ax.legend()
     ax1.legend()
-    # plt.show()
+    fig.show()
     pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\latent_slide_window'
     fname = "{}_{}_motif{}.png".format('latent_volume', 'BD-CP', d)
-    #fig.savefig(os.path.join(pwd, fname))
+    #fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fname0 = "{}_{}_motif{}.pdf".format('latent_volume', 'BD-CP', d)
+    #fig.savefig(os.path.join(pwd, fname0), transparent=True)
 
+    fig1.show()
     pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\motif_freq_slide_window'
     fname = "{}_{}_motif{}.png".format('motif_usage', 'BD-CP', d)
-    #fig1.savefig(os.path.join(pwd, fname))
+    #fig1.savefig(os.path.join(pwd, fname), transparent=True)
+    fname1 = "{}_{}_motif{}.pdf".format('motif_usage', 'BD-CP', d)
+    #fig1.savefig(os.path.join(pwd, fname1), transparent=True)
 #%%
 # num_metrics = 5
 # CP_idx = np.zeros(12)

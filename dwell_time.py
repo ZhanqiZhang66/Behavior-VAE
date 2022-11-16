@@ -167,7 +167,7 @@ states = []
 for i in range(n_cluster):
     states.append([i]*12)
 states = np.asarray(states).flatten()
-sns.set_style('darkgrid')
+sns.set_style("white")
 
 CP_idx = np.zeros(12*n_cluster)
 BD_idx = np.ones(12*n_cluster)
@@ -180,7 +180,7 @@ ds = pd.DataFrame(np.concatenate((
 w = n_cluster/10 * 6
 fig, ax = plt.subplots(1, 1, figsize=(w, 4))
 violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
-               data=ds, orient="v")
+               data=ds, orient="v", palette=sns.color_palette("tab10"))
 handles = violin.legend_.legendHandles
 dict_name = {0.0:'CP', 1.0:'BD'}
 labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
@@ -191,7 +191,11 @@ ax.set_xticks(x)
 ax.set_title('15 min dwell frequency over {} motifs'.format(n_cluster))
 ax.set_xlabel('Motifs(States)')
 fig.show()
-
+pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell-time'
+fname = "15-min-dwell.png"
+fname_pdf = "15-min-dwell.pdf"
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 #%% plot box dwell per video
@@ -246,6 +250,11 @@ ax.set_title('average dwell frequency over {} motifs'.format(n_cluster))
 ax.set_ylim([0, 0.2])
 ax.legend(titles)#, loc='center left', bbox_to_anchor=(1, 0.5))
 fig.show()
+pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell-time'
+fname = "15-min-dwell.png"
+fname_pdf = "15-min-dwell.pdf"
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Epoch-wise analysis
 
 
@@ -278,7 +287,7 @@ for epoch in range(1, 4):
     for i in range(n_cluster):
         states.append([i]*12)
     states = np.asarray(states).flatten()
-    sns.set_style('darkgrid')
+    sns.set_style('white')
 
     CP_idx = np.zeros(12 * n_cluster)
     BD_idx = np.ones(12 * n_cluster)
@@ -291,7 +300,7 @@ for epoch in range(1, 4):
 
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
     violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
-                   data=ds, orient="v")
+                   data=ds, orient="v", palette=sns.color_palette("tab10"))
     handles = violin.legend_.legendHandles
     dict_name = {0.0:'CP', 1.0:'BD'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
@@ -302,6 +311,11 @@ for epoch in range(1, 4):
     ax.set_title('Epoch {} dwell frequency over {} motifs'.format(epoch, n_cluster))
     ax.set_xlabel('Motifs(States)')
     fig.show()
+    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell-time'
+    fname = "{}-dwell.png".format(epoch)
+    fname_pdf = "{}-dwell.pdf".format(epoch)
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 #%% Plot histogram
 

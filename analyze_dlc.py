@@ -10,6 +10,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+import matplotlib.cm as cm
+import matplotlib.pylab as pl
 import os
 from vame.analysis.community_analysis import  read_config, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 import tqdm
@@ -39,24 +41,33 @@ for nf, filename in enumerate(os.listdir(csv_path)):
     f_start_frame = start_frame[filename[:-4]][0]
 
     data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', filename), skiprows=2)
-    data_mat = pd.DataFrame.to_numpy(data)
-    data_mat = data_mat[f_start_frame:, 1:]
+    data_mat0 = pd.DataFrame.to_numpy(data)
+    data_mat = data_mat0[f_start_frame:, 1:]
+    data_mat_ori = data_mat0[:, 1:]
     # get the coordinates for alignment from data table
 
     for i in range(int(data_mat.shape[1] / 3)):
         temp = data_mat[:, i * 3:(i + 1) * 3]
+        temp_org = data_mat_ori[:, i * 3:(i + 1) * 3]
         for j in temp:
             if j[2] <= confidence:
                 j[0], j[1] = np.nan, np.nan
         pose_list = temp[:,0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]],axis=1)
+        for idx, k in enumerate(temp_org):
+            lower_bound = min(0, idx - 60)
+            upper_bound = min(len(data_mat_ori), idx + 60)
+            if k[2] <= confidence:
+                k[0], k[1] = np.nanmean(temp_org[lower_bound:upper_bound, 0]), np.nanmean(temp_org[lower_bound:upper_bound, 1])
+        pose_list_org = temp_org[:,0:2] if i == 0 else np.concatenate([pose_list_org, temp_org[:, :2]],axis=1)
     pose_list1 = pose_list - np.nan_to_num(pose_list[0,:], nan=0)
-    np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq.npy'), pose_list)
-    np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_normalized.npy'), pose_list1)
+    #np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq.npy'), pose_list)
+    np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_original_smoothed.npy'), pose_list_org)
+    # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_normalized.npy'), pose_list1)
     time_seq_cat = pose_list if nf == 0 else np.concatenate((time_seq_cat, pose_list),axis=0)
-    time_seq_normalize_cat = pose_list1 if nf == 0 else np.concatenate((time_seq_normalize_cat, pose_list1), axis=0)
-np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'cat-90pct_seq.npy'), time_seq_cat)
-np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm-90pct_seq_normalized.npy'), time_seq_normalize_cat)
-#%% plot deeplabcut with motif usage
+    # time_seq_normalize_cat = pose_list1 if nf == 0 else np.concatenate((time_seq_normalize_cat, pose_list1), axis=0)
+# np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'cat-90pct_seq.npy'), time_seq_cat)
+# np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm-90pct_seq_normalized.npy'), time_seq_normalize_cat)
+#%% plot deeplabcut with motif usage, and deeplabcut trajectory in room
 project_name = 'BD20-Jun5-2022'
 path_to_file = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}'.format(project_name)
 csv_path = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\videos\pose_estimation'.format(project_name)
@@ -76,33 +87,49 @@ for j, videos in enumerate([control_videos, BD_videos]):
             frame_count = len(data)
             f_start_frame = frame_count - len(label)  # the old f_start_frame by Victoria
 
-            data_mat = pd.DataFrame.to_numpy(data)
-            data_mat = data_mat[f_start_frame:, 1:]
+            data_mat_original = pd.DataFrame.to_numpy(data)
+            data_mat = data_mat_original[f_start_frame:, 1:]
             # get the coordinates for alignment from data table
             for i in range(int(data_mat.shape[1] / 3)):
                 temp = data_mat[:, i * 3:(i + 1) * 3]
-                for j in temp:
+                temp_original = data_mat_original[:, i * 3:(i + 1) * 3]
+
+                # replace markers < 90 confidence to be nanmean average in 30 seconds period
+                for j_idx, j in enumerate(temp):
                     if j[2] <= confidence:
-                        j[0], j[1] = np.nan, np.nan
+                        start = np.max(j_idx-450, 0)
+                        j[0], j[1] = np.nanmean(temp[start:j_idx+450,0], 0), np.nanmean(temp[start:j_idx+450, 1], 0)
+                        temp[j_idx, 0] = j[0]
+                        temp[j_idx, 1] =  j[1]
                 pose_list = temp[:, 0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]], axis=1)
+                for k_idx, k in enumerate(temp_original):
+                    if k[2] <= confidence:
+                        start = np.max(k_idx-450, 0)
+                        k[0], k[1] = np.nanmean(temp_original[start:k_idx+450,0], 0), np.nanmean(temp_original[start:k_idx+450, 1], 0)
+                        temp_original[k_idx, 0] = k[0]
+                        temp_original[k_idx, 1] = k[1]
+                pose_list_original = temp_original[:, 0:2] if i == 0 else np.concatenate([pose_list_original, temp_original[:, :2]], axis=1)
             np.save(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'), pose_list)
+            np.save(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq_original.npy'), pose_list_original)
         else:
             label = np.load(
                 r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
                     project_name, v, n_cluster, n_cluster, v))
             data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
             d = np.concatenate((label.reshape(-1, 1), data), axis=1)
-            df = pd.DataFrame(d, columns=['label', 'l-eyex',	'l-eyey'	,'r-eyex','r-eyey','l_earx','l_eary','r_earx',	'r_eary'	,
+            df = pd.DataFrame(d, columns=['label', 'l-eyex','l-eyey','r-eyex','r-eyey','l_earx','l_eary','r_earx',	'r_eary'	,
                                           'mouthx',	'mouthy','center_neckx','center_necky',	'l_shox','l_shoy','r_shox',	'r_shoy',
                                           'l-elbx',	'l-elby','r-elbx'	,'r-elby'	,'l-handx',	'l-handy',	'r-handx','r-handy',
                                           'center_hipx','center_hipy','l-hipx','l-hipy','r-hipx','r-hipy','l-kneex','l-kneey',
                                           'r-kneex','r-kneey','l-feetx','l-feety','r-feetx','r-feety','center_feetx','center_feety'])
 
-            for body_i in range(1,21):
+            for body_i in range(1, 41, 2):
+                print(df.columns[body_i][:-1])
+                # plot time sequence and motif segmentation
                 x = df.iloc[:,body_i]
                 y = df.iloc[:, body_i+1]
                 fig, ax = plt.subplots(figsize=(10,5))
-                lx = ax.plot(x,label='x',color='b',)
+                lx = ax.plot(x,label='x',color='k',)
                 ly = ax.plot(y,label='y',color='r')
                 ax.legend()
                 cmap = plt.get_cmap('tab20')
@@ -126,26 +153,73 @@ for j, videos in enumerate([control_videos, BD_videos]):
                     ax.axvspan(span[0], span[1], alpha=0.2,color=cmap.colors[int(l* 2 + j)])
 
                 X = np.arange(len(x))
-                legend = [Line2D(X, df.iloc[:,body_i], color='b',  label='x'),
+                legend = [Line2D(X, df.iloc[:,body_i], color='k',  label='x'),
                           Line2D(X, df.iloc[:,body_i+1], color='r', label='y'),
-                          Patch(facecolor=cmap.colors[int(0 * 2 + j)], label=0),
-                          Patch(facecolor=cmap.colors[int(1* 2 + j)], label=1),
-                          Patch(facecolor=cmap.colors[int(2 * 2 + j)], label=2),
-                          Patch(facecolor=cmap.colors[int(3 * 2 + j)], label=3),
-                          Patch(facecolor=cmap.colors[int(4 * 2 + j)], label=4),
-                          Patch(facecolor=cmap.colors[int(5 * 2 + j)], label=5),
-                          Patch(facecolor=cmap.colors[int(6 * 2 + j)], label=6),
-                          Patch(facecolor=cmap.colors[int(7 * 2 + j)], label=7),
-                          Patch(facecolor=cmap.colors[int(8 * 2 + j)], label=8),
-                          Patch(facecolor=cmap.colors[int(9 * 2 + j)], label=9),
+                          Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label=0),
+                          Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=0.2, label=1),
+                          Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label=2),
+                          Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=0.2, label=3),
+                          Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label=4),
+                          Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=0.2, label=5),
+                          Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label=6),
+                          Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=0.2, label=7),
+                          Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label=8),
+                          Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label=9),
                           ]
-                ax.legend(handles=legend)
+                ax.legend(handles=legend,bbox_to_anchor=(1.04, 1), loc="upper left", ncol=1)
+                ax.grid(False)
+                ax.set_xlabel('time')
+                ax.set_ylabel('marker position in pixels')
+                ax.set_ylim([0, 720])
                 plt.title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
                 plt.show()
                 pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell_time_n_dlc'
                 fname = "{}-{}_{}_{}_dwell_time_dlc.png".format(group[j],v, n_cluster, df.columns[body_i][:-1])
-                fig.savefig(os.path.join(pwd, fname))
+                fname_pdf = "{}-{}_{}_{}_dwell_time_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+                fig.savefig(os.path.join(pwd, fname), transparent=True)
+                fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
+                fig, ax = plt.subplots(figsize=(10, 5))
+                cmap = plt.get_cmap('plasma')
+                c = np.linspace(0, 1, len(x))
+                t = np.arange(0, len(x))
+                scatter_plt = ax.scatter(t,x, c=c, cmap=cmap, s=30)
+                ax.set_xlabel('time')
+                ax.set_ylabel('marker position in pixels')
+                ax.set_ylim([0, 720])
+                ax.grid(False)
+                ax.set_title('{}-{}-{} x position'.format(group[j], v, df.columns[body_i][:-1]))
+                fig.colorbar(scatter_plt)
+                fig.show()
+                pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell_time_n_dlc'
+                fname = "{}-{}_{}_{}_dwell_time_dlc_plain_xpos.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+                fname_pdf = "{}-{}_{}_{}_trajectory_dlc_plain_xpos.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+                fig.savefig(os.path.join(pwd, fname), transparent=True)
+                fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+                # plot trajectory
+                fig, ax = plt.subplots(figsize=(10,5))
+                img = matplotlib.image.imread(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\DLC raw\background.png')
+                img = cv2.flip(img, 0)
+                room = ax.imshow(img)
+                cmap = plt.get_cmap('plasma')
+                c = np.linspace(0, 1, len(x))
+                scatter_plt = ax.scatter(x, y, c=c, cmap=cmap,  s=30)
+                ax.set_ylim([0, 540])
+                ax.set_xlim([0, 720])
+                ax.grid(False)
+                ax.axis('off')
+                ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
+                fig.colorbar(scatter_plt)
+                fig.show()
+                pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell_time_n_dlc'
+                fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+                fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+                fig.savefig(os.path.join(pwd, fname), transparent=True)
+                fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+
+                plt.close('all')
 #%% Fit Kmeans to cluster 20 temporal sequences
 
 import numpy as np
