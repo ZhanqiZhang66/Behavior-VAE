@@ -5,31 +5,55 @@
 # Scenario:
 # Usage:
 #%%
+import seaborn as sns
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import scipy
-import seaborn as sns
 from scipy import stats
+from pathlib import Path
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 #%%
-project_name = 'BD20-Jun5-2022'
-config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
+    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    github_path = r'D:\OneDrive - UC San Diego\GitHub'
+else:
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+#%%
+b_o_colors = ['#1f77b4', '#ff7f0e']
+#%%
+project_name = 'BD20-Feb25-2023'
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
+dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 model_name = 'VAME'
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-start_frame = pd.read_csv('G:\start_frame_vic.csv')
 
-diagnosis_score = pd.read_csv('D:\OneDrive - UC San Diego\Bahavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
-YMRS = diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
-YMRS = YMRS.set_index('Subject ID').T.to_dict('list')
-HAM_D = diagnosis_score[['Subject ID','HAM-D']]
-HAM_D = HAM_D.set_index('Subject ID').T.to_dict('list')
+#TODO gender-wise CP-male, CP-female
+control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA',
+                  'BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU',
+                  'BC1MOKI','BC1NITA','BC1BRPO','BC1BRSC','BC1CERO',
+                  'BC1COGR','BC1DAAR','BC1DEBR','BC1FEMO','BC1GESA',
+                  'BC1GRLE','BC1HAKO','BC1HETR','BC1JECO','BC1JUPA']
+#TODO gender-wise [BD-male, BD-female]
+BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO',
+                  'BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU',
+                  'BC1MISE','BC1OKBA','CASH1','GRCH','BC1AMMU',
+                  'GRJO1','HESN1','JEPT1','JETH1','LABO1',
+                  'MAFL','MIHA1','MIRU1','PANU','ROEA1']
+n_subject_in_population = len(control_videos)
+start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
+diagnosis_score = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,4,5])#pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
+YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
+YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
+HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
+HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
+#%%
 titles = ["CP", "BD"]
 N = [0, 0]
 
@@ -139,12 +163,13 @@ for j, videos in enumerate([control_videos, BD_videos]):
         HAM_D_score.append(HAM_D[v][0])
         print("Loading {} data...".format(v))
 
-        label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
-        transition_m = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(project_name, v,n_cluster, v))
-        cluster_center = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(project_name, v,n_cluster, v))
-        motif_usage = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(project_name, v,n_cluster, v))
+        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v, n_cluster, n_cluster, v))
+        transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v, n_cluster, v))
+        cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,project_name, v,n_cluster, v))
+        motif_usage = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name,v, n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy'))  # L x 30
+
         transition = transition_m.copy()
 
         transition_matrices.append(transition_m)
@@ -162,9 +187,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
         door_close_time = start_frame.loc[v_index, 'door_close']
-        start_time = start_frame.loc[v_index, 'n']
+        start_time = start_frame.loc[v_index, 'door_close']#start_frame.loc[v_index, 'n']
         five_min_frame_no = int(5 * 60 * 30)
-        offset = int(door_close_time - start_time)
+        offset = 0#  int(door_close_time - start_time)
 
         epoch_1_label = label[offset:five_min_frame_no + offset]
         epoch_2_label = label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
@@ -251,8 +276,29 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Labels[j] = l
     population_transition_matrix = compute_transition_matrices([titles[j]], [l], n_cluster)
     population_TM[j] = population_transition_matrix
-    TM[j] = tm/12
+    TM[j] = tm/n_subject_in_population
 #%%   Population-level plots
+#%% Plot transition matrix
+pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+patient_names = control_videos + BD_videos
+for i in range(len(videos)*2):
+    fig, axes = plt.subplots(1,1, figsize=(3,3))
+    im = axes.imshow(transition_matrices[i], cmap='viridis')
+    axes.set_title(patient_names[i])
+    axes.set_xticks(np.arange(n_cluster), np.arange(n_cluster))
+    axes.set_yticks(np.arange(n_cluster), np.arange(n_cluster))
+    plt.colorbar(im, ax=axes)
+    plt.grid(None)
+    fig.show()
+    if i < n_subject_in_population:
+        population = 'HC'
+    else:
+        population = 'BD'
+
+    fname = "{}-{}_{}_transition.png".format(population, patient_names[i], n_cluster)
+    fname_pdf = "{}-{}_{}_transition.pdf".format(population, patient_names[i], n_cluster)
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Plot L0 measures: spasity, entropy, number of 1s, number of 0s
 num_metrics = 4
 metric_names = ['distribution of entropy',
@@ -262,9 +308,9 @@ metric_names = ['distribution of entropy',
                 'is_BD']
 lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
 fig, axes = plt.subplots(num_metrics, figsize=(5, 10))
-sns.set_style('darkgrid')
-CP_idx = np.zeros(12)
-BD_idx = np.ones(12)
+sns.set_style("white")
+CP_idx = np.zeros(n_subject_in_population)
+BD_idx = np.ones(n_subject_in_population)
 latent_ds = pd.DataFrame(np.concatenate((
     np.concatenate((Entropies[0],Entropies[1]),0).reshape(-1, 1),     # 2 x 12 list
     np.concatenate((num_zero_rows[0],num_zero_rows[1]),0).reshape(-1, 1),
@@ -272,14 +318,13 @@ latent_ds = pd.DataFrame(np.concatenate((
     np.concatenate((num_zeros[0],num_zeros[1]),0).reshape(-1, 1),
     np.concatenate((CP_idx, BD_idx),0).reshape(-1, 1)), 1),
     columns=metric_names)
-sns.set_style('darkgrid')
 for i in range(num_metrics):
     sns.violinplot(x=metric_names[-1], y=metric_names[i],
                 data=latent_ds, palette="muted", ax=axes[i])
     sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
                   color="white", edgecolor="gray", ax=axes[i])
-    CP = np.asarray(latent_ds[metric_names[i]][:12])
-    BD = np.asarray(latent_ds[metric_names[i]][12:])
+    CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
+    BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
     corr_HAM_D_score, _ = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
     corr_YMRS_score, _ = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
     print("corr_HAM_D_score:", corr_HAM_D_score)
@@ -293,6 +338,12 @@ for i in range(num_metrics):
 
 plt.suptitle("15-min")
 plt.show()
+pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+Path(pwd).mkdir(parents=True, exist_ok=True)
+fname = "L0-measures.png"
+fname_pdf = "L0-measures.pdf"
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 
 #%% Plot L1, l2 distance
@@ -300,21 +351,27 @@ from scipy.spatial.distance import cityblock
 def similarity_func(u, v):
     return 1/(1+np.linalg.norm(np.asarray(u)-np.asarray(v)))
 
-l2_matrix = np.zeros((24,24))
+l2_matrix = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
 # l1_matrix = np.zeros((24,24))
-for i in range(24):
-    for j in range(24):
+for i in range(n_subject_in_population*2):
+    for j in range(n_subject_in_population*2):
         l2_matrix[i][j] = np.linalg.norm(transition_matrices[i]-transition_matrices[j])
         # l1_matrix[i][j] = cityblock(transition_matrices[i],transition_matrices[j])
 
-fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+fig, ax = plt.subplots(1, 1, figsize=(20, 20))
 im = ax.imshow(l2_matrix)
 ax.set_title('15-min L2 distance of transition matrix')
 patient_names = control_videos + BD_videos
-ax.set_xticks(np.arange(24), patient_names, rotation=45)
-ax.set_yticks(np.arange(24), patient_names, rotation=45)
+ax.set_xticks(np.arange(n_subject_in_population*2), patient_names, rotation=45)
+ax.set_yticks(np.arange(n_subject_in_population*2), patient_names, rotation=45)
 plt.colorbar(im)
 fig.show()
+pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+Path(pwd).mkdir(parents=True, exist_ok=True)
+fname = "TM-similarity.png"
+fname_pdf = "TM-similarity.pdf"
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 # fig, ax = plt.subplots(1, 1, figsize=(10, 10))
 # im = ax.imshow(l1_matrix)
@@ -353,8 +410,8 @@ metric_names = ['distribution of entropy',
                 'distribution of #p(state) = 0',
                 'is_BD']
 lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
-CP_idx = np.zeros(12)
-BD_idx = np.ones(12)
+CP_idx = np.zeros(n_subject_in_population)
+BD_idx = np.ones(n_subject_in_population)
 for epoch in range(1,4):
     entropy = eval("Epoch{}_Entropies".format(epoch))
     num_zero_rows = eval("Epoch{}_num_zero_rows".format(epoch))
@@ -378,8 +435,8 @@ for epoch in range(1,4):
                        data=latent_ds, palette="muted", ax=axes[i])
         sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
                       color="white", edgecolor="gray", ax=axes[i])
-        CP = np.asarray(latent_ds[metric_names[i]][:12])
-        BD = np.asarray(latent_ds[metric_names[i]][12:])
+        CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
+        BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
         s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
         print("{} , t-stat: {:.2f}, p-val: {:.3f}".format(metric_names[i], s.statistic, s.pvalue))
         axes[i].set_xticklabels(['CP', 'BD'])
@@ -388,11 +445,16 @@ for epoch in range(1,4):
         axes[i].set_xlabel('population')
     plt.suptitle("Epoch {}".format(epoch))
     fig.show()
-
+    pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(exist_ok=True)
+    fname = f"epoch{epoch}-L0-measures.png"
+    fname_pdf = f"epoch{epoch}-L0-measures.pdf"
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 from scipy.spatial.distance import euclidean, pdist, squareform
 for epoch in range(1,4):
-    sim_matrix = np.zeros((24,24))
+    sim_matrix = np.zeros((n_subject_in_population * 2,n_subject_in_population * 2))
     epoch_tm = eval('Epoch{}_transition_matrix'.format(epoch))
     epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1])
     epoch_label = eval('Epoch{}_labels'.format(epoch))
@@ -400,33 +462,49 @@ for epoch in range(1,4):
     BD_label = np.concatenate(epoch_label[1], axis=0)
     CP_transition_matrix = compute_transition_matrices([titles[0]], [CP_label], n_cluster)
     BD_transition_matrix = compute_transition_matrices([titles[1]], [BD_label], n_cluster)
-    for i in range(24):
-        for j in range(24):
+    for i in range(n_subject_in_population * 2):
+        for j in range(n_subject_in_population * 2):
             sim_matrix[i][j] = np.linalg.norm(epoch_tm_[i]-epoch_tm_[j])
 
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    fig, ax = plt.subplots(1, 1, figsize=(20, 20))
     im = ax.imshow(sim_matrix)
     ax.set_title('Epoch {} similarity of transition matrix'.format(epoch))
     patient_names = control_videos + BD_videos
-    ax.set_xticks(np.arange(24), patient_names, rotation=45)
-    ax.set_yticks(np.arange(24), patient_names, rotation=45)
+    ax.set_xticks(np.arange(n_subject_in_population * 2), patient_names, rotation=45)
+    ax.set_yticks(np.arange(n_subject_in_population * 2), patient_names, rotation=45)
     plt.colorbar(im)
     fig.show()
+    pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(exist_ok=True)
+    fname = f"epoch{epoch}-TM-similarity.png"
+    fname_pdf = f"epoch{epoch}-TM-similarity.pdf"
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
+pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices\epoch'.format(onedrive_path, project_name)
+Path(pwd).mkdir(exist_ok=True)
 for epoch in range(1,4):
     epoch_tm = eval('Epoch{}_transition_matrix'.format(epoch))
     epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1]).squeeze()
-    for i in range(24):
+    for i in range(n_subject_in_population * 2):
         fig, axes = plt.subplots(1,1, figsize=(3,3))
-        im = axes.imshow(epoch_tm_[i])
+        im = axes.imshow(epoch_tm_[i], cmap='viridis')
+        plt.grid(None)
         axes.set_title(patient_names[i])
         axes.set_xticks(np.arange(n_cluster), np.arange(n_cluster))
         axes.set_yticks(np.arange(n_cluster), np.arange(n_cluster))
         plt.colorbar(im, ax=axes)
-        pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\transition_matrices\epoch'
-        fname = "{}_{}_transition_epoch{}.png".format(patient_names[i], n_cluster, epoch)
-        fig.savefig(os.path.join(pwd, fname))
+        fig.show()
+        if i < n_subject_in_population:
+            population = 'HC'
+        else:
+            population = 'BD'
+        fname = "{}-{}_{}_transition_epoch{}.png".format(population, patient_names[i], n_cluster, epoch)
+        fname_pdf = "{}-{}_{}_transition_epoch{}.pdf".format(population, patient_names[i], n_cluster, epoch)
+        fig.savefig(os.path.join(pwd, fname), transparent=True)
+        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
 
 
 

@@ -4,6 +4,7 @@
 # Scenario:
 # Usage:
 #%%
+
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -11,25 +12,47 @@ import matplotlib.pyplot as plt
 import os
 import scipy
 from scipy import stats
+from pathlib import Path
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 #%%
-project_name = 'BD20-Jun5-2022'
-#TODO: seperate path for Vic and Jack based on computer name
-config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
-dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
+if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
+    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    github_path = r'D:\OneDrive - UC San Diego\GitHub'
+else:
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+#%%
+b_o_colors = ['#1f77b4', '#ff7f0e']
+#%%
+project_name = 'BD20-Feb25-2023'
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
+dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 model_name = 'VAME'
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA'] #TODO gender-wise CP-male, CP-female
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA'] #TODO gender-wise [BD-male, BD-female]
-start_frame = pd.read_csv('D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\start_frame_vic.csv')
-diagnosis_score = pd.read_csv('D:\OneDrive - UC San Diego\Bahavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
-YMRS = diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
-YMRS = YMRS.set_index('Subject ID').T.to_dict('list')
-HAM_D = diagnosis_score[['Subject ID','HAM-D']]
-HAM_D = HAM_D.set_index('Subject ID').T.to_dict('list')
+
+#TODO gender-wise CP-male, CP-female
+control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA',
+                  'BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU',
+                  'BC1MOKI','BC1NITA','BC1BRPO','BC1BRSC','BC1CERO',
+                  'BC1COGR','BC1DAAR','BC1DEBR','BC1FEMO','BC1GESA',
+                  'BC1GRLE','BC1HAKO','BC1HETR','BC1JECO','BC1JUPA']
+#TODO gender-wise [BD-male, BD-female]
+BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO',
+                  'BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU',
+                  'BC1MISE','BC1OKBA','CASH1','GRCH','BC1AMMU',
+                  'GRJO1','HESN1','JEPT1','JETH1','LABO1',
+                  'MAFL','MIHA1','MIRU1','PANU','ROEA1']
+n_subject_in_population = len(control_videos)
+start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
+diagnosis_score = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,4,5])#pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
+YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
+YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
+HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
+HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
 #%%
 YMRS_score = []
 HAM_D_score = []
@@ -68,18 +91,18 @@ for j, videos in enumerate([control_videos, BD_videos]):
         YMRS_score.append(YMRS[v][0])
         HAM_D_score.append(HAM_D[v][0])
         print("Loading {} data...".format(v))
-        label = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
-        transition_m = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(project_name, v,n_cluster, v))
-        cluster_center = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(project_name, v,n_cluster, v))
-        motif_usage = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(project_name, v,n_cluster, v))
+        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+        transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
+        cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
+        motif_usage = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
         latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
 
         v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
         door_close_time = start_frame.loc[v_index, 'door_close']
-        start_time = start_frame.loc[v_index, 'n']
+        start_time = start_frame.loc[v_index, 'door_close']#start_frame.loc[v_index, 'n']
         five_min_frame_no = int(5 * 60 * 30)
-        offset = int(start_time - door_close_time)
+        offset = 0 #int(start_time - door_close_time)
 
         epoch_1_label = label[:five_min_frame_no + offset]
         epoch_2_label = label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
@@ -142,7 +165,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Motif_usage_pct[j] = m/n
     Latent_vectors[j] = latent
     Labels[j] = l
-    TM[j] = tm/12
+    TM[j] = tm/len(videos)
 #%% Population-wise analysis
 #%% between motif paired t test and score correltion
 motif_usage_cat = np.asarray(motif_usage_cat)
@@ -158,20 +181,20 @@ for i in range(n_cluster):
     print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
 
     # only correlate with BD list
-    corr_HAM_D_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], HAM_D_score[12:])
-    corr_YMRS_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], YMRS_score[12:])
+    corr_HAM_D_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], HAM_D_score[n_subject_in_population:])
+    corr_YMRS_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], YMRS_score[n_subject_in_population:])
     print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
     print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
 #%% Plot Box
 
 states = []
 for i in range(n_cluster):
-    states.append([i]*12)
+    states.append([i]*n_subject_in_population)
 states = np.asarray(states).flatten()
 sns.set_style("white")
 
-CP_idx = np.zeros(12*n_cluster)
-BD_idx = np.ones(12*n_cluster)
+CP_idx = np.zeros(n_subject_in_population * n_cluster)
+BD_idx = np.ones(n_subject_in_population * n_cluster)
 
 ds = pd.DataFrame(np.concatenate((
     np.concatenate((motif_usage_cat[0,:,:].T.flatten(), motif_usage_cat[1,:,:].T.flatten()), 0).reshape(-1, 1),
@@ -191,15 +214,17 @@ ax.legend(handles, labels)
 ax.set_xticks(x)
 ax.set_title('15 min dwell frequency over {} motifs'.format(n_cluster))
 ax.set_xlabel('Motifs(States)')
+sns.despine()
 fig.show()
-pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell-time'
+pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
+Path(pwd).mkdir(parents=True, exist_ok=True)
 fname = "15-min-dwell.png"
 fname_pdf = "15-min-dwell.pdf"
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-
-
 #%% plot box dwell per video
+sns.set_style('white')
+
 states = []
 for i in range(n_cluster):
     states.append([i])
@@ -220,14 +245,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
         w = n_cluster/10 * 6
         fig, ax = plt.subplots(1, 1, figsize=(w, 4))
         violin = sns.barplot(y="motif frequency", x='state',hue='is_BD',
-                       data=ds, orient="v", facecolor='C{}'.format(j))
+                       data=ds, orient="v", facecolor=b_o_colors[j])
         x = np.arange(n_cluster)
         ax.set_xticks(x)
         ax.set_title('{} 15 min dwell frequency over {} motifs'.format(v, n_cluster))
         ax.set_xlabel('Motifs(States)')
         ax.set_ylim([0, 1])
+        sns.despine()
         fig.show()
-        pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\motif_freq_each_video'
+        pwd = r'{}\Behavior_VAE_data\{}\figure\motif_freq_each_video'.format(onedrive_path, project_name)
+        Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "{}_{}_motif_freq.png".format(n_cluster, v)
         fig.savefig(os.path.join(pwd, fname))
 #%% Plot histogram of averaged dwell frequency
@@ -238,7 +265,6 @@ from scipy.stats import ks_2samp
 p = stats.ttest_ind(Motif_usages[0]/N[0], Motif_usages[1]/N[1])
 x = np.arange(n_cluster)
 for j, videos in enumerate([control_videos, BD_videos]):
-
     n = N[j]
     motif = Motif_usages[j]
     label = Labels[j]
@@ -250,10 +276,12 @@ ax.set_xticks(x)
 ax.set_title('average dwell frequency over {} motifs'.format(n_cluster))
 ax.set_ylim([0, 0.2])
 ax.legend(titles)#, loc='center left', bbox_to_anchor=(1, 0.5))
+sns.despine()
 fig.show()
-pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell-time'
-fname = "15-min-dwell.png"
-fname_pdf = "15-min-dwell.pdf"
+pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
+Path(pwd).mkdir(parents=True, exist_ok=True)
+fname = "15-min-dwell1.png"
+fname_pdf = "15-min-dwell1.pdf"
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Epoch-wise analysis
@@ -276,8 +304,8 @@ for epoch in range(1, 4):
         print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
 
         # only correlate with BD list
-        corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[12:])
-        corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[12:])
+        corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
+        corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
         print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
         print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
 #%% Plot Box
@@ -286,12 +314,12 @@ for epoch in range(1, 4):
     motif_usage_cat = np.asarray(motif_usage_)
     states = []
     for i in range(n_cluster):
-        states.append([i]*12)
+        states.append([i]*n_subject_in_population)
     states = np.asarray(states).flatten()
     sns.set_style('white')
 
-    CP_idx = np.zeros(12 * n_cluster)
-    BD_idx = np.ones(12 * n_cluster)
+    CP_idx = np.zeros(n_subject_in_population * n_cluster)
+    BD_idx = np.ones(n_subject_in_population * n_cluster)
 
     ds = pd.DataFrame(np.concatenate((
         np.concatenate((motif_usage_cat[0, :, :].T.flatten(), motif_usage_cat[1, :, :].T.flatten()), 0).reshape(-1, 1),
@@ -311,8 +339,10 @@ for epoch in range(1, 4):
     ax.set_xticks(x)
     ax.set_title('Epoch {} dwell frequency over {} motifs'.format(epoch, n_cluster))
     ax.set_xlabel('Motifs(States)')
+    sns.despine()
     fig.show()
-    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell-time'
+    pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "{}-dwell.png".format(epoch)
     fname_pdf = "{}-dwell.pdf".format(epoch)
     fig.savefig(os.path.join(pwd, fname), transparent=True)

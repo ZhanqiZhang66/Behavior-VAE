@@ -6,6 +6,7 @@
 #%%
 import pandas as pd
 import numpy as np
+from pathlib import Path
 import matplotlib.pyplot as plt
 import os
 from sklearn.decomposition import PCA
@@ -16,16 +17,44 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 #%%
-project_name = 'BD20-Jun5-2022'
-config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+%%
+if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
+    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    github_path = r'D:\OneDrive - UC San Diego\GitHub'
+else:
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+#%%
+b_o_colors = ['#1f77b4', '#ff7f0e']
+#%%
+project_name = 'BD20-Feb25-2023'
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
+dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 model_name = 'VAME'
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-start_frame = pd.read_csv('G:\start_frame_vic.csv')
 
-
+#TODO gender-wise CP-male, CP-female
+control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA',
+                  'BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU',
+                  'BC1MOKI','BC1NITA','BC1BRPO','BC1BRSC','BC1CERO',
+                  'BC1COGR','BC1DAAR','BC1DEBR','BC1FEMO','BC1GESA',
+                  'BC1GRLE','BC1HAKO','BC1HETR','BC1JECO','BC1JUPA']
+#TODO gender-wise [BD-male, BD-female]
+BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO',
+                  'BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU',
+                  'BC1MISE','BC1OKBA','CASH1','GRCH','BC1AMMU',
+                  'GRJO1','HESN1','JEPT1','JETH1','LABO1',
+                  'MAFL','MIHA1','MIRU1','PANU','ROEA1']
+n_subject_in_population = len(control_videos)
+start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
+diagnosis_score = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,4,5])#pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
+YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
+YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
+HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
+HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
+#%%
 titles = ["CP", "BD"]
 N = [0, 0]
 
@@ -93,12 +122,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
     for i in range(len(videos)):
         v = videos[i]
         print("Loading {} data...".format(v))
-        label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
-        transition_m = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(project_name, v,n_cluster, v))
-        cluster_center = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(project_name, v,n_cluster, v))
-        motif_usage = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(project_name, v,n_cluster, v))
+
+        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+        transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
+        cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
+        motif_usage = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
         latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
+
 
         transition = transition_m.copy()
         transition_matrices.append(transition_m)
@@ -112,9 +143,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
         door_close_time = start_frame.loc[v_index, 'door_close']
-        start_time = start_frame.loc[v_index, 'n']
+        start_time = start_frame.loc[v_index, 'door_close']#start_frame.loc[v_index, 'n']
         five_min_frame_no = int(5 * 60 * 30)
-        offset = int(start_time - door_close_time)
+        offset = 0 #int(start_time - door_close_time)
 
         epoch_1_label = label[:five_min_frame_no + offset]
         epoch_2_label = label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
@@ -203,19 +234,19 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Labels[j] = l
     population_transition_matrix = compute_transition_matrices([titles[j]], [l], n_cluster)
     population_TM[j] = population_transition_matrix
-    TM[j] = tm/12
+    TM[j] = tm/n_subject_in_population
 #%% Population-wise plot
-#%% plot PCA for each video, all states
+#%% plot PCA embedding for each video, all states
 titles = ["CP", "BD"]
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
         v = videos[i]
         print("Computing {} ...".format(v))
-        label = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v,n_cluster,n_cluster,v))
-        cluster_center = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(project_name, v,n_cluster, v))
+        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+        cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 10
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
 
         pca = PCA(n_components=3)
         components = pca.fit_transform(latent_vector)
@@ -255,8 +286,12 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax.set_zlim(-55, 55)
         ax.grid(False)
         fig.show()
-        pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+        pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Subjects-All-Motifs'.format(onedrive_path, project_name)
+        Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "PCs of {}-{}-3d.png".format(titles[j], v)
+        fname_pdf = "PCs of {}-{}-3d.pdf".format(titles[j], v)
+        fig.savefig(os.path.join(pwd, fname), transparent=True)
+        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
         #fig.savefig(os.path.join(pwd, fname), tranparent=True)
 
         # # 2D PCA
@@ -281,12 +316,12 @@ for j, videos in enumerate([control_videos, BD_videos]):
 #%% Plot PCA of BD and CP population, for all state
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
-fig_pca = plt.figure(figsize=(10,10))
-fig_latent = plt.figure(figsize=(10,10))
+fig_pca = plt.figure(figsize=(30,30))
+fig_latent = plt.figure(figsize=(30,30))
 
 pca = PCA(n_components=3)
 K_var = np.zeros((10, 2))
-K_var_all_subjects = np.zeros((12, 10, 2))
+K_var_all_subjects = np.zeros((n_subject_in_population, 10, 2))
 for j, videos in enumerate([control_videos, BD_videos]):
     n = N[j]
     latent_vec = Latent_vectors[j]
@@ -324,7 +359,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
     zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
     ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
 fig_pca.show()
-# pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\PCA_visual'
+pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual'.format(onedrive_path, project_name)
+Path(pwd).mkdir(exist_ok=True)
+fname = "PCs-of-BD-CP-3d.png"
+fname_pdf = "PCs-of-BD-CP-3d.pdf"
+fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+
 # fname = "PCs-of-BD-CP.png"
 # fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
 # fname1 = "PCs-of-BD-CP.pdf"
@@ -375,20 +417,24 @@ for g in np.unique(label):
     zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
     ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
     fig_pca.show()
-    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\PCA_visual'
+
+    pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Population-{}-motifs'.format(onedrive_path, project_name, n_cluster)
+    Path(pwd).mkdir(exist_ok=True)
     fname = "PCs-of-BD-CP-STATE-{}.png".format(g)
+    fname_pdf = "PCs-of-BD-CP-STATE-{}.pdf".format(g)
     fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
-    fname1 = "PCs-of-BD-CP-STATE-{}.pdf".format(g)
-    fig_pca.savefig(os.path.join(pwd, fname1), transparent=True)
+    fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+
 #%% Plot PCA of BD and CP population, for each state, and each subject
-K_var_all_subjects = np.zeros((12, 10, 2))
+K_var_all_subjects = np.zeros((n_subject_in_population, 10, 2))
 for j, videos in enumerate([control_videos, BD_videos]):
     n = N[j]
     latent_vec = Latent_vectors[j]
     latent_vec_trim = latent_vec
     label = Labels[j]
     label_trim = Labels[j]
-    for sub in range(12):
+    for sub in range(n_subject_in_population):
         latent_vec_sub = latent_vec_trim[0: Latent_len[j][sub]]
         latent_vec_trim = latent_vec_trim[Latent_len[j][sub]:]
 
@@ -411,31 +457,37 @@ for j, videos in enumerate([control_videos, BD_videos]):
             else:
                 volume_of_group_sub = 0
                 K_var_all_subjects[sub][g][j] = volume_of_group_sub
-            # fig_pca_per_state = plt.figure(figsize=(10, 10))
-            # ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
-            # ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
-            #             color=cmap(g * 2 + j), s=10, alpha=0.1, label='%d' % g)
-            #
-            # # make simple, bare axis lines through space:
-            # xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
-            # ax2.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
-            # yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
-            # ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
-            # zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
-            # ax2.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
-            # for lh in leg.legendHandles:
-            #     lh.set_alpha(1)
-            # ax2.set_title("PCs of {}-{}-State- {}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, total_var))
-            # ax2.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
-            # ax2.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
-            # ax2.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
-            # ax2.set_xlim(-50, 50)
-            # ax2.set_ylim(-30, 50)
-            # ax2.set_zlim(-50, 50)
-            # fig_pca_per_state.show()
-            # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
-            # fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
-            # #fig_pca_per_state.savefig(os.path.join(pwd, fname))
+            fig_pca_per_state = plt.figure(figsize=(10, 10))
+            ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
+            ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                        color=cmap(g * 2 + j), s=10, alpha=0.1, label='%d' % g)
+
+            # make simple, bare axis lines through space:
+            xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+            ax2.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+            yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+            ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+            zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+            ax2.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+            for lh in leg.legendHandles:
+                lh.set_alpha(1)
+            ax2.set_title("PCs of {}-{}-State- {}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, total_var))
+            ax2.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
+            ax2.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
+            ax2.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
+            ax2.set_xlim(-50, 50)
+            ax2.set_ylim(-30, 50)
+            ax2.set_zlim(-50, 50)
+            fig_pca_per_state.show()
+            pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Subject-{}-Motifs'.format(onedrive_path, project_name, n_cluster)
+            Path(pwd).mkdir(exist_ok=True)
+            fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
+            fname_pdf =  "PCs of {}-{} State {}.pdf".format(titles[j], sub_name, g)
+            fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
+            fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+            plt.close('all')
+
+
 
 
             #  state-population wise
@@ -495,9 +547,9 @@ ax.set_ylabel('volume of state')
 ax.set_ylim([-500, 2000])
 ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
 fig.show()
-# pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual\epoch'
-# fname = "Volume of state {}.png".format(g)
-# fig.savefig(os.path.join(pwd, fname))
+pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch'.format(onedrive_path, project_name)
+fname = "Volume of state {}.png".format(g)
+fig.savefig(os.path.join(pwd, fname))
 #%%
 from matplotlib.animation import FuncAnimation
 fig, ax = plt.subplots(figsize=(10, 10))
@@ -527,7 +579,6 @@ plt.show()
 cmap = plt.get_cmap('tab20')
 for j, videos in enumerate([control_videos, BD_videos]):
     color = 'C{}'.format(j)
-
     for sub in range(12):
         sub_name = videos[sub]
         fig, ax = plt.subplots(1, 1, figsize=(6, 4))
@@ -540,28 +591,34 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax.set_ylabel('volume of state')
         ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
         fig.show()
-        pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\PCA_visual'
-        fname = "{}_{}_volumn.png".format(sub_name, n_cluster)
-        fig.savefig(os.path.join(pwd, fname))
+        pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\volume'.format(onedrive_path, project_name)
+
+        Path(pwd).mkdir(exist_ok=True, parents=True)
+        fname = "{}_{}_volume.png".format(sub_name, n_cluster)
+        fig.savefig(os.path.join(pwd, fname),transparent=True)
+        fname_pdf = "{}_{}_volume.pdf".format(sub_name, n_cluster)
+        fig.savefig(os.path.join(pwd, fname_pdf),transparent=True)
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 x = np.arange(10)
 for sub in range(12):
-    ax.scatter(x, K_var_all_subjects[sub, :, 0], c='C0', alpha=0.5)
-    ax.scatter(x+0.2, K_var_all_subjects[sub, :, 1], c='C1', alpha=0.5)
+    ax.scatter(x, K_var_all_subjects[sub, :, 0], c=b_o_colors[0], alpha=0.5)
+    ax.scatter(x+0.2, K_var_all_subjects[sub, :, 1], c=b_o_colors[1], alpha=0.5)
     x = np.arange(10)
 
-ax.plot(x, np.median(K_var_all_subjects[:, :, 0],axis=0), '-^', color='C0')
-ax.plot(x, np.median(K_var_all_subjects[:, :, 1],axis=0),'-^', color='C1')
+ax.plot(x, np.mean(K_var_all_subjects[:, :, 0],axis=0), '-^', color=b_o_colors[0])
+ax.plot(x, np.mean(K_var_all_subjects[:, :, 1],axis=0),'-^', color=b_o_colors[1])
 ax.set_title('Volume of state')
 ax.set_xticks(x)
 ax.set_xlabel('State')
 ax.set_ylabel('volume of state')
 ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
 fig.show()
-pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
-fname = "{}_volume.png".format(n_cluster)
-fig.savefig(os.path.join(pwd, fname))
+pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\volume'.format(onedrive_path, project_name)
+fname = "{}_volume-mean.png".format(n_cluster)
+fname_pdf = "{}_volume-mean.pdf".format(n_cluster)
+fig.savefig(os.path.join(pwd, fname),transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf),transparent=True)
 #%% Epoch-wise plot
 
 
@@ -572,7 +629,7 @@ cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
 pca = PCA(n_components=3)
 K_var = [np.zeros((10, 3)), np.zeros((10, 3))]
-K_var_all_subjects = [np.zeros((12,10, 3)), np.zeros((12, 10, 3))]
+K_var_all_subjects = [np.zeros((n_subject_in_population,10, 3)), np.zeros((n_subject_in_population, 10, 3))]
 for j, videos in enumerate([control_videos, BD_videos]):
     for epoch in range(1, 4):
         latent_vec = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
@@ -582,7 +639,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         principalDf = pd.DataFrame(data=components)
         finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
         finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
-        for sub in range(12):
+        for sub in range(n_subject_in_population):
             latent_vec_sub = latent_vec_trim[0: Latent_len_epoch[epoch-1][j][sub]]
             latent_vec_trim = latent_vec_trim[Latent_len_epoch[epoch-1][j][sub]:]
 
@@ -612,8 +669,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 # fig_pca_per_state = plt.figure(figsize=(10, 10))
                 # ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
                 #
-                # ax.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                #            color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
+                # # ax.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                # #            color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
                 # ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
                 #             color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
                 #
@@ -632,7 +689,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 # ax2.set_ylim(-30, 30)
                 # ax2.set_zlim(-40, 40)
                 # fig_pca_per_state.show()
-                # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+                # pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual'
                 # fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
                 # fig_pca_per_state.savefig(os.path.join(pwd, fname))
 
@@ -648,10 +705,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 fig_pca_per_state = plt.figure(figsize=(10, 10))
                 ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
 
-                ax.scatter(components[i, 0], components[i, 1], components[i, 2],norm=plt.Normalize(vmin=0, vmax=9),
-                                  color=cmap(g * 2 + j), s=3, alpha=0.1, label='%d' % g)
-                ax2.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                           color=cmap(g * 2 + j), s=3, alpha=0.1, label='%d' % g)
+                # ax.scatter(components[i, 0], components[i, 1], components[i, 2],norm=plt.Normalize(vmin=0, vmax=9),s=3, color=cmap(g * 2 + j), s=3, alpha=0.1, label='%d' % g)
+                ax2.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),s=3, color=cmap(g * 2 + j),  alpha=0.1, label='%d' % g)
 
             ax2.set_title("PCs of {}-State-{}-Epoch-{} \n volume:{:.2f}".format(titles[j], g,epoch, volume_of_group))
             ax2.set_xlabel('PC 1')
@@ -668,9 +723,12 @@ for j, videos in enumerate([control_videos, BD_videos]):
             ax2.set_ylim(-30, 30)
             ax2.set_zlim(-40, 40)
             fig_pca_per_state.show()
-            pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual\epoch'
+            pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch'.format(onedrive_path, project_name)
+            Path(pwd).mkdir(parents=True, exist_ok=True)
             fname = "PCs of {} State {} Epoch {}.png".format(titles[j], g, epoch)
-            # fig_pca_per_state.savefig(os.path.join(pwd, fname))
+            fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
+            fname_pdf = "PCs of {} State {} Epoch {}.pdf".format(titles[j], g, epoch)
+            fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 #%%
 for g in range(n_cluster):
@@ -684,7 +742,7 @@ for g in range(n_cluster):
     ax.set_ylabel('volume of state')
     ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
     fig.show()
-    pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual\epoch'
+    pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\volume'.format(onedrive_path, project_name)
     fname = "Volume of state {}.png".format(g)
     fig.savefig(os.path.join(pwd, fname))
 #%%
@@ -704,9 +762,11 @@ for epoch in range(3):
             ax.set_ylabel('volume of state')
             ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
             fig.show()
-            pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
-            fname = "{}_{}_epoch{}_volumn.png".format(sub_name, n_cluster, epoch+1)
+            pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\volume'.format(onedrive_path, project_name)
+            fname = "{}_{}_epoch{}_volume.png".format(sub_name, n_cluster, epoch+1)
             fig.savefig(os.path.join(pwd, fname))
+            fname_pdf = "{}_{}_epoch{}_volume.pdf".format(sub_name, n_cluster, epoch+1)
+            fig.savefig(os.path.join(pwd, fname_pdf))
 #%%
 for epoch in range(3):
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
@@ -726,6 +786,6 @@ for epoch in range(3):
     ax.set_ylabel('volume of state')
     ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
     fig.show()
-    pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
+    pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual'.format(onedrive_path, project_name)
     fname = "{}_volume_epoch_{}.png".format(n_cluster, epoch)
     fig.savefig(os.path.join(pwd, fname))

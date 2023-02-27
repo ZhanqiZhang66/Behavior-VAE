@@ -12,30 +12,38 @@ import vame
 import pandas as pd
 from vame.analysis.community_analysis import  read_config
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+#%%
 sys.path.append(r"D:\OneDrive - UC San Diego\GitHub\VAME")   #Victoria local
 sys.path.append(r"D:\OneDrive - UC San Diego\GitHub\markov-chain")
+#%%
+vame_pth = r"D:\OneDrive - UC San Diego\GitHub\VAME"
+sys.path.append(r"C:\Users\zhanq\OneDrive - UC San Diego\GitHub\VAME")   #Victoria local
+sys.path.append(r"C:\Users\zhanq\OneDrive - UC San Diego\GitHub\markov-chain")
+
 #%% 1.0 video files & directories
-video_dir = r'G:\hBPM_BD_Control_Iter2\hBPM_BD_Control_Iter2'
+#video_dir = r'G:\hBPM_BD_Control_Iter2\hBPM_BD_Control_Iter2'
+video_dir = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\Cosyne_50_videos'
 videos = []
 for filename in os.listdir(video_dir):
     if filename.endswith('.mpg'):
         fpath = os.path.join(video_dir, filename)
         videos.append(fpath)
 #%% 1.1 create new config
+data_pth = 'C:/Users/zhanq/OneDrive - UC San Diego/Behavior_VAE_data/'
 config = vame.init_new_project(project='BD20',
                                videos=videos,
-                               working_directory='D:/OneDrive - UC San Diego/Bahavior_VAE_data/',
+                               working_directory=data_pth,
                                videotype='.mpg')
 #%% OR 1.2 load pre-defined config
 #project_name = 'BD20-Oct20-2022'
-project_name = 'BD20-Jun5-2022'
-config = 'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\config.yaml'.format(project_name)
+project_name = 'BD20-Feb25-2023'
+config = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\{}\config.yaml'.format(project_name)
 
 #%% Edit config file
 print("edit n_cluster, zdims, num_features=(#dlc labels x2), kmeans_loss=(n_cluster)")
 
 #%% 1.5 load start frame (frame that person completely entered the room) Elizabeth label
-start_frame = pd.read_csv('G:\start_frame.csv')
+start_frame = pd.read_csv(r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\start_frame_vic_50.csv',  usecols=[0,1])
 start_frame = start_frame.set_index('video_name').T.to_dict('list')
 #%% 2. egocentric alignment
 vame.egocentric_alignment(config,
@@ -324,7 +332,7 @@ for i in range(len(videos)):
     plt.title("{}-{}".format(t, v))
     plt.tight_layout()
     plt.box('off')
-    plt.savefig(os.path.join(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\graphs', "net_" + str(n_cluster) + v + '.png'))
+    plt.savefig(os.path.join(r'D:\OneDrive - UC San Diego\Behavior_VAE_data\BD20-Jun5-2022\figure\graphs', "net_" + str(n_cluster) + v + '.png'))
 
 
     scc = nx.kosaraju_strongly_connected_components(G)
