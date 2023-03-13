@@ -24,21 +24,49 @@ import pandas as pd
 import glob
 import datetime
 import cv2
+#%%
+if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
+    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    github_path = r'D:\OneDrive - UC San Diego\GitHub'
+else:
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 #%% Define Project
-project_name = 'BD20-Jun5-2022'
-path_to_file= 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
-config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+project_name = 'BD20-Feb25-2023'
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-start_frame = pd.read_csv('G:\start_frame_vic.csv')
-start_frame = start_frame.set_index('video_name').T.to_dict('list')
-#%% Read DLC readings
-csv_path = r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\{}\videos\pose_estimation'.format(project_name)
+dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
+n_cluster = 10
+model_name = 'VAME'
+path_to_file = cfg['project_path']
+#TODO gender-wise CP-male, CP-female
+control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA',
+                  'BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU',
+                  'BC1MOKI','BC1NITA','BC1BRPO','BC1BRSC','BC1CERO',
+                  'BC1COGR','BC1DAAR','BC1DEBR','BC1FEMO','BC1GESA',
+                  'BC1GRLE','BC1HAKO','BC1HETR','BC1JECO','BC1JUPA']
+#TODO gender-wise [BD-male, BD-female]
+BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO',
+                  'BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU',
+                  'BC1MISE','BC1OKBA','CASH1','GRCH','BC1AMMU',
+                  'GRJO1','HESN1','JEPT1','JETH1','LABO1',
+                  'MAFL','MIHA1','MIRU1','PANU','ROEA1']
+dlc_labels = ['label', 'l-eyex','l-eyey','r-eyex','r-eyey','l_earx','l_eary','r_earx',	'r_eary'	,
+                                          'mouthx',	'mouthy','center_neckx','center_necky',	'l_shox','l_shoy','r_shox',	'r_shoy',
+                                          'l-elbx',	'l-elby','r-elbx'	,'r-elby'	,'l-handx',	'l-handy',	'r-handx','r-handy',
+                                          'center_hipx','center_hipy','l-hipx','l-hipy','r-hipx','r-hipy','l-kneex','l-kneey',
+                                          'r-kneex','r-kneey','l-feetx','l-feety','r-feetx','r-feety','center_feetx','center_feety']
+n_subject_in_population = len(control_videos)
+start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
+csv_path = os.path.join(cfg['project_path'],"videos","\pose_estimation")
 confidence = 0.9
-
+#%% Read DLC readings
 for nf, filename in enumerate(os.listdir(csv_path)):
-    f_start_frame = start_frame[filename[:-4]][0]
+    v = filename[:-4]
+    v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
+    f_start_frame = start_frame.loc[v_index, 'door_close']
+
 
     data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', filename), skiprows=2)
     data_mat0 = pd.DataFrame.to_numpy(data)
@@ -59,6 +87,7 @@ for nf, filename in enumerate(os.listdir(csv_path)):
             if k[2] <= confidence:
                 k[0], k[1] = np.nanmean(temp_org[lower_bound:upper_bound, 0]), np.nanmean(temp_org[lower_bound:upper_bound, 1])
         pose_list_org = temp_org[:,0:2] if i == 0 else np.concatenate([pose_list_org, temp_org[:, :2]],axis=1)
+    print(f"Saving %{confidence*100} {v} pose estimation data...\n")
     pose_list1 = pose_list - np.nan_to_num(pose_list[0,:], nan=0)
     #np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq.npy'), pose_list)
     np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_original_smoothed.npy'), pose_list_org)
@@ -68,21 +97,18 @@ for nf, filename in enumerate(os.listdir(csv_path)):
 # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'cat-90pct_seq.npy'), time_seq_cat)
 # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm-90pct_seq_normalized.npy'), time_seq_normalize_cat)
 #%% plot deeplabcut with motif usage, and deeplabcut trajectory in room
-project_name = 'BD20-Jun5-2022'
-path_to_file = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}'.format(project_name)
-csv_path = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\videos\pose_estimation'.format(project_name)
-confidence = 0.9
-n_cluster = 10
-
 load_presaved  = 1
+#%%
 group = ['CP','BD']
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
         v = videos[i]
         if not load_presaved:
-            f_start_frame = start_frame[v][0]
-            label = np.load(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(project_name, v, n_cluster, n_cluster, v))
+            v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
+            f_start_frame = start_frame.loc[v_index, 'door_close']
+
+            label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v, n_cluster, n_cluster, v))
             data = pd.read_csv(os.path.join(csv_path, v + '.csv'), skiprows=2)
             frame_count = len(data)
             f_start_frame = frame_count - len(label)  # the old f_start_frame by Victoria
@@ -113,15 +139,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
             np.save(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq_original.npy'), pose_list_original)
         else:
             label = np.load(
-                r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
-                    project_name, v, n_cluster, n_cluster, v))
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
+                    onedrive_path, project_name, v, n_cluster, n_cluster, v))
             data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
             d = np.concatenate((label.reshape(-1, 1), data), axis=1)
-            df = pd.DataFrame(d, columns=['label', 'l-eyex','l-eyey','r-eyex','r-eyey','l_earx','l_eary','r_earx',	'r_eary'	,
-                                          'mouthx',	'mouthy','center_neckx','center_necky',	'l_shox','l_shoy','r_shox',	'r_shoy',
-                                          'l-elbx',	'l-elby','r-elbx'	,'r-elby'	,'l-handx',	'l-handy',	'r-handx','r-handy',
-                                          'center_hipx','center_hipy','l-hipx','l-hipy','r-hipx','r-hipy','l-kneex','l-kneey',
-                                          'r-kneex','r-kneey','l-feetx','l-feety','r-feetx','r-feety','center_feetx','center_feety'])
+            df = pd.DataFrame(d, columns=dlc_labels)
 
             for body_i in range(1, 41, 2):
                 print(df.columns[body_i][:-1])
@@ -173,7 +195,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 ax.set_ylim([0, 720])
                 plt.title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
                 plt.show()
-                pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell_time_n_dlc'
+                pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
                 fname = "{}-{}_{}_{}_dwell_time_dlc.png".format(group[j],v, n_cluster, df.columns[body_i][:-1])
                 fname_pdf = "{}-{}_{}_{}_dwell_time_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
                 fig.savefig(os.path.join(pwd, fname), transparent=True)
@@ -191,7 +213,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 ax.set_title('{}-{}-{} x position'.format(group[j], v, df.columns[body_i][:-1]))
                 fig.colorbar(scatter_plt)
                 fig.show()
-                pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell_time_n_dlc'
+                pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
                 fname = "{}-{}_{}_{}_dwell_time_dlc_plain_xpos.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
                 fname_pdf = "{}-{}_{}_{}_trajectory_dlc_plain_xpos.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
                 fig.savefig(os.path.join(pwd, fname), transparent=True)
@@ -199,7 +221,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
                 # plot trajectory
                 fig, ax = plt.subplots(figsize=(10,5))
-                img = matplotlib.image.imread(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\DLC raw\background.png')
+                img = matplotlib.image.imread(r'{}\Behavior_VAE_data\DLC raw\background.png'.format(onedrive_path))
                 img = cv2.flip(img, 0)
                 room = ax.imshow(img)
                 cmap = plt.get_cmap('plasma')
@@ -212,7 +234,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
                 fig.colorbar(scatter_plt)
                 fig.show()
-                pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\dwell_time_n_dlc'
+                pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
                 fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
                 fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
                 fig.savefig(os.path.join(pwd, fname), transparent=True)

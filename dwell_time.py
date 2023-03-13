@@ -49,10 +49,14 @@ BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO',
 n_subject_in_population = len(control_videos)
 start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
 diagnosis_score = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,4,5])#pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
+gender_list = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,7])
+
 YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
 YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
 HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
 HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
+gender = gender_list[['video_name','Gender']]
+gender = gender.set_index('video_name').T.to_dict('list')
 #%%
 YMRS_score = []
 HAM_D_score = []
@@ -175,10 +179,10 @@ for i in range(n_cluster):
     BD = motif_usage_cat[1,:,i].reshape(-1,1)
     s = stats.ttest_ind(CP, BD)
     print("motif  {}, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic[0], s.pvalue[0]))
-    corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP,BD), HAM_D_score)
-    corr_YMRS_score= scipy.stats.pearsonr(np.append(CP,BD), YMRS_score)
-    print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
-    print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
+    corr_HAM_D_score = scipy.stats.pearsonr(motif_usage_cat[0,:,i], HAM_D_score[:n_subject_in_population])
+    corr_YMRS_score= scipy.stats.pearsonr(motif_usage_cat[0,:,i], YMRS_score[:n_subject_in_population])
+    print("          YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
+    print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
 
     # only correlate with BD list
     corr_HAM_D_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], HAM_D_score[n_subject_in_population:])
@@ -298,8 +302,8 @@ for epoch in range(1, 4):
         s = stats.ttest_ind(CP, BD, nan_policy='omit')
         print("  motif  {}, t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
 
-        corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
-        corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
+        corr_HAM_D_score = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
+        corr_YMRS_score = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
         print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
         print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
 
