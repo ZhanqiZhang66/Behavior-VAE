@@ -31,7 +31,7 @@ project_name = 'BD20-Feb25-2023'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
 dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
-n_cluster = 10
+n_cluster = 30
 model_name = 'VAME'
 
 #TODO gender-wise CP-male, CP-female
@@ -319,16 +319,29 @@ latent_ds = pd.DataFrame(np.concatenate((
     np.concatenate((CP_idx, BD_idx),0).reshape(-1, 1)), 1),
     columns=metric_names)
 for i in range(num_metrics):
+    print(f"          {metric_names[i]}\n")
     sns.violinplot(x=metric_names[-1], y=metric_names[i],
                 data=latent_ds, palette="muted", ax=axes[i])
     sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
                   color="white", edgecolor="gray", ax=axes[i])
     CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
     BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
-    corr_HAM_D_score, _ = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
-    corr_YMRS_score, _ = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
-    print("corr_HAM_D_score:", corr_HAM_D_score)
-    print("corr_YMRS_score:", corr_YMRS_score)
+    corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
+    corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
+    print("          YMARS-all: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
+    print("          HAM_D-all: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
+
+
+    corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
+    corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
+    corr_HAM_D_score_CP = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
+    corr_YMRS_score_CP = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
+    print("          YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_CP[0], corr_YMRS_score_CP[1]))
+    print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_CP[0], corr_HAM_D_score_CP[1]))
+    print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
+    print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
+    # print("corr_HAM_D_score:", corr_HAM_D_score)
+    # print("corr_YMRS_score:", corr_YMRS_score)
     s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
     print("{} t-stat: {:.2f}, p-val: {:.3f}".format(metric_names[i], s.statistic, s.pvalue))
     axes[i].set_xticklabels(['CP','BD'])
@@ -417,7 +430,7 @@ for epoch in range(1,4):
     num_zero_rows = eval("Epoch{}_num_zero_rows".format(epoch))
     num_ones = eval("Epoch{}_num_ones".format(epoch))
     num_zeros = eval("Epoch{}_num_zeros".format(epoch))
-    print("Epoch {}".format(epoch))
+    print("\nEpoch {}\n".format(epoch))
 
     fig, axes = plt.subplots(num_metrics, figsize=(5, 10))
     sns.set_style('darkgrid')
@@ -437,6 +450,20 @@ for epoch in range(1,4):
                       color="white", edgecolor="gray", ax=axes[i])
         CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
         BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
+
+        corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
+        corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
+        print("          YMARS-all: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
+        print("          HAM_D-all: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
+
+        corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
+        corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
+        corr_HAM_D_score_CP = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
+        corr_YMRS_score_CP = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
+        print("          YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_CP[0], corr_YMRS_score_CP[1]))
+        print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_CP[0], corr_HAM_D_score_CP[1]))
+        print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
+        print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
         s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
         print("{} , t-stat: {:.2f}, p-val: {:.3f}".format(metric_names[i], s.statistic, s.pvalue))
         axes[i].set_xticklabels(['CP', 'BD'])
@@ -489,12 +516,14 @@ for epoch in range(1,4):
     epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1]).squeeze()
     for i in range(n_subject_in_population * 2):
         fig, axes = plt.subplots(1,1, figsize=(3,3))
-        im = axes.imshow(epoch_tm_[i], cmap='viridis')
-        plt.grid(None)
+        im = axes.imshow(epoch_tm_[i], cmap='viridis', vmin=0, vmax=1)
+        plt.grid(False)
         axes.set_title(patient_names[i])
         axes.set_xticks(np.arange(n_cluster), np.arange(n_cluster))
         axes.set_yticks(np.arange(n_cluster), np.arange(n_cluster))
+
         plt.colorbar(im, ax=axes)
+
         fig.show()
         if i < n_subject_in_population:
             population = 'HC'

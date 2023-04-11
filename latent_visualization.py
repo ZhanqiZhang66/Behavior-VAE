@@ -17,7 +17,7 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 #%%
-%%
+
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'

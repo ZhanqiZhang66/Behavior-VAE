@@ -17,7 +17,7 @@ sys.path.append(r"D:\OneDrive - UC San Diego\GitHub\VAME")   #Victoria local
 sys.path.append(r"D:\OneDrive - UC San Diego\GitHub\markov-chain")
 #%%
 vame_pth = r"D:\OneDrive - UC San Diego\GitHub\VAME"
-sys.path.append(r"C:\Users\zhanq\OneDrive - UC San Diego\GitHub\VAME")   #Victoria local
+sys.path.append(r"C:\Users\zhanq\OneDrive - UC San Diego\GitHub\VAME")   #Victoria work
 sys.path.append(r"C:\Users\zhanq\OneDrive - UC San Diego\GitHub\markov-chain")
 
 #%% 1.0 video files & directories
