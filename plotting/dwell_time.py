@@ -4,7 +4,6 @@
 # Scenario:
 # Usage:
 #%%
-
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -12,6 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import scipy
 from scipy import stats
+from scipy.stats import permutation_test
 from pathlib import Path
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
@@ -20,8 +20,6 @@ from vame.analysis.pose_segmentation import get_motif_usage
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
-elif os.environ['COMPUTERNAME'] == 'MISHNE_DESKTOP':
-    onedrive_path = r'C:\Users\kietc\OneDrive - UC San Diego'
 elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
 else:
@@ -59,47 +57,6 @@ HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','H
 HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
 gender = gender_list[['video_name','Gender']]
 gender = gender.set_index('video_name').T.to_dict('list')
-
-# %%
-import csv
-project_name = 'BD25-HC25-final-May17-2023'
-videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", 
-              "BC1ANBU", "BC1ANGA", "BC1ANHE", "BC1ANWI", "BC1ASKA", 
-              "BC1ATKU", "BC1BRBU", "BC1BRPO", "BC1BRSC", "BC1CERO", 
-              "BC1CISI", "BC1COGR", "BC1DAAR", "BC1DOBO", 
-              "BC1FEMO", "BC1GESA", "BC1GRLE", "BC1HAKO", "BC1HETR", 
-              "BC1JACL", "BC1JECO", "BC1JUPA", "BC1JUST", "BC1KEMA", 
-              "BC1LABO", "BC1LACA", "BC1LESA", "BC1LOKE", "BC1LOMI", 
-              "BC1LUOR", "BC1LUSE", "BC1MAMA", "BC1MEMA", "BC1MISE", 
-              "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", 
-              "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
-
-# %% Generate dv_data.csv
-out_file = "../data/dv_data.csv"
-
-# writing to csv file
-with open(out_file, 'w') as csvfile:
-    csvwriter = csv.writer(csvfile, lineterminator='\n')
-    csvwriter.writerow(['', 'm0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'])
-    for v in videos:
-        print("Loading {} data...".format(v))
-        label = np.load(
-            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name,
-                                                                                            v, n_cluster, n_cluster, v))
-        transition_m = np.load(
-            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(
-                onedrive_path, project_name, v, n_cluster, v))
-        cluster_center = np.load(
-            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,
-                                                                                                project_name, v,
-                                                                                                n_cluster, v))
-        motif_usage = np.load(
-            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name,
-                                                                                            v, n_cluster, v))
-        vec = motif_usage.tolist()
-        vec.insert(0, v)
-        csvwriter.writerow(vec + transition_m.flatten().tolist())
-
 #%%
 YMRS_score = []
 HAM_D_score = []
@@ -137,7 +94,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         v = videos[i]
         YMRS_score.append(YMRS[v][0])
         HAM_D_score.append(HAM_D[v][0])
-        print("Loading {} data...".format(v))
+        print("Loading {}-{} data {}/{}...".format(v, titles[j], i, len(videos)))
         label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
         transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
         cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
@@ -191,15 +148,18 @@ for j, videos in enumerate([control_videos, BD_videos]):
             m_e1 = epoch_1_motif_usage
             m_e2 = epoch_2_motif_usage
             m_e3 = epoch_3_motif_usage
+            print(np.shape(m_e3))
         else:
+
             latent = np.concatenate([latent, latent_vector])
             l = np.concatenate([l,label])
             m += motif_usage
             tm += transition_m
             Cluster_center.append(cluster_center)
-            m_e1 += epoch_1_motif_usage
-            m_e2 += epoch_2_motif_usage
-            m_e3 += epoch_3_motif_usage
+            m_e1 += np.asarray(epoch_1_motif_usage)
+            m_e2 += np.asarray(epoch_2_motif_usage)
+            m_e3 += np.asarray(epoch_3_motif_usage)
+            print(np.shape(m_e3))
 
         motif_usage_cat[j].append(motif_usage/ np.sum(motif_usage))
         num_points = latent_vector.shape[0]
@@ -213,19 +173,29 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Latent_vectors[j] = latent
     Labels[j] = l
     TM[j] = tm/len(videos)
+
 #%% Population-wise analysis
 #%% between motif paired t test and score correltion
+def statistic(x, y, axis):
+    return np.mean(x, axis=axis) - np.mean(y, axis=axis)
 motif_usage_cat = np.asarray(motif_usage_cat)
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 for i in range(n_cluster):
     CP = motif_usage_cat[0,:,i].reshape(-1,1)
     BD = motif_usage_cat[1,:,i].reshape(-1,1)
     s = stats.ttest_ind(CP, BD)
+    # because our statistic is vectorized, we pass `vectorized=True`
+    # `n_resamples=np.inf` indicates that an exact test is to be performed
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
+    res = permutation_test((CP, BD), statistic, permutation_type='sampled', vectorized=True,
+                           n_resamples=np.inf, alternative='less')
     print("motif  {}, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic[0], s.pvalue[0]))
+    print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score = scipy.stats.pearsonr(motif_usage_cat[0,:,i], HAM_D_score[:n_subject_in_population])
     corr_YMRS_score= scipy.stats.pearsonr(motif_usage_cat[0,:,i], YMRS_score[:n_subject_in_population])
     print("          YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
     print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
+
 
     # only correlate with BD list
     corr_HAM_D_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], HAM_D_score[n_subject_in_population:])
