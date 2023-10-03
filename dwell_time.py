@@ -20,6 +20,8 @@ from vame.analysis.pose_segmentation import get_motif_usage
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+elif os.environ['COMPUTERNAME'] == 'MISHNE_DESKTOP':
+    onedrive_path = r'C:\Users\kietc\OneDrive - UC San Diego'
 elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
 else:
@@ -57,6 +59,47 @@ HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','H
 HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
 gender = gender_list[['video_name','Gender']]
 gender = gender.set_index('video_name').T.to_dict('list')
+
+# %%
+import csv
+project_name = 'BD25-HC25-final-May17-2023'
+videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", 
+              "BC1ANBU", "BC1ANGA", "BC1ANHE", "BC1ANWI", "BC1ASKA", 
+              "BC1ATKU", "BC1BRBU", "BC1BRPO", "BC1BRSC", "BC1CERO", 
+              "BC1CISI", "BC1COGR", "BC1DAAR", "BC1DOBO", 
+              "BC1FEMO", "BC1GESA", "BC1GRLE", "BC1HAKO", "BC1HETR", 
+              "BC1JACL", "BC1JECO", "BC1JUPA", "BC1JUST", "BC1KEMA", 
+              "BC1LABO", "BC1LACA", "BC1LESA", "BC1LOKE", "BC1LOMI", 
+              "BC1LUOR", "BC1LUSE", "BC1MAMA", "BC1MEMA", "BC1MISE", 
+              "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", 
+              "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
+
+# %% Generate dv_data.csv
+out_file = "../data/dv_data.csv"
+
+# writing to csv file
+with open(out_file, 'w') as csvfile:
+    csvwriter = csv.writer(csvfile, lineterminator='\n')
+    csvwriter.writerow(['', 'm0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9'])
+    for v in videos:
+        print("Loading {} data...".format(v))
+        label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name,
+                                                                                            v, n_cluster, n_cluster, v))
+        transition_m = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, v))
+        cluster_center = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,
+                                                                                                project_name, v,
+                                                                                                n_cluster, v))
+        motif_usage = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name,
+                                                                                            v, n_cluster, v))
+        vec = motif_usage.tolist()
+        vec.insert(0, v)
+        csvwriter.writerow(vec + transition_m.flatten().tolist())
+
 #%%
 YMRS_score = []
 HAM_D_score = []

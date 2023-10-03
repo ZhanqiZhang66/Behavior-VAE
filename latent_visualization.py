@@ -21,6 +21,8 @@ from vame.analysis.pose_segmentation import get_motif_usage
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+elif os.environ['COMPUTERNAME'] == 'MISHNE_DESKTOP':
+    onedrive_path = r'C:\Users\kietc\OneDrive - UC San Diego'
 elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
 else:
@@ -54,6 +56,8 @@ YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', '
 YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
 HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
 HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
+
+
 #%%
 titles = ["CP", "BD"]
 N = [0, 0]
