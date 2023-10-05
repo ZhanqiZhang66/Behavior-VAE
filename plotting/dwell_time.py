@@ -380,3 +380,4 @@ for epoch in range(1, 4):
     ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
     fig.show()
 
+
