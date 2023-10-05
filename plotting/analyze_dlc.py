@@ -24,6 +24,9 @@ import pandas as pd
 import glob
 import datetime
 import cv2
+from pathlib import Path
+import pathlib
+from data.load_data import load_pt_data
 #%% Paths
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -45,36 +48,30 @@ else:
 
 
 #%% plot deeplabcut with motif usage, and deeplabcut trajectory in room
-load_filtered_DLC  = 1
+load_filtered_DLC = 1 # 0: remove markers under 90% confidence, otherwise, 1: just loaded the filtered DLC
 compute_significance = 1
-show_DLC_in_room_over_time = 1
+show_DLC_in_room_over_time = 0 # show DLC trajectory in room
 #%% Define Project
-project_name = 'BD20-Feb25-2023'
+project_name = 'BD25-HC25-final-May17-2023'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
 dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 model_name = 'VAME'
 path_to_file = cfg['project_path']
-#TODO gender-wise CP-male, CP-female
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA',
-                  'BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU',
-                  'BC1MOKI','BC1NITA','BC1BRPO','BC1BRSC','BC1CERO',
-                  'BC1COGR','BC1DAAR','BC1DEBR','BC1FEMO','BC1GESA',
-                  'BC1GRLE','BC1HAKO','BC1HETR','BC1JECO','BC1JUPA']
-#TODO gender-wise [BD-male, BD-female]
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO',
-                  'BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU',
-                  'BC1MISE','BC1OKBA','CASH1','GRCH','BC1AMMU',
-                  'GRJO1','HESN1','JEPT1','JETH1','LABO1',
-                  'MAFL','MIHA1','MIRU1','PANU','ROEA1']
-dlc_labels = ['label', 'l-eyex','l-eyey','r-eyex','r-eyey','l_earx','l_eary','r_earx',	'r_eary'	,
-                                          'mouthx',	'mouthy','center_neckx','center_necky',	'l_shox','l_shoy','r_shox',	'r_shoy',
-                                          'l-elbx',	'l-elby','r-elbx'	,'r-elby'	,'l-handx',	'l-handy',	'r-handx','r-handy',
-                                          'center_hipx','center_hipy','l-hipx','l-hipy','r-hipx','r-hipy','l-kneex','l-kneey',
-                                          'r-kneex','r-kneey','l-feetx','l-feety','r-feetx','r-feety','center_feetx','center_feety']
+
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
+
+dlc_labels = ['label', 'l-eyex','l-eyey','r-eyex','r-eyey','l_earx','l_eary','r_earx',	'r_eary',
+              'mouthx',	'mouthy','center_neckx','center_necky',	'l_shox','l_shoy','r_shox',	'r_shoy',
+              'l-elbx',	'l-elby','r-elbx'	,'r-elby'	,'l-handx',	'l-handy',	'r-handx','r-handy',
+              'center_hipx','center_hipy','l-hipx','l-hipy','r-hipx','r-hipy','l-kneex','l-kneey',
+              'r-kneex','r-kneey','l-feetx','l-feety','r-feetx','r-feety','center_feetx','center_feety'
+              ]
 n_subject_in_population = len(control_videos)
-start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
+
 csv_path = os.path.join(cfg['project_path'],"videos","pose_estimation")
 confidence = 0.9
 #%% Read DLC readings
@@ -117,24 +114,24 @@ confidence = 0.9
 
 #%%
 group = ['CP','BD']
-
+temp_win = cfg['time_window']
 #%%
 unfiltered_DLC_data_cat = []
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
         v = videos[i]
+
+        f_start_frame = start_frame[v][0]  # f_start_frame = frame_count - len(label)  # the old f_start_frame by Victoria
+
+        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name,
+                                                                                           v, n_cluster, n_cluster, v))
+        data = pd.read_csv(os.path.join(csv_path, v + '.csv'), skiprows=2)
+        frame_count = len(data)
+
+        data_mat_original = pd.DataFrame.to_numpy(data)
+        data_mat = data_mat_original[f_start_frame:, 1:]
         if not load_filtered_DLC:
-            v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
-            f_start_frame = start_frame.loc[v_index, 'door_close']      # f_start_frame = frame_count - len(label)  # the old f_start_frame by Victoria
-
-            label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v, n_cluster, n_cluster, v))
-            data = pd.read_csv(os.path.join(csv_path, v + '.csv'), skiprows=2)
-            frame_count = len(data)
-
-
-            data_mat_original = pd.DataFrame.to_numpy(data)
-            data_mat = data_mat_original[f_start_frame:, 1:]
             # get the coordinates for alignment from data table
             for i in range(int(data_mat.shape[1] / 3)):
                 temp = data_mat[:, i * 3:(i + 1) * 3]
@@ -155,21 +152,38 @@ for j, videos in enumerate([control_videos, BD_videos]):
                         temp_original[k_idx, 0] = k[0]
                         temp_original[k_idx, 1] = k[1]
                 pose_list_original = temp_original[:, 0:2] if i == 0 else np.concatenate([pose_list_original, temp_original[:, :2]], axis=1)
-            np.save(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'), pose_list)
-            np.save(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq_original.npy'), pose_list_original)
+            pwd = r'{}\data\pose_sequence'.format(path_to_file)
+            Path(pwd).mkdir(exist_ok=True)
+            np.save(os.path.join(pwd, v + '-90pct_seq.npy'), pose_list)
+            np.save(os.path.join(pwd, v + '-90pct_seq_original.npy'), pose_list_original)
         else:
-
-
             unfiltered_DLC_data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', v+'.csv'), skiprows=2)
             unfiltered_DLC_data_np = pd.DataFrame.to_numpy(unfiltered_DLC_data)
             unfiltered_DLC_data_np = unfiltered_DLC_data_np[f_start_frame:, 1:]
+
+            save_data = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+            if not os.path.exists(
+                    os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")):
+                try:
+                    pathlib.Path(
+                        os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster),
+                                     "")).mkdir(parents=True)
+
+                    print('create path ----')
+                except OSError as error:
+                    print(error)
+
+            print("saving ", v)
+            np.save(os.path.join(save_data, 'dlc_vector_' + v), unfiltered_DLC_data_np)
             unfiltered_DLC_data_cat.append(unfiltered_DLC_data_np)
 
             label = np.load(
                 r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
                     onedrive_path, project_name, v, n_cluster, n_cluster, v))
             data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
-            d = np.concatenate((label.reshape(-1, 1), data), axis=1)
+            # latent vector has time window of temp_win, thus is temp_win shorter than data
+            # we need to crop data to match latent vector
+            d = np.concatenate((label.reshape(-1, 1), data[temp_win//2:-temp_win//2]), axis=1)
             df = pd.DataFrame(d, columns=dlc_labels)
 
 
@@ -271,7 +285,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
 
                     plt.close('all')
-#%%
+print("Finished cleaning or loading the DLC data\n")
+#%%  Compute K-means clustering on raw DLC data
+print("Compute K-means clustering on raw DLC data\n")
 unfiltered_DLC_data_cat = np.concatenate(unfiltered_DLC_data_cat, axis=0)
 kmeans = KMeans(n_clusters=n_cluster, random_state=0, n_init=10).fit(unfiltered_DLC_data_cat)
 kmeans_labels = kmeans.labels_
@@ -302,7 +318,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         idx += file_len
         count += 1
-
+print("\n Finished K-means clustering on raw DLC data")
 #%% Fit Kmeans to cluster 20 temporal sequences
 
 import numpy as np
