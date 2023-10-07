@@ -12,18 +12,29 @@ import datetime
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
+from data.load_data import load_pt_data
+#%% Paths
+if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
+    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    github_path = r'D:\OneDrive - UC San Diego\GitHub'
+else:
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+
 #%%
-project_name = 'BD20-Jun5-2022'
-config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+project_name = 'BD25-HC25-final-May17-2023'
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name)
 cfg = read_config(config)
 n_cluster = 10
 model_name = 'VAME'
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
+
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 
 #%% Read door close time from scoring (only need to run for the first time)
-scoring_pth = 'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\Scoring'
-start_frame = pd.read_csv('G:\start_frame.csv')
+scoring_pth = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final'
 
 for j, videos in enumerate([control_videos, BD_videos]):
     for i in range(len(videos)):
@@ -49,24 +60,31 @@ for j, videos in enumerate([control_videos, BD_videos]):
 # start_frame.to_csv('G:\start_frame.csv')
 
 #%% Read scoring of video
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
-video_path = r'G:\hBPM_Videos'
-scoring_path = r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\Scoring\video_score_vz'
+from openpyxl import load_workbook
+
+scoring_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final'
 bahavior_names =["sit_obj", "sit", "stand_obj", "stand", "walk_obj", "walk", "lie_obj", "lie", "interact", "wear", "exercise"]
 total_usage = np.zeros([2,6])
 motif_usage_cat = [[],[]]
+
 for nf, filename in enumerate(os.listdir(scoring_path)):
+    if filename[0] == 'B':
+        video_name = filename[:7]
+        data = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='15 template data', skiprows=3,
+                             usecols=range(1, 12))
+        usage = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='15 Data time', skiprows=3, header=None,
+                              usecols=range(12, 14))
+    else:
+        video_name = filename[:5]
+        data = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='template data', skiprows=3,
+                             usecols=range(1, 12))
+        usage = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='template time', skiprows=3, header=None,
+                              usecols=range(12, 14))
 
-    video_name = filename[:7]
-    print(video_name)
-    # video = cv2.VideoCapture(filename)
-    # duration = video.get(cv2.CAP_PROP_POS_MSEC)
-    # frame_count = video.get(cv2.CAP_PROP_FRAME_COUNT)
-    data = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='15 template data',skiprows=3, usecols=range(1,12))
-    usage = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='15 Data time', skiprows=3,header=None,usecols=range(12, 14))
 
+    print("Reading {} scoring overall motif usage time data".format(video_name))
 
+    # Get motif usage time and category from time to # frame
     usage = usage.dropna()
     usage1 = pd.DataFrame.to_numpy(usage)
     for i in range(len(usage1)):
@@ -83,12 +101,14 @@ for nf, filename in enumerate(os.listdir(scoring_path)):
         total_usage[1,:] += usage1[:, 1].astype(int)
         motif_usage_cat[0].append(usage1[:, 1].astype(int) / np.sum(usage1[:, 1]))
 
+    # Get motif usage at each frame and change format
+    print("        {} motif usage time breakup".format(video_name))
     data = data.dropna(how='all')
     data_mat = pd.DataFrame.to_numpy(data)
     frame_score = []
     for i in range(int(len(data_mat) / 2) -1):
         start = data_mat[i*2, :]
-        end = data_mat[i*2 +1, :]
+        end = data_mat[i*2+1, :]
         df1 = np.asarray([start, end])
         df2 = df1.copy()
         for j, row in enumerate(df1):

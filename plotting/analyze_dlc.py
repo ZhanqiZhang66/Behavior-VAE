@@ -117,6 +117,7 @@ group = ['CP','BD']
 temp_win = cfg['time_window']
 #%%
 unfiltered_DLC_data_cat = []
+data_length= []
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
@@ -176,6 +177,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             print("saving ", v)
             np.save(os.path.join(save_data, 'dlc_vector_' + v), unfiltered_DLC_data_np)
             unfiltered_DLC_data_cat.append(unfiltered_DLC_data_np)
+            data_length.append(len(unfiltered_DLC_data_np))
 
             label = np.load(
                 r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
@@ -304,16 +306,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
         v = videos[i]
         print("K-means clustering (same parameterization) for {}...".format(v))
 
-        file_len = unfiltered_DLC_data_cat[count].shape[0]
+        file_len = data_length[count]
         labels.append(label[idx:idx + file_len])
         cluster_centers.append(clust_center)
         motif_usage = get_motif_usage(label[idx:idx + file_len], n_cluster)
         motif_usages.append(motif_usage)
-        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_DLC_km_label_{}.npy'.format(
+        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(
                 onedrive_path, project_name, v, n_cluster, n_cluster, v), label[idx:idx + file_len])
-        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(
+        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_cluster_center_{}.npy'.format(
                 onedrive_path, project_name, v, n_cluster, n_cluster, v), clust_center)
-        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(
+        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_motif_usage_{}.npy'.format(
                 onedrive_path, project_name, v, n_cluster, n_cluster, v), motif_usage)
 
         idx += file_len
