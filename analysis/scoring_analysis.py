@@ -13,6 +13,7 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
+import pathlib
 #%% Paths
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -62,8 +63,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
 #%% Read scoring of video
 from openpyxl import load_workbook
 
-scoring_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final'
-bahavior_names =["sit_obj", "sit", "stand_obj", "stand", "walk_obj", "walk", "lie_obj", "lie", "interact", "wear", "exercise"]
+scoring_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final-time'
+bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
 total_usage = np.zeros([2,6])
 motif_usage_cat = [[],[]]
 
@@ -79,7 +80,7 @@ for nf, filename in enumerate(os.listdir(scoring_path)):
         data = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='template data', skiprows=3,
                              usecols=range(1, 12))
         usage = pd.read_excel(os.path.join(scoring_path, filename), sheet_name='template time', skiprows=3, header=None,
-                              usecols=range(12, 14))
+                              usecols=range(12, 13))
 
 
     print("Reading {} scoring overall motif usage time data".format(video_name))
@@ -88,25 +89,31 @@ for nf, filename in enumerate(os.listdir(scoring_path)):
     usage = usage.dropna()
     usage1 = pd.DataFrame.to_numpy(usage)
     for i in range(len(usage1)):
-        t = usage1[i,1]
-        minute = t.hour
-        second = t.minute
-        frame = t.second
-        nf = (minute * 60 + second) * 30 + frame
-        usage1[i,1] = nf
+        if filename[0] == 'B':
+            t = usage1[i,1]
+            minute = t.hour
+            second = t.minute
+            # frame = t.second
+        else:
+            t = usage1[i,0]
+            minute = t.hour
+            second = t.minute
+            # frame = usage1[i,1]
+        nf = (minute * 60 + second) * 30
+        usage1[i,0] = nf
     if video_name in BD_videos:
-        total_usage[0,:] += usage1[:, 1].astype(int)
-        motif_usage_cat[1].append(usage1[:, 1].astype(int)/np.sum(usage1[:, 1]))
+        total_usage[0,:] += usage1[:, 0].astype(int)
+        motif_usage_cat[1].append(usage1[:, 0].astype(int)/np.sum(usage1[:, 0]))
     if video_name in control_videos:
-        total_usage[1,:] += usage1[:, 1].astype(int)
-        motif_usage_cat[0].append(usage1[:, 1].astype(int) / np.sum(usage1[:, 1]))
+        total_usage[1,:] += usage1[:, 0].astype(int)
+        motif_usage_cat[0].append(usage1[:, 0].astype(int) / np.sum(usage1[:, 0]))
 
     # Get motif usage at each frame and change format
     print("        {} motif usage time breakup".format(video_name))
     data = data.dropna(how='all')
     data_mat = pd.DataFrame.to_numpy(data)
     frame_score = []
-    for i in range(int(len(data_mat) / 2) -1):
+    for i in range(int(len(data_mat)/2)-1):
         start = data_mat[i*2, :]
         end = data_mat[i*2+1, :]
         df1 = np.asarray([start, end])
@@ -126,7 +133,50 @@ for nf, filename in enumerate(os.listdir(scoring_path)):
     start_frames_df.columns = bahavior_names
     end_frames_df = pd.DataFrame(end_frames)
     end_frames_df.columns = bahavior_names
-    output_csv = os.path.join(scoring_path, filename[:8] + 'frames.xlsx')
-    # with pd.ExcelWriter(output_csv) as writer:
-    #     start_frames_df.to_excel(writer, sheet_name='start')
-    #     end_frames_df.to_excel(writer, sheet_name='end')
+    scoring_frames_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final-frames'
+    output_csv = os.path.join(scoring_frames_path, video_name + 'frames.xlsx')
+    with pd.ExcelWriter(output_csv) as writer:
+        start_frames_df.to_excel(writer, sheet_name='start')
+        end_frames_df.to_excel(writer, sheet_name='end')
+
+#%%  Get scoring of the videos in the same format as VAME output
+scoring_frames_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final-frames'
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        video_name = videos[i]
+        print("reading {}".format(video_name))
+        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, video_name,n_cluster,n_cluster,video_name))
+        scoring_motif_usage = np.full_like(label, np.nan)
+        start_time = start_frame[video_name][0]
+
+        pwd = os.path.join(scoring_frames_path, video_name + 'frames.xlsx')
+        start_frames_df = pd.read_excel(pwd, sheet_name='start', usecols=range(1, 12))
+        end_frames_df = pd.read_excel(pwd, sheet_name='end',usecols=range(1, 12))
+
+        for i_motif, motif in enumerate(start_frames_df.head()):
+            print("  reading {} start and end time".format(motif))
+            for j in range(start_frames_df[motif].count()):
+                start_f = int(start_frames_df[motif][j])
+                end_f = int(end_frames_df[motif][j])
+                if start_f > start_time:
+                    scoring_motif_usage[start_f-start_time:end_f-start_time] = i_motif
+                else:
+                    scoring_motif_usage[0:end_f-start_time] = i_motif
+
+        save_data = os.path.join(cfg['project_path'], "results", video_name, model_name, 'kmeans-' + str(n_cluster), "")
+        if not os.path.exists(
+                os.path.join(cfg['project_path'], "results", video_name, model_name, 'kmeans-' + str(n_cluster), "")):
+            try:
+                pathlib.Path(
+                    os.path.join(cfg['project_path'], "results", video_name, model_name, 'kmeans-' + str(n_cluster),
+                                 "")).mkdir(parents=True)
+
+                print('create path ----')
+            except OSError as error:
+                print(error)
+
+        np.save(os.path.join(save_data, 'score_labels_' + video_name), scoring_motif_usage)
+
+
+

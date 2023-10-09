@@ -144,7 +144,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch1_motif_usage_ctl[j].append(epoch_1_motif_usage_ctl/ np.sum(epoch_1_motif_usage_ctl))
 
         Epoch2_labels_ctl[j].append(epoch_2_label_ctl)
-        Epoch2_motif_usage[j].append(epoch_2_motif_usage_ctl/ np.sum(epoch_2_motif_usage_ctl))
+        Epoch2_motif_usage_ctl[j].append(epoch_2_motif_usage_ctl/ np.sum(epoch_2_motif_usage_ctl))
 
         Epoch3_labels_ctl[j].append(epoch_3_label)
         Epoch3_motif_usage_ctl[j].append(epoch_3_motif_usage_ctl/ np.sum(epoch_3_motif_usage_ctl))
@@ -355,23 +355,43 @@ fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% between motif paired t test
 for epoch in range(1, 4):
     motif_usage_ = eval("Epoch{}_motif_usage".format(epoch))
+    motif_usage_control_ = eval("Epoch{}_motif_usage_ctl".format(epoch))
     print("Epoch {}".format(epoch))
     for i in range(n_cluster):
         CP = np.vstack(motif_usage_[0])[:,i]
         BD = np.vstack(motif_usage_[1])[:,i]
         s = stats.ttest_ind(CP, BD, nan_policy='omit')
-        print("  motif  {}, t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
+        print("motif  {}\n 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
 
         corr_HAM_D_score = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
         corr_YMRS_score = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
-        print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
-        print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
+        print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0][0], corr_YMRS_score[1]))
+        print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0][0], corr_HAM_D_score[1]))
 
         # only correlate with BD list
         corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
         corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
-        print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
-        print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
+        print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0][0], corr_YMRS_score_BD[1]))
+        print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0][0], corr_HAM_D_score_BD[1]))
+
+        print("  Control \n")
+        CP_ctl = np.vstack(motif_usage_control_[0])[:,i]
+        BD_ctl = np.vstack(motif_usage_control_[1])[:,i]
+        s_ctl = stats.ttest_ind(CP_ctl, BD_ctl)
+        print(" 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_ctl.statistic, s_ctl.pvalue))
+        # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
+        corr_HAM_D_score_ctl = scipy.stats.pearsonr(CP_ctl, HAM_D_score[:n_subject_in_population])
+        corr_YMRS_score_ctl = scipy.stats.pearsonr(CP_ctl, YMRS_score[:n_subject_in_population])
+        print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_ctl[0][0], corr_YMRS_score_ctl[1]))
+        print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_ctl[0][0], corr_HAM_D_score_ctl[1]))
+
+        # only correlate with BD list
+        corr_HAM_D_score_BD_ctl = scipy.stats.pearsonr(BD_ctl, HAM_D_score[n_subject_in_population:])
+        corr_YMRS_score_BD_ctl = scipy.stats.pearsonr(BD_ctl, YMRS_score[n_subject_in_population:])
+        print("          Pearson corr YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD_ctl[0][0],
+                                                                                   corr_YMRS_score_BD_ctl[1]))
+        print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD_ctl[0][0],
+                                                                                   corr_HAM_D_score_BD_ctl[1]))
 #%% Plot Box
 for epoch in range(1, 4):
     motif_usage_ = eval("Epoch{}_motif_usage".format(epoch))
