@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import seaborn as sns 
 import matplotlib.pyplot as plt
+import random
 
 # %%
 # https://www.geeksforgeeks.org/ml-logistic-regression-using-python/
@@ -15,44 +16,53 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score, precision_score, recall_score
 from sklearn.model_selection import cross_validate
 
-
 #%%
-path = '../../data/dv_data.csv'
+videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", 
+                  "BC1ANWI", "BC1ASKA", "BC1ATKU", "BC1BRBU", "BC1BRPO", "BC1BRSC", "BC1CERO", "BC1CISI", 
+                  "BC1COGR", "BC1DAAR", "BC1DEBR", "BC1DOBO", "BC1FEMO", "BC1GESA", "BC1GRLE", "BC1HAKO", 
+                  "BC1HETR", "BC1JACL", "BC1JECO", "BC1JUPA", "BC1JUST", "BC1KEMA", "BC1LABO", "BC1LACA", 
+                  "BC1LESA", "BC1LOKE", "BC1LOMI", "BC1LUOR", "BC1LUSE", "BC1MAMA", "BC1MEMA", "BC1MISE", 
+                  "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
+dataframe = {}
+
+#%% diagnostic scales
+diagnosticPath = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
+
+with open(diagnosticPath, 'r') as file:
+    csvreader = csv.reader(file, delimiter=',')
+    next(csvreader)
+    for row in csvreader:
+        dataframe[row[0]] = [int(row[1])]
+        vec = np.array(row[4:5]).astype(float).tolist()
+        vec = [i * 30 for i in vec]
+        dataframe[row[0]].extend(vec)
+
+#%% motif usages in 30 sec intervals
+# 9 motifs x 30 intervals = 270 columns
+motifPath = r"C:\Users\kietc\SURF\jack-data\motif_usage_30s_interval.csv"
+
+with open(motifPath, 'r') as file:
+    csvreader = csv.reader(file, delimiter=',')
+    next(csvreader)
+    for row in csvreader:
+        vec = np.array(row[1:]).astype(float).tolist()
+        dataframe[row[0]].extend(vec)
 
 #%%
 X = []
 Y = []
-with open(path, 'r') as file:
-    csvreader = csv.reader(file, delimiter=',')
-    next(csvreader)
-    for row in csvreader:
-        G = 0
-        if row[117] == 'F': G = 1
-        # motif - 1:10
-        # transition - 11:110
-        # entropy - 111
-        # num_zero_row - 112
-        # num_one_item - 113
-        # num_zero_item - 114
-        # YMRS - 115
-        # HAMD - 116
-        # Gender - 117
-        vec = np.array(row[1:117]).astype(float).tolist()
-        #vec.extend(np.array(row[111:112]).astype(float).tolist())
-        #vec.extend(np.array(row[115:117]).astype(float).tolist())
-        #vec.append(G)
-        X.append(vec)
-        Y.append(int(row[-1]))
-
-print(X)
-print(Y)
+seeds = []
+for video in dataframe:
+    X.append(dataframe[video][1:])
+    Y.append(dataframe[video][0])
 
 # %%
 acc = []
 pre = []
 rec = []
 
-for i in range(1):
+rand = random.randrange(100)
+for i in range(rand, rand + 50):
     xtrain, xtest, ytrain, ytest = train_test_split(X, Y, test_size=0.24, stratify=Y, random_state=i)
 
     # x
@@ -104,8 +114,15 @@ for i in range(1):
     acc.extend(scores['test_accuracy'])
     pre.extend(scores['test_precision'])
     rec.extend(scores['test_recall'])
+    seeds.append(i)
 
-print('Accuracy:', np.mean(acc))
-print('Precision:', np.mean(pre))
-print('Recall:', np.mean(rec))
-# %%
+print('Accuracy: %.05f' % np.mean(acc))
+print('Precision: %.05f' % np.mean(pre))
+print('Recall: %.05f' % np.mean(rec))
+
+#%%
+fig = plt.figure(figsize =(10, 7))
+plt.boxplot(acc)
+plt.show()
+
+
