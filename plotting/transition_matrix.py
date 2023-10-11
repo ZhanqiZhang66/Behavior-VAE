@@ -16,6 +16,7 @@ from pathlib import Path
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
+from data.load_data import load_pt_data
 #%%
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -34,25 +35,17 @@ dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_pa
 n_cluster = 30
 model_name = 'VAME'
 
-#TODO gender-wise CP-male, CP-female
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA',
-                  'BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU',
-                  'BC1MOKI','BC1NITA','BC1BRPO','BC1BRSC','BC1CERO',
-                  'BC1COGR','BC1DAAR','BC1DEBR','BC1FEMO','BC1GESA',
-                  'BC1GRLE','BC1HAKO','BC1HETR','BC1JECO','BC1JUPA']
-#TODO gender-wise [BD-male, BD-female]
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO',
-                  'BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU',
-                  'BC1MISE','BC1OKBA','CASH1','GRCH','BC1AMMU',
-                  'GRJO1','HESN1','JEPT1','JETH1','LABO1',
-                  'MAFL','MIHA1','MIRU1','PANU','ROEA1']
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
+
 n_subject_in_population = len(control_videos)
-start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
-diagnosis_score = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,4,5])#pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
-YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
-YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
-HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
-HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
+# start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
+# diagnosis_score = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,4,5])#pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
+# YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
+# YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
+# HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
+# HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
 #%%
 titles = ["CP", "BD"]
 N = [0, 0]
@@ -185,9 +178,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
         num_zeros[j].append(num_zero_item)
 
 
-        v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
-        door_close_time = start_frame.loc[v_index, 'door_close']
-        start_time = start_frame.loc[v_index, 'door_close']#start_frame.loc[v_index, 'n']
+
+        start_time = start_frame[v][0]
         five_min_frame_no = int(5 * 60 * 30)
         offset = 0#  int(door_close_time - start_time)
 

@@ -18,6 +18,7 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from sklearn.decomposition import PCA
+from data.load_data import load_pt_data
 #%%
 load_precomputed_sliding_window = False
 #%%
