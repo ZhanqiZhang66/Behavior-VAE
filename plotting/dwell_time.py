@@ -66,7 +66,11 @@ Motif_usage_pct_ctl = [[], []]
 motif_usage_cat_ctl = [[], []]
 Labels_ctl = [[], []]
 Cluster_center_ctl = []
+Labels_score = [[], []]
+motif_usage_cat_score = [[], []]
 
+Motif_usages_score = [[], []]
+Motif_usage_pct_score = [[], []]
 
 Epoch1_labels = [[], []]
 Epoch1_motif_usage = [[], []]
@@ -91,6 +95,18 @@ Epoch2_motif_usage_cat_ctl = [[],[]]
 Epoch3_labels_ctl = [[], []]
 Epoch3_motif_usage_ctl = [[], []]
 Epoch3_motif_usage_cat_ctl = [[],[]]
+
+Epoch1_labels_score = [[], []]
+Epoch1_motif_usage_score = [[], []]
+Epoch1_motif_usage_cat_score = [[],[]]
+
+Epoch2_labels_score = [[], []]
+Epoch2_motif_usage_score = [[], []]
+Epoch2_motif_usage_cat_score = [[],[]]
+
+Epoch3_labels_score = [[], []]
+Epoch3_motif_usage_score = [[], []]
+Epoch3_motif_usage_cat_score = [[],[]]
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
@@ -107,6 +123,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
         control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
         control_cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, n_cluster, v))
         control_motif_usage = get_motif_usage(control_label, n_cluster)
+
+        score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+        score_label = score_label[:15*60*30]
+        n_scores = 11
+        score_motif_usage = get_motif_usage(score_label, n_scores)
 
         door_close_time = start_frame[v]
         start_time = start_frame[v] #start_frame.loc[v_index, 'n']
@@ -149,12 +170,34 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch3_labels_ctl[j].append(epoch_3_label)
         Epoch3_motif_usage_ctl[j].append(epoch_3_motif_usage_ctl/ np.sum(epoch_3_motif_usage_ctl))
 
+        # concat labels, motif usage for 3 epochs for scores
+        epoch_1_label_score = control_label[:five_min_frame_no + offset]
+        epoch_2_label_score = control_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
+        epoch_3_label_score = control_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+
+        epoch_1_motif_usage_score = get_motif_usage(epoch_1_label_score, n_cluster)
+        epoch_2_motif_usage_score = get_motif_usage(epoch_2_label_score, n_cluster)
+        epoch_3_motif_usage_score = get_motif_usage(epoch_3_label_score, n_cluster)
+
+        Epoch1_labels_score[j].append(epoch_1_label_score)
+        Epoch1_motif_usage_score[j].append(epoch_1_motif_usage_score / np.sum(epoch_1_motif_usage_score))
+
+        Epoch2_labels_score[j].append(epoch_2_label_score)
+        Epoch2_motif_usage_score[j].append(epoch_2_motif_usage_score / np.sum(epoch_2_motif_usage_score))
+
+        Epoch3_labels_score[j].append(epoch_3_label)
+        Epoch3_motif_usage_score[j].append(epoch_3_motif_usage_score / np.sum(epoch_3_motif_usage_score))
+
 
         if i == 0:
             l = label
             l_control = control_label
+            l_score = score_label
+
             m = motif_usage
             m_control = control_motif_usage
+            m_score = score_motif_usage
+
             Cluster_center.append(cluster_center)
             m_e1 = epoch_1_motif_usage
             m_e2 = epoch_2_motif_usage
@@ -164,6 +207,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
             m_e1_ctl = epoch_1_motif_usage_ctl
             m_e2_ctl = epoch_2_motif_usage_ctl
             m_e3_ctl = epoch_3_motif_usage_ctl
+
+            m_e1_score = epoch_1_motif_usage_score
+            m_e2_score = epoch_2_motif_usage_score
+            m_e3_score = epoch_3_motif_usage_score
             # print(np.shape(m_e3))
         else:
             l = np.concatenate([l,label])
@@ -179,10 +226,17 @@ for j, videos in enumerate([control_videos, BD_videos]):
             m_e1_ctl += np.asarray(epoch_1_motif_usage_ctl)
             m_e1_ctl += np.asarray(epoch_2_motif_usage_ctl)
             m_e1_ctl += np.asarray(epoch_3_motif_usage_ctl)
+
+            l_score = np.concatenate([l_score, score_label])
+            m_score += score_motif_usage
+            m_e1_score += np.asarray(epoch_1_motif_usage_score)
+            m_e2_score += np.asarray(epoch_2_motif_usage_score)
+            m_e3_score += np.asarray(epoch_3_motif_usage_score)
             # print(np.shape(m_e3))
 
         motif_usage_cat[j].append(motif_usage/ np.sum(motif_usage))
         motif_usage_cat_ctl[j].append(control_motif_usage / np.sum(control_motif_usage))
+        motif_usage_cat_score[j].append(score_motif_usage / np.sum(score_motif_usage))
 
         num_points = label.shape[0]
         n += num_points
@@ -200,6 +254,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Motif_usages_ctl[j] = m_control
     Motif_usage_pct_ctl[j] = m_control / n
     Labels_ctl[j] = l_control
+
+    Epoch1_motif_usage_cat_score[j] = m_e1_score
+    Epoch2_motif_usage_cat_score[j] = m_e2_score
+    Epoch3_motif_usage_cat_score[j] = m_e3_score
+    Motif_usages_score[j] = m_control
+    Motif_usage_pct_score[j] = m_control / n
+    Labels_score[j] = l_control
+
 #%% Population-wise analysis
 #%% between motif paired t test and score correltion
 import permutation_test as p
@@ -207,6 +269,7 @@ def statistic(x, y, axis):
     return np.mean(x, axis=axis) - np.mean(y, axis=axis)
 motif_usage_cat = np.asarray(motif_usage_cat)
 motif_usage_cat_ctl = np.asarray(motif_usage_cat_ctl)
+motif_usage_cat_score = np.asarray(motif_usage_cat_score)
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 for i in range(n_cluster):
     CP = motif_usage_cat[0,:,i].reshape(-1,1)
@@ -243,12 +306,36 @@ for i in range(n_cluster):
     corr_YMRS_score_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[0,:,i], YMRS_score[:n_subject_in_population])
     print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_ctl[0][0], corr_YMRS_score_ctl[1]))
     print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_ctl[0][0], corr_HAM_D_score_ctl[1]))
-
     # only correlate with BD list
     corr_HAM_D_score_BD_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[1,:,i], HAM_D_score[n_subject_in_population:])
     corr_YMRS_score_BD_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[1,:,i], YMRS_score[n_subject_in_population:])
     print("          Pearson corr YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD_ctl[0][0], corr_YMRS_score_BD_ctl[1]))
     print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD_ctl[0][0], corr_HAM_D_score_BD_ctl[1]))
+
+    CP_score = motif_usage_cat_score[0, :, i].reshape(-1, 1)
+    BD_score = motif_usage_cat_score[1, :, i].reshape(-1, 1)
+    s_score = stats.ttest_ind(CP_score, BD_score)
+    # because our statistic is vectorized, we pass `vectorized=True`
+    # `n_resamples=np.inf` indicates that an exact test is to be performed
+    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
+    # res = p.permutation_test(BD, CP)
+    print("Score \n")
+    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_score.statistic[0], s_score.pvalue[0]))
+    # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
+    corr_HAM_D_score_score = scipy.stats.pearsonr(motif_usage_cat_score[0, :, i], HAM_D_score[:n_subject_in_population])
+    corr_YMRS_score_score = scipy.stats.pearsonr(motif_usage_cat_score[0, :, i], YMRS_score[:n_subject_in_population])
+    print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_score[0][0],
+                                                                               corr_YMRS_score_score[1]))
+    print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_score[0][0],
+                                                                               corr_HAM_D_score_score[1]))
+    # only correlate with BD list
+    corr_HAM_D_score_BD_score = scipy.stats.pearsonr(motif_usage_cat_score[1, :, i], HAM_D_score[n_subject_in_population:])
+    corr_YMRS_score_BD_score = scipy.stats.pearsonr(motif_usage_cat_score[1, :, i], YMRS_score[n_subject_in_population:])
+    print("          Pearson corr YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD_score[0][0],
+                                                                               corr_YMRS_score_BD_score[1]))
+    print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD_score[0][0],
+                                                                               corr_HAM_D_score_BD_score[1]))
+
 
 #%% Plot Box
 states = []

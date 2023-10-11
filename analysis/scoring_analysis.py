@@ -113,7 +113,7 @@ for nf, filename in enumerate(os.listdir(scoring_path)):
     data = data.dropna(how='all')
     data_mat = pd.DataFrame.to_numpy(data)
     frame_score = []
-    for i in range(int(len(data_mat)/2)-1):
+    for i in range(int(len(data_mat)/2)):
         start = data_mat[i*2, :]
         end = data_mat[i*2+1, :]
         df1 = np.asarray([start, end])
