@@ -50,7 +50,9 @@ else:
 #%% plot deeplabcut with motif usage, and deeplabcut trajectory in room
 load_filtered_DLC = 1 # 0: remove markers under 90% confidence, otherwise, 1: just loaded the filtered DLC
 compute_significance = 1
-show_DLC_in_room_over_time = 0 # show DLC trajectory in room
+
+show_DLC_in_room_over_time = 1 # show DLC trajectory in room
+
 #%% Define Project
 project_name = 'BD25-HC25-final-May17-2023'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
@@ -115,9 +117,7 @@ confidence = 0.9
 #%%
 group = ['CP','BD']
 temp_win = cfg['time_window']
-#%%
-unfiltered_DLC_data_cat = []
-data_length= []
+#%% filter DLC keypoints by confidence level
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
@@ -132,165 +132,75 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         data_mat_original = pd.DataFrame.to_numpy(data)
         data_mat = data_mat_original[f_start_frame:, 1:]
-        if not load_filtered_DLC:
-            # get the coordinates for alignment from data table
-            for i in range(int(data_mat.shape[1] / 3)):
-                temp = data_mat[:, i * 3:(i + 1) * 3]
-                temp_original = data_mat_original[:, i * 3:(i + 1) * 3]
+        # get the coordinates for alignment from data table
+        for i in range(int(data_mat.shape[1] / 3)):
+            temp = data_mat[:, i * 3:(i + 1) * 3]
+            temp_original = data_mat_original[:, i * 3:(i + 1) * 3]
 
-                # replace markers < 90 confidence to be nanmean average in 30 seconds period
-                for j_idx, j in enumerate(temp):
-                    if j[2] <= confidence:
-                        start = np.max(j_idx-450, 0)
-                        j[0], j[1] = np.nanmean(temp[start:j_idx+450,0], 0), np.nanmean(temp[start:j_idx+450, 1], 0)
-                        temp[j_idx, 0] = j[0]
-                        temp[j_idx, 1] = j[1]
-                pose_list = temp[:, 0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]], axis=1)
-                for k_idx, k in enumerate(temp_original):
-                    if k[2] <= confidence:
-                        start = np.max(k_idx-450, 0)
-                        k[0], k[1] = np.nanmean(temp_original[start:k_idx+450,0], 0), np.nanmean(temp_original[start:k_idx+450, 1], 0)
-                        temp_original[k_idx, 0] = k[0]
-                        temp_original[k_idx, 1] = k[1]
-                pose_list_original = temp_original[:, 0:2] if i == 0 else np.concatenate([pose_list_original, temp_original[:, :2]], axis=1)
-            pwd = r'{}\data\pose_sequence'.format(path_to_file)
-            Path(pwd).mkdir(exist_ok=True)
-            np.save(os.path.join(pwd, v + '-90pct_seq.npy'), pose_list)
-            np.save(os.path.join(pwd, v + '-90pct_seq_original.npy'), pose_list_original)
-        else:
-            unfiltered_DLC_data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', v+'.csv'), skiprows=2)
-            unfiltered_DLC_data_np = pd.DataFrame.to_numpy(unfiltered_DLC_data)
-            unfiltered_DLC_data_np = unfiltered_DLC_data_np[f_start_frame:, 1:]
-
-            save_data = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-            if not os.path.exists(
-                    os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")):
-                try:
-                    pathlib.Path(
-                        os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster),
-                                     "")).mkdir(parents=True)
-
-                    print('create path ----')
-                except OSError as error:
-                    print(error)
-
-            print("saving ", v)
-            np.save(os.path.join(save_data, 'dlc_vector_' + v), unfiltered_DLC_data_np)
-            unfiltered_DLC_data_cat.append(unfiltered_DLC_data_np)
-            data_length.append(len(unfiltered_DLC_data_np))
-
-            label = np.load(
-                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
-                    onedrive_path, project_name, v, n_cluster, n_cluster, v))
-            data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
-            # latent vector has time window of temp_win, thus is temp_win shorter than data
-            # we need to crop data to match latent vector
-            d = np.concatenate((label.reshape(-1, 1), data[temp_win//2:-temp_win//2]), axis=1)
-            df = pd.DataFrame(d, columns=dlc_labels)
-
-
-            if show_DLC_in_room_over_time:
-                for body_i in range(1, 41, 2):
-                    print(df.columns[body_i][:-1])
-                    # plot time sequence and motif segmentation
-                    x = df.iloc[:,body_i]
-                    y = df.iloc[:, body_i+1]
-                    fig, ax = plt.subplots(figsize=(10,5))
-                    lx = ax.plot(x,label='x',color='k',)
-                    ly = ax.plot(y,label='y',color='r')
-                    ax.legend()
-                    cmap = plt.get_cmap('tab20')
-                    condition = df['label']
-                    current_c = condition[0]
-                    spans = [[0, 0]]
-                    span_label = [current_c]
-                    for i, c in enumerate(condition):
-                        if c != current_c:
-                            # change to i-1 if gap between two conditions is to be left empty
-                            spans[-1][-1] = i
-                            spans.append([i, None])
-                            span_label.append(c)
-                            current_c = c
-                    # assumes that the last condition is not on its own but same as previous
-                    spans[-1][-1] = len(condition) - 1
-                    # span_label.append(condition[-1])
-                    for i in range(len(spans)):
-                        span = spans[i]
-                        l = span_label[i]
-                        ax.axvspan(span[0], span[1], alpha=0.2,color=cmap.colors[int(l* 2 + j)])
-
-                    X = np.arange(len(x))
-                    legend = [Line2D(X, df.iloc[:,body_i], color='k',  label='x'),
-                              Line2D(X, df.iloc[:,body_i+1], color='r', label='y'),
-                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label=0),
-                              Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=0.2, label=1),
-                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label=2),
-                              Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=0.2, label=3),
-                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label=4),
-                              Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=0.2, label=5),
-                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label=6),
-                              Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=0.2, label=7),
-                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label=8),
-                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label=9),
-                              ]
-                    ax.legend(handles=legend,bbox_to_anchor=(1.04, 1), loc="upper left", ncol=1)
-                    ax.grid(False)
-                    ax.set_xlabel('time')
-                    ax.set_ylabel('marker position in pixels')
-                    ax.set_ylim([0, 720])
-                    plt.title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
-                    plt.show()
-                    pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
-                    fname = "{}-{}_{}_{}_dwell_time_dlc.png".format(group[j],v, n_cluster, df.columns[body_i][:-1])
-                    fname_pdf = "{}-{}_{}_{}_dwell_time_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-                    fig.savefig(os.path.join(pwd, fname), transparent=True)
-                    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-
-                    fig, ax = plt.subplots(figsize=(10, 5))
-                    cmap = plt.get_cmap('plasma')
-                    c = np.linspace(0, 1, len(x))
-                    t = np.arange(0, len(x))
-                    scatter_plt = ax.scatter(t,x, c=c, cmap=cmap, s=30)
-                    ax.set_xlabel('time')
-                    ax.set_ylabel('marker position in pixels')
-                    ax.set_ylim([0, 720])
-                    ax.grid(False)
-                    ax.set_title('{}-{}-{} x position'.format(group[j], v, df.columns[body_i][:-1]))
-                    fig.colorbar(scatter_plt)
-                    fig.show()
-                    pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
-                    fname = "{}-{}_{}_{}_dwell_time_dlc_plain_xpos.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-                    fname_pdf = "{}-{}_{}_{}_trajectory_dlc_plain_xpos.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-                    fig.savefig(os.path.join(pwd, fname), transparent=True)
-                    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-
-                    # plot trajectory
-                    fig, ax = plt.subplots(figsize=(10,5))
-                    img = matplotlib.image.imread(r'{}\Behavior_VAE_data\DLC raw\background.png'.format(onedrive_path))
-                    img = cv2.flip(img, 0)
-                    room = ax.imshow(img)
-                    cmap = plt.get_cmap('plasma')
-                    c = np.linspace(0, 1, len(x))
-                    scatter_plt = ax.scatter(x, y, c=c, cmap=cmap,  s=30)
-                    ax.set_ylim([0, 540])
-                    ax.set_xlim([0, 720])
-                    ax.grid(False)
-                    ax.axis('off')
-                    ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
-                    fig.colorbar(scatter_plt)
-                    fig.show()
-                    pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
-                    fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-                    fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-                    fig.savefig(os.path.join(pwd, fname), transparent=True)
-                    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-
-
-                    plt.close('all')
+            # replace markers < 90 confidence to be nanmean average in 30 seconds period
+            for j_idx, j in enumerate(temp):
+                if j[2] <= confidence:
+                    start = np.max(j_idx-450, 0)
+                    j[0], j[1] = np.nanmean(temp[start:j_idx+450,0], 0), np.nanmean(temp[start:j_idx+450, 1], 0)
+                    temp[j_idx, 0] = j[0]
+                    temp[j_idx, 1] = j[1]
+            pose_list = temp[:, 0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]], axis=1)
+            for k_idx, k in enumerate(temp_original):
+                if k[2] <= confidence:
+                    start = np.max(k_idx-450, 0)
+                    k[0], k[1] = np.nanmean(temp_original[start:k_idx+450,0], 0), np.nanmean(temp_original[start:k_idx+450, 1], 0)
+                    temp_original[k_idx, 0] = k[0]
+                    temp_original[k_idx, 1] = k[1]
+            pose_list_original = temp_original[:, 0:2] if i == 0 else np.concatenate([pose_list_original, temp_original[:, :2]], axis=1)
+        pwd = r'{}\data\pose_sequence'.format(path_to_file)
+        Path(pwd).mkdir(exist_ok=True)
+        np.save(os.path.join(pwd, v + '-90pct_seq.npy'), pose_list)
+        np.save(os.path.join(pwd, v + '-90pct_seq_original.npy'), pose_list_original)
 print("Finished cleaning or loading the DLC data\n")
+#%%  Load filtered DLC keypoints
+unfiltered_DLC_data_cat = []
+data_length = []
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+
+        f_start_frame = start_frame[v][0]  # f_start_frame = frame_count - len(label)
+
+        label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                           project_name,
+                                                                                           v, n_cluster,
+                                                                                           n_cluster, v))
+        data = pd.read_csv(os.path.join(csv_path, v + '.csv'), skiprows=2)
+        frame_count = len(data)
+
+        data_mat_original = pd.DataFrame.to_numpy(data)
+        data_mat = data_mat_original[f_start_frame:, 1:]
+
+        unfiltered_DLC_data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', v+'.csv'), skiprows=2)
+        unfiltered_DLC_data_np = pd.DataFrame.to_numpy(unfiltered_DLC_data)
+        unfiltered_DLC_data_np = unfiltered_DLC_data_np[f_start_frame:, 1:]
+
+        save_data = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        if not os.path.exists(
+                os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")):
+            try:
+                pathlib.Path(
+                    os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster),
+                                 "")).mkdir(parents=True)
+
+                print('create path ----')
+            except OSError as error:
+                print(error)
+
+        print("loading ", v)
+        #np.save(os.path.join(save_data, 'dlc_vector_' + v), unfiltered_DLC_data_np)
+        unfiltered_DLC_data_cat.append(unfiltered_DLC_data_np)
+        data_length.append(len(unfiltered_DLC_data_np))
+unfiltered_DLC_data_cat = np.concatenate(unfiltered_DLC_data_cat, axis=0)
 #%%  Compute K-means clustering on raw DLC data
 print("Compute K-means clustering on raw DLC data\n")
-unfiltered_DLC_data_cat = np.concatenate(unfiltered_DLC_data_cat, axis=0)
 kmeans = KMeans(n_clusters=n_cluster, random_state=0, n_init=10).fit(unfiltered_DLC_data_cat)
 kmeans_labels = kmeans.labels_
 label = kmeans.predict(unfiltered_DLC_data_cat)
@@ -321,8 +231,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         idx += file_len
         count += 1
 print("\n Finished K-means clustering on raw DLC data")
-#%% Fit Kmeans to cluster 20 temporal sequences
-
+#%% Fit Kmeans to cluster DLC temporal sequences
 import numpy as np
 from sklearn.cluster import KMeans
 
@@ -366,10 +275,8 @@ def kmeans_missing(X, n_clusters, random_state, n_init, max_iter=10):
         # when the labels have stopped changing then we have converged
         if i > 0 and np.all(labels == prev_labels):
             break
-
         prev_labels = labels
         prev_centroids = cls.cluster_centers_
-
     return labels, centroids, X_hat
 
 n_cluster = cfg['n_cluster']
@@ -377,14 +284,228 @@ random_state = cfg['random_state_kmeans']
 n_init = cfg['n_init_kmeans']
 
 
-labels, centroids, time_seq_hat = kmeans_missing(time_seq_normalize_cat, n_cluster, random_state=random_state, n_init=n_init, max_iter=30)
+labels, centroids, time_seq_hat = kmeans_missing(time_seq_normalize_cat, n_cluster, n_init=n_init, max_iter=30)
 np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm_labels.npy'), labels)
 np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm_centroids.npy'), centroids)
 np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm_hat.npy'), time_seq_hat)
+#%%  Compute K-means clustering on filtered DLC data
+import random
+print("Compute K-means clustering on filtered DLC data\n")
+n_cluster = cfg['n_cluster']
+random_state = cfg['random_state_kmeans']
+n_init = cfg['n_init_kmeans']
+random.seed(10)
+label, clust_center, time_seq_hat = kmeans_missing(unfiltered_DLC_data_cat, n_cluster, random_state=None, n_init=n_init, max_iter=30)
+
+idx = 0
+count = 0
+labels = []
+cluster_centers = []
+motif_usages = []
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+        print("K-means clustering (same parameterization) for {}...".format(v))
+
+        file_len = data_length[count]
+        labels.append(label[idx:idx + file_len])
+        cluster_centers.append(clust_center)
+        motif_usage = get_motif_usage(label[idx:idx + file_len], n_cluster)
+        motif_usages.append(motif_usage)
+        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\filtered_DLC_{}_km_label_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, n_cluster, v), label[idx:idx + file_len])
+        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\filtered_DLC_{}_cluster_center_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, n_cluster, v), clust_center)
+        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\filtered_DLC_{}_motif_usage_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, n_cluster, v), motif_usage)
+
+        idx += file_len
+        count += 1
+print("\n Finished K-means clustering on filtered DLC data")
+# %% ===================PLOT====================
+
+
+
 #%% Umap embedding of the data
 standard_embedding = umap.UMAP(n_components=3,random_state=42).fit_transform(time_seq_hat[:300000,:])
 np.save(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\BD20-Jun5-2022\data\time-seq-umap-embed.npy',standard_embedding)
-#%%
+#%% Plot keypoints overlapping motif segmentations [three approaches]
+titles = ["vame", 'dlc k-means', 'scores', 'scored_merged']
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+        print(v)
+
+        data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+        labels = []
+        vame_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, n_cluster, v))
+
+        dlc_cluster_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\filtered_DLC_{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                               project_name, v,
+                                                                                               n_cluster, n_cluster,
+                                                                                               v))
+
+        score_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster,  v))
+        score_label[score_label<0] = -1
+        # bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+        score_label_merged = score_label.copy()
+        score_label_merged[score_label_merged == 1] = 0
+        score_label_merged[score_label_merged == 3] = 2
+        score_label_merged[score_label_merged == 5] = 4
+        score_label_merged[score_label_merged == 7] = 6
+        # latent vector has time window of temp_win, thus is temp_win shorter than data
+        # we need to crop data to match latent vector
+        labels = [vame_label,
+                  dlc_cluster_label[temp_win // 2:-temp_win // 2],
+                  score_label,
+                  score_label_merged
+                  ]
+
+        # a colored line plot for every body keypoint
+        for body_i in range(1, 41, 2):
+
+            fig, axs = plt.subplots(4, 1, figsize=(12, 20))
+            # plot motif segmentation in three approaches [vame, dlc, score]
+            for fig_i in range(4):
+                d = np.concatenate((labels[fig_i].reshape(-1, 1), data[temp_win // 2:-temp_win // 2]), axis=1)
+                df = pd.DataFrame(d, columns=dlc_labels)
+
+                # plot time sequence and motif segmentation
+                x = df.iloc[:, body_i]
+                y = df.iloc[:, body_i + 1]
+
+                lx = axs[fig_i].plot(x, label='x', color='k', )
+                ly = axs[fig_i].plot(y, label='y', color='r')
+                axs[fig_i].legend()
+
+                cmap = plt.get_cmap('tab20')
+                condition = df['label']
+                current_c = condition[0]
+                spans = [[0, 0]]
+                span_label = [current_c]
+                for ii, c in enumerate(condition):
+                    if c != current_c:
+                        # change to i-1 if gap between two conditions is to be left empty
+                        spans[-1][-1] = ii
+                        spans.append([ii, None])
+                        span_label.append(c)
+                        current_c = c
+                # assumes that the last condition is not on its own but same as previous
+                spans[-1][-1] = len(condition) - 1
+                # span_label.append(condition[-1])
+                for iii in range(len(spans)):
+                    span = spans[iii]
+                    l_label = span_label[iii]
+                    axs[fig_i].axvspan(span[0], span[1], alpha=0.2, color=cmap.colors[int(l_label * 2 + j)])
+
+                X = np.arange(len(x))
+                if fig_i == 0 or fig_i == 1:
+                    legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
+                              Line2D(X, df.iloc[:, body_i + 1], color='r', label='y'),
+                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label=0),
+                              Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=0.2, label=1),
+                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label=2),
+                              Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=0.2, label=3),
+                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label=4),
+                              Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=0.2, label=5),
+                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label=6),
+                              Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=0.2, label=7),
+                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label=8),
+                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label=9),
+                            ]
+                elif fig_i == 2:
+                    legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
+                              Line2D(X, df.iloc[:, body_i + 1], color='r', label='y'),
+                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label="sit"),
+                              Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=0.2, label="sit_obj"),
+                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label="stand"),
+                              Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=0.2, label="stand-obj"),
+                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label="walk"),
+                              Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=0.2, label="walk_obj"),
+                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label="lie"),
+                              Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=0.2, label="lie_obj"),
+                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label="interact"),
+                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label="wear"),
+                              ]
+                else:
+                    legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
+                              Line2D(X, df.iloc[:, body_i + 1], color='r', label='y'),
+                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label="sit"),
+                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label="stand"),
+                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label="walk"),
+                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label="lie"),
+                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label="interact"),
+                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label="wear"),
+                              ]
+                axs[fig_i].set_title(titles[fig_i])
+                axs[fig_i].legend(handles=legend, bbox_to_anchor=(1.04, 1), loc="upper left", ncol=1)
+                axs[fig_i].grid(False)
+                axs[fig_i].set_xlabel('time')
+                axs[fig_i].set_ylabel('marker position in pixels')
+                axs[fig_i].set_ylim([0, 720])
+
+            plt.suptitle('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
+            plt.show()
+            pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
+            Path(pwd).mkdir(parents=True, exist_ok=True)
+            fname = "{}-{}_{}_{}_dwell_time_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            fname_pdf = "{}-{}_{}_{}_dwell_time_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            fig.savefig(os.path.join(pwd, fname), transparent=True)
+            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+            # plot keypoint transparent trajectory over time
+            fig, ax = plt.subplots(figsize=(10, 5))
+            cmap = plt.get_cmap('plasma')
+            c = np.linspace(0, 1, len(x))
+            t = np.arange(0, len(x))
+            scatter_plt = ax.scatter(t, x, c=c, cmap=cmap, s=30)
+            ax.set_xlabel('time')
+            ax.set_ylabel('marker position in pixels')
+            ax.set_ylim([0, 720])
+            ax.grid(False)
+            ax.set_title('{}-{}-{} x position'.format(group[j], v, df.columns[body_i][:-1]))
+            fig.colorbar(scatter_plt)
+            fig.show()
+            pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
+            fname = "{}-{}_{}_{}_dwell_time_dlc_plain_xpos.png".format(group[j], v, n_cluster,
+                                                                       df.columns[body_i][:-1])
+            fname_pdf = "{}-{}_{}_{}_trajectory_dlc_plain_xpos.pdf".format(group[j], v, n_cluster,
+                                                                           df.columns[body_i][:-1])
+            fig.savefig(os.path.join(pwd, fname), transparent=True)
+            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+            # plot spatial trajectory
+            fig, ax = plt.subplots(figsize=(10, 5))
+            img = matplotlib.image.imread(r'{}\Behavior_VAE_data\DLC raw\background.png'.format(onedrive_path))
+            img = cv2.flip(img, 0)
+            room = ax.imshow(img)
+            cmap = plt.get_cmap('plasma')
+            c = np.linspace(0, 1, len(x))
+            scatter_plt = ax.scatter(x, y, c=c, cmap=cmap, s=30)
+            ax.set_ylim([0, 540])
+            ax.set_xlim([0, 720])
+            ax.grid(False)
+            ax.axis('off')
+            ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
+            fig.colorbar(scatter_plt)
+            fig.show()
+            pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
+            fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            fig.savefig(os.path.join(pwd, fname), transparent=True)
+            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+            plt.close('all')
+
+
+#%%  OLD STUFF
 import plotly.graph_objects as go
 #standard_embedding = np.load(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\BD20-Jun5-2022\data\time-seq-umap-embed.npy')
 ax = plt.axes(projection='3d')
