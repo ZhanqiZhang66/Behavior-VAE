@@ -113,7 +113,7 @@ for nf, filename in enumerate(os.listdir(scoring_path)):
     data = data.dropna(how='all')
     data_mat = pd.DataFrame.to_numpy(data)
     frame_score = []
-    for i in range(int(len(data_mat)/2)-1):
+    for i in range(int(len(data_mat)/2)):
         start = data_mat[i*2, :]
         end = data_mat[i*2+1, :]
         df1 = np.asarray([start, end])
@@ -157,8 +157,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
         for i_motif, motif in enumerate(start_frames_df.head()):
             print("  reading {} start and end time".format(motif))
             for j in range(start_frames_df[motif].count()):
+                print(j)
                 start_f = int(start_frames_df[motif][j])
                 end_f = int(end_frames_df[motif][j])
+                print(end_f)
                 if start_f > start_time:
                     scoring_motif_usage[start_f-start_time:end_f-start_time] = i_motif
                 else:
@@ -175,7 +177,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 print('create path ----')
             except OSError as error:
                 print(error)
-
+        nhhiohio
         np.save(os.path.join(save_data, 'score_labels_' + video_name), scoring_motif_usage)
 
 
