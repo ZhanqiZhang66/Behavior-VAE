@@ -23,7 +23,6 @@ for v in videos:
 print(found)
 
 #%% Retrieve and truncate 10_km_labels
-
 labels = {}
 minLength = float('inf')
 
@@ -41,16 +40,18 @@ motifUsage = {}
 for v in videos:
     motifUsage[v] = []
     for i in range(0, minLength, 900):
-        currUsage = [0]*10
+        currUsage = [0]*11
         for j in range(i, i + 900):
+            if labels[v][j] < 0:
+                continue
             currUsage[labels[v][j]] += 1
         currUsage = [x / 900 for x in currUsage]
         motifUsage[v].append(currUsage)
 
 #%% Generate motif_usage data
-outFile = r"C:\Users\kietc\SURF\jack-data\motif_usage_30s_interval.csv"
+outFile = r"C:\Users\kietc\SURF\jack-data\hBPM_motif_usage_30s_interval.csv"
 header = ["video"]
-for i in range(0, 10):
+for i in range(0, 11):
     for j in range(0, minLength, 900):
         header.append("{}-{}".format(i, j))
         

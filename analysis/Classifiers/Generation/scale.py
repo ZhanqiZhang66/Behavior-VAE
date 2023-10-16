@@ -31,3 +31,5 @@ with open(outPath, 'w') as csvfile:
         row = [v]
         row.extend(dataframe[v])
         csvwriter.writerow(row)
+
+# %%

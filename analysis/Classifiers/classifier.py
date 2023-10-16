@@ -33,13 +33,24 @@ with open(diagnosticPath, 'r') as file:
     next(csvreader)
     for row in csvreader:
         dataframe[row[0]] = [int(row[1])]
-        vec = np.array(row[4:5]).astype(float).tolist()
+        vec = np.array(row[5:5]).astype(float).tolist()
         vec = [i * 30 for i in vec]
         dataframe[row[0]].extend(vec)
 
-#%% motif usages in 30 sec intervals
-# 9 motifs x 30 intervals = 270 columns
+#%% VAME motif usages in 30 sec intervals
+# 10 motifs x 30 intervals = 300 columns
 motifPath = r"C:\Users\kietc\SURF\jack-data\motif_usage_30s_interval.csv"
+
+with open(motifPath, 'r') as file:
+    csvreader = csv.reader(file, delimiter=',')
+    next(csvreader)
+    for row in csvreader:
+        vec = np.array(row[1:]).astype(float).tolist()
+        dataframe[row[0]].extend(vec)
+
+#%% hBPM motif usages in 30 sec intervals
+# 11 motifs x 30 intervals = 330 columns
+motifPath = r"C:\Users\kietc\SURF\jack-data\hBPM_motif_usage_30s_interval.csv"
 
 with open(motifPath, 'r') as file:
     csvreader = csv.reader(file, delimiter=',')
