@@ -69,12 +69,15 @@ for file in files:
     X_len = len(X.T)
     print(file, ' ', X_len)
 #%% 4. train model [take a while]
+import time
+start_time = time.time()
 vame.train_model(config)
+print("--- %s seconds ---" % (time.time() - start_time))
 #%% 5. evaluate model
 vame.evaluate_model(config)
 #%% 6. cluster motifs
 vame.pose_segmentation(config)
-
+#%%
 vame.motif_videos(config, start_frame, videoType='.mpg')
 #%% 6.1 create tree and umap
 vame.community(config, show_umap=True, cut_tree=None)

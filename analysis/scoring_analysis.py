@@ -166,7 +166,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 else:
                     scoring_motif_usage[0:end_f-start_time] = i_motif
 
-        save_data = os.path.join(cfg['project_path'], "results", video_name, model_name, 'kmeans-' + str(n_cluster), "")
+
         if not os.path.exists(
                 os.path.join(cfg['project_path'], "results", video_name, model_name, 'kmeans-' + str(n_cluster), "")):
             try:
@@ -177,7 +177,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 print('create path ----')
             except OSError as error:
                 print(error)
-        nhhiohio
+        save_data = os.path.join(cfg['project_path'], "results", video_name, model_name, 'kmeans-' + str(n_cluster), "")
         np.save(os.path.join(save_data, 'score_labels_' + video_name), scoring_motif_usage)
 
 

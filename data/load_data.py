@@ -5,21 +5,25 @@
 # Usage
 import pandas as pd
 import numpy as np
+import os
+
+
+dir = os.getcwd()
 #%%
-def load_pt_data(video_information_pth=r'data\video-information.csv'):
+def load_pt_data(video_information_pth=r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub\Behavior-VAE\data\video-information.csv'):
     data = pd.read_csv(video_information_pth,
                               usecols=["video_name"	,"door_close", "condition",	"bipolar_state", "YMRS", "HAMD", "gender"])
 
     # data = data.set_index('video_name').T.to_dict('list')
-    start_frame_list = pd.read_csv(r'data\video-information.csv',
+    start_frame_list = pd.read_csv(video_information_pth,
                               usecols=["video_name"	,"door_close"])
-    condition_list = pd.read_csv(r'data\video-information.csv',
+    condition_list = pd.read_csv(video_information_pth,
                                   usecols=["video_name", "condition"])
-    isBD_list = pd.read_csv(r'data\video-information.csv',
+    isBD_list = pd.read_csv(video_information_pth,
                                  usecols=["video_name", "bipolar_state"])
-    diagnosis_scale_list = pd.read_csv(r'data\video-information.csv',
+    diagnosis_scale_list = pd.read_csv(video_information_pth,
                                   usecols=["video_name", "YMRS", "HAMD"])
-    gender_list = pd.read_csv(r'data\video-information.csv',
+    gender_list = pd.read_csv(video_information_pth,
                                   usecols=["video_name", "gender"])
 
     YMRS = diagnosis_scale_list[

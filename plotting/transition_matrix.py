@@ -8,6 +8,7 @@
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import os
 import scipy
@@ -17,6 +18,8 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
+import networkx as nx
+from networkx.drawing.nx_agraph import graphviz_layout
 #%%
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -28,7 +31,7 @@ else:
 #%%
 b_o_colors = ['#1f77b4', '#ff7f0e']
 #%%
-project_name = 'BD20-Feb25-2023'
+project_name = 'BD25-HC25-final-May17-2023'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
 dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
@@ -173,6 +176,9 @@ def compute_l0_entropy(transition_m, last_state):
         entropy = 0
     return entropy
 
+
+# https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors
+
 #%% Load transition matrix in each video, and append into two classes (BD, CP)
 YMRS_score = []
 HAM_D_score = []
@@ -182,19 +188,19 @@ for j, videos in enumerate([control_videos, BD_videos]):
         v = videos[i]
         YMRS_score.append(YMRS[v][0])
         HAM_D_score.append(HAM_D[v][0])
-        print("Loading {}-{} data {}/{}...".format(v, titles[j], i, len(videos)))
+        print("Loading {}-{} data {}/{}...".format(v, titles[j], i+1, len(videos)))
 
         label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v, n_cluster, n_cluster, v))
         transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v, n_cluster, v))
         cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,project_name, v,n_cluster, v))
-        motif_usage = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name,v, n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
 
         control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
-        control_transition = compute_transition_matrices([v], [control_label], n_cluster)
+        control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
 
         score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
-        score_transition = compute_transition_matrices([v], [score_label], n_cluster)
+        score_label = score_label[: 27000]
+        score_transition = compute_transition_matrices([v], [score_label], n_cluster)[0]
 
         transition = transition_m.copy()
         transition_matrices.append(transition_m)
@@ -316,11 +322,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch3_num_zero_rows[j].append(num_zero_row_3)
         Epoch3_num_ones[j].append(num_one_item_3)
         Epoch3_num_zeros[j].append(num_zero_item_3)
-        Epoch3_Entropies[j].append(entropy_3_ctl)
+        Epoch3_Entropies_ctl[j].append(entropy_3_ctl)
         Epoch3_num_zero_rows_ctl[j].append(num_zero_row_3_ctl)
         Epoch3_num_ones_ctl[j].append(num_one_item_3_ctl)
         Epoch3_num_zeros_ctl[j].append(num_zero_item_3_ctl)
-        Epoch3_Entropies[j].append(entropy_3_score)
+        Epoch3_Entropies_score[j].append(entropy_3_score)
         Epoch3_num_zero_rows_score[j].append(num_zero_row_3_score)
         Epoch3_num_ones_score[j].append(num_one_item_3_score)
         Epoch3_num_zeros_score[j].append(num_zero_item_3_score)
@@ -356,40 +362,125 @@ transition_group = ['','_ctl', '_score']
 #%% Plot transition matrix
 pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
 patient_names = control_videos + BD_videos
+# plot score, vame, and dlc transition matrices
+cividis_cmap = plt.get_cmap('cividis')
+cividis_colors = cividis_cmap(np.linspace(0, 1, 20))
 for i in range(len(videos)*2):
-    fig, axes = plt.subplots(3, 1, figsize=(3,3))
+    k = 0 if i < 25 else 1
+    fig, axes = plt.subplots(3, 2, figsize=(10, 15))
     for j in range(3):
         transition_matrix_to_plot = eval("transition_matrices{}".format(transition_group[j]))
-        im = axes[j].imshow(transition_matrix_to_plot[i], cmap='viridis')
-        axes[j].set_title(patient_names[i])
-        axes[j].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
-        axes[j].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
-        plt.colorbar(im, ax=axes[j])
-        plt.grid(None)
+        transition_matrix_to_plot = transition_matrix_to_plot[i]
+        # plot transition matrix
+        im = axes[j][0].imshow(transition_matrix_to_plot, cmap='viridis', vmin=0, vmax=1)
+        axes[j][0].set_title("{}-{}-{}".format(titles[k],patient_names[i], transition_group[j]))
+        axes[j][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
+        axes[j][0].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
+        cbar = plt.colorbar(im, ax=axes[j][0],fraction=0.046, pad=0.04)
+        axes[j][0].grid(None)
+        axes[j][0].set_xlabel('To')
+        axes[j][0].set_ylabel('From')
+
+
+        # plot graph of the transition matrix
+        G = nx.DiGraph(transition_matrix_to_plot)
+        weight = []
+        for (nodefrom, nodeto) in G.edges:
+            w = transition_matrix_to_plot[nodefrom, nodeto]
+            weight.append(w)
+        LWidths = (weight / max(weight)) * 5
+        nodelist = G.nodes()
+        edgeList = G.edges()
+        # pos = nx.circular_layout(G)
+        # pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
+        cmap = plt.get_cmap('tab20')
+        seed = 13648  # Seed random number generators for reproducibility
+        pos = nx.circular_layout(G)
+        node_sizes = [3 + 10 * i for i in range(len(G))]
+        motif_usage = eval('motif_usage_cat{}'.format(transition_group[j]))[0] + \
+                      eval('motif_usage_cat{}'.format(transition_group[j]))[1]
+        motif_usage = motif_usage[i][:10]
+
+        M = G.number_of_edges()
+
+
+        bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+        if j == 2:
+            labels = dict(zip(nodelist, bahavior_names))
+            colormap_used = cividis_colors
+            node_radius = motif_usage * 2000
+        else:
+            labels = dict(zip(nodelist, nodelist))
+
+            colormap_used = cmap.colors
+            node_radius = motif_usage/np.sum(motif_usage) * 5000
+        font_color = 'black'
+        nodes = nx.draw_networkx_nodes(G, pos,
+                               nodelist=nodelist,
+                               node_size=node_radius,
+                               node_color=colormap_used[k::2],
+                               alpha=1,
+                               ax=axes[j][1])
+        for e in list(G.edges(data=True)):
+            axes[j][1].annotate("",
+                                xy=pos[e[0]], xycoords='data',
+                                xytext=pos[e[1]], textcoords='data',
+                                arrowprops=dict(arrowstyle="<-",
+                                                color=colormap_used[int(e[0] * 2 + k)],
+                                                linewidth=(e[2]['weight'] / max(weight)) * 5,
+                                                shrinkA=5, shrinkB=5,
+                                                patchA=None, patchB=None,
+                                                connectionstyle="arc3,rad=rrr".replace('rrr',
+                                                                                       str(0.6 * e[2]['weight'])),
+                                                ),
+                                )
+        # curved edges
+        # ref: https://stackoverflow.com/questions/15053686/networkx-overlapping-edges-when-visualizing-multigraph
+
+        # edges = nx.draw_networkx_edges(G, pos,
+        #                        edgelist=edgeList,
+        #                        width=LWidths,
+        #                        edge_color=[cmap.colors[int(edge[0] * 2 + k)] for edge in list(G.edges(data=True))],
+        #                        alpha=1,
+        #                        arrows=True,
+        #                        arrowsize=20,
+        #                                ax=axes[j][1])
+        labels_nx = nx.draw_networkx_labels(G, pos=pos,
+                                labels=labels,
+                                font_color=font_color,ax=axes[j][1])
+        axes[j][1].axis('off')
+
+        # maybe smaller factors work as well, but 1.1 works fine for this minimal example
+        axes[j][1].set_xlim([1.1 * x for x in axes[j][1].get_xlim()])
+        axes[j][1].set_ylim([1.1 * y for y in axes[j][1].get_ylim()])
+        plt.show()
+
+
     fig.show()
     if i < n_subject_in_population:
         population = 'HC'
     else:
         population = 'BD'
 
-    fname = "{}-{}_{}_transition.png".format(population, patient_names[i], n_cluster)
+    fname = "{}-{}_{}_transition.png".format(population, patient_names[i], n_cluster )
     fname_pdf = "{}-{}_{}_transition.pdf".format(population, patient_names[i], n_cluster)
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Plot L0 measures: spasity, entropy, number of 1s, number of 0s
 num_metrics = 4
-metric_names = ['distribution of entropy',
-                'distribution of #empty state',
-                'distribution of #p(state) = 1',
-                'distribution of #p(state) = 0',
+metric_names = ['dist of entropy',
+                'dist of #empty state',
+                'dist of #p(state) = 1',
+                'dist of #p(state) = 0',
                 'is_BD']
 lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
-fig, axes = plt.subplots(num_metrics, figsize=(5, 10))
+
 sns.set_style("white")
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
-
+fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(15, 15))
 for j in range(len(transition_group)):
+    print(f"{transition_group[j]}\n")
     Entropies_to_plot = eval("Entropies{}".format(transition_group[j]))
     num_zero_rows_to_plot = eval("num_zero_rows{}".format(transition_group[j]))
     num_ones_to_plot = eval("num_ones{}".format(transition_group[j]))
@@ -403,11 +494,11 @@ for j in range(len(transition_group)):
         np.concatenate((CP_idx, BD_idx),0).reshape(-1, 1)), 1),
         columns=metric_names)
     for i in range(num_metrics):
-        print(f"          {metric_names[i]}\n")
+        print(f"{metric_names[i]}\n")
         sns.violinplot(x=metric_names[-1], y=metric_names[i],
-                    data=latent_ds, palette="muted", ax=axes[i])
+                    data=latent_ds, palette="muted", ax=axes[i][j])
         sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
-                      color="white", edgecolor="gray", ax=axes[i])
+                      color="white", edgecolor="gray", ax=axes[i][j])
         CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
         BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
         corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
@@ -427,20 +518,20 @@ for j in range(len(transition_group)):
         # print("corr_HAM_D_score:", corr_HAM_D_score)
         # print("corr_YMRS_score:", corr_YMRS_score)
         s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
-        print("{} t-stat: {:.2f}, p-val: {:.3f}".format(metric_names[i], s.statistic, s.pvalue))
-        axes[i].set_xticklabels(['CP','BD'])
-        axes[i].set_title('{}, p-val: {:.3f}'.format(metric_names[i], s.pvalue))
-        axes[i].set_ylim(lims[i])
-        axes[i].set_xlabel('population')
+        print("          t-stat: {:.2f}, p-val: {:.3f}".format(s.statistic, s.pvalue))
+        axes[i][j].set_xticklabels(['CP','BD'])
+        axes[i][j].set_title('{}\n p-val: {:.3f}'.format(metric_names[i], s.pvalue))
+        axes[i][j].set_ylim(lims[i])
 
-    plt.suptitle("15-min")
-    plt.show()
-    pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
-    Path(pwd).mkdir(parents=True, exist_ok=True)
-    fname = "L0-measures.png"
-    fname_pdf = "L0-measures.pdf"
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
-    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+plt.tight_layout
+plt.suptitle("15-min-{}, vame, ctrl, score".format(transition_group[j]))
+plt.show()
+pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+Path(pwd).mkdir(parents=True, exist_ok=True)
+fname = "L0-measures.png"
+fname_pdf = "L0-measures.pdf"
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 
 #%% Plot L1, l2 distance
@@ -516,15 +607,15 @@ lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 
-for k in range(len(transition_group)):
-    fig, axes = plt.subplots(num_metrics, figsize=(5, 10))
+for epoch in range(1,4):
+    fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(10, 10))
     sns.set_style('darkgrid')
-    for epoch in range(1,4):
-        entropy = eval("Epoch{}_Entropies".format(epoch))
-        num_zero_rows = eval("Epoch{}_num_zero_rows".format(epoch))
-        num_ones = eval("Epoch{}_num_ones".format(epoch))
-        num_zeros = eval("Epoch{}_num_zeros".format(epoch))
-        print("\nEpoch {}\n".format(epoch))
+    for k in range(len(transition_group)):
+        print("\nEpoch {}-{}\n".format(epoch, transition_group[k]))
+        entropy = eval("Epoch{}_Entropies{}".format(epoch, transition_group[k]))
+        num_zero_rows = eval("Epoch{}_num_zero_rows{}".format(epoch, transition_group[k]))
+        num_ones = eval("Epoch{}_num_ones{}".format(epoch, transition_group[k]))
+        num_zeros = eval("Epoch{}_num_zeros{}".format(epoch, transition_group[k]))
         latent_ds = pd.DataFrame(np.concatenate((
             np.concatenate((entropy[0], entropy[1]), 0).reshape(-1, 1),
             np.concatenate((num_zero_rows[0], num_zero_rows[1]), 0).reshape(-1, 1),
@@ -532,12 +623,11 @@ for k in range(len(transition_group)):
             np.concatenate((num_zeros[0], num_zeros[1]), 0).reshape(-1, 1),
             np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1)), 1),
             columns=metric_names)
-
         for i in range(num_metrics):
             sns.violinplot(x=metric_names[-1], y=metric_names[i],
-                           data=latent_ds, palette="muted", ax=axes[i])
+                           data=latent_ds, palette="muted", ax=axes[i][k])
             sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
-                          color="white", edgecolor="gray", ax=axes[i])
+                          color="white", edgecolor="gray", ax=axes[i][k])
             CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
             BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
 
@@ -556,18 +646,18 @@ for k in range(len(transition_group)):
             print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
             s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
             print("{} , t-stat: {:.2f}, p-val: {:.3f}".format(metric_names[i], s.statistic, s.pvalue))
-            axes[i].set_xticklabels(['CP', 'BD'])
-            axes[i].set_title('{}, p-val: {:.3f}'.format(metric_names[i], s.pvalue))
-            axes[i].set_ylim(lims[i])
-            axes[i].set_xlabel('population')
-        plt.suptitle("Epoch {}-{}".format(epoch, transition_group[k]))
-        fig.show()
-        pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
-        Path(pwd).mkdir(exist_ok=True)
-        fname = f"epoch{epoch}-L0-measures-{transition_group[k]}.png"
-        fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
-        fig.savefig(os.path.join(pwd, fname), transparent=True)
-        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+            axes[i][k].set_xticklabels(['CP', 'BD'])
+            axes[i][k].set_title('{}, p-val: {:.3f}'.format(metric_names[i], s.pvalue))
+            axes[i][k].set_ylim(lims[i])
+            # axes[i].set_xlabel('population')
+        plt.suptitle("Epoch {}-{}-vame-ctl-score".format(epoch, transition_group[k]))
+    fig.show()
+    pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(exist_ok=True)
+    fname = f"epoch{epoch}-L0-measures-{transition_group[k]}.png"
+    fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 from scipy.spatial.distance import euclidean, pdist, squareform
 for k in range(len(transition_group)):
@@ -584,7 +674,8 @@ for k in range(len(transition_group)):
             for j in range(n_subject_in_population * 2):
                 sim_matrix[i][j] = np.linalg.norm(epoch_tm_[i]-epoch_tm_[j])
 
-
+        sim_matrix_copy = sim_matrix.copy()
+        sim_matrix_copy[]
         fig, ax = plt.subplots(1, 1, figsize=(20, 20))
         im = ax.imshow(sim_matrix)
         ax.set_title('Epoch {} similarity of transition matrix {}'.format(epoch, transition_group[k]))
@@ -600,31 +691,105 @@ for k in range(len(transition_group)):
         fig.savefig(os.path.join(pwd, fname), transparent=True)
         fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
-pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices\epoch'.format(onedrive_path, project_name)
+pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices\epoch-dwell'.format(onedrive_path, project_name)
 Path(pwd).mkdir(exist_ok=True)
-for k in range(len(transition_group)):
-    for epoch in range(1,4):
-        epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
-        epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1]).squeeze()
-        for i in range(n_subject_in_population * 2):
-            fig, axes = plt.subplots(1,1, figsize=(3,3))
-            im = axes.imshow(epoch_tm_[i], cmap='viridis', vmin=0, vmax=1)
+for i in range(n_subject_in_population * 2):
+    j = 0 if i < n_subject_in_population else 1
+    for k in range(len(transition_group)):
+        fig, axes = plt.subplots(3, 2, figsize=(10, 15))
+        for epoch in range(1,4):
+            epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
+            epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1]).squeeze()
+            im = axes[epoch-1][0].imshow(epoch_tm_[i], cmap='viridis', vmin=0, vmax=1)
             plt.grid(False)
-            axes.set_title(patient_names[i])
-            axes.set_xticks(np.arange(n_cluster), np.arange(n_cluster))
-            axes.set_yticks(np.arange(n_cluster), np.arange(n_cluster))
+            axes[epoch-1][0].set_title("{}-{}-{}-epoch {}".format(titles[j],patient_names[i], transition_group[k], epoch))
+            axes[epoch-1][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
+            axes[epoch-1][0].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
+            axes[epoch-1][0].grid(None)
+            axes[epoch-1][0].set_xlabel('To')
+            axes[epoch-1][0].set_ylabel('From')
 
-            plt.colorbar(im, ax=axes)
-    
-            fig.show()
-            if i < n_subject_in_population:
-                population = 'HC'
+            plt.colorbar(im, ax=axes[epoch-1][0], fraction=0.046, pad=0.04)
+
+            # plot graph of the transition matrix
+            G = nx.DiGraph(epoch_tm_[i])
+            weight = []
+            for (nodefrom, nodeto) in G.edges:
+                w = epoch_tm_[i][nodefrom, nodeto]
+                weight.append(w)
+
+            nodelist = G.nodes()
+            edgeList = G.edges()
+            motif_usage = eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[0]+ eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[1]
+            motif_usage = motif_usage[i][:10]
+            print(motif_usage)
+            # pos = nx.circular_layout(G)
+            # pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
+            cmap = plt.get_cmap('tab20')
+            seed = 13648  # Seed random number generators for reproducibility
+            pos = nx.circular_layout(G)
+            node_sizes = [3 + 10 * i for i in range(len(G))]
+            M = G.number_of_edges()
+            if k == 2:
+                labels = dict(zip(nodelist, bahavior_names))
+                colormap_used = cividis_colors
+                node_radius = motif_usage * 2000
             else:
-                population = 'BD'
-            fname = "{}-{}_{}_transition_epoch{}-{}.png".format(population, patient_names[i], n_cluster, epoch, transition_group[k])
-            fname_pdf = "{}-{}_{}_transition_epoch{}-{}.pdf".format(population, patient_names[i], n_cluster, epoch, transition_group[k])
-            fig.savefig(os.path.join(pwd, fname), transparent=True)
-            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+                labels = dict(zip(nodelist, nodelist))
+                colormap_used = cmap.colors
+                node_radius = motif_usage/np.sum(motif_usage) * 5000
+            nodes = nx.draw_networkx_nodes(G, pos,
+                                           nodelist=nodelist,
+                                           node_size=node_radius,
+                                           node_color=colormap_used[j::2],
+                                           alpha=1,
+                                           ax=axes[epoch-1][1])
+            font_color = 'black'
+            if weight:
+                LWidths = (weight / max(weight)) * 5
+                # curved edges
+                # ref: https://stackoverflow.com/questions/15053686/networkx-overlapping-edges-when-visualizing-multigraph
+                for e in list(G.edges(data=True)):
+                    axes[epoch-1][1].annotate("",
+                                        xy=pos[e[0]], xycoords='data',
+                                        xytext=pos[e[1]], textcoords='data',
+                                        arrowprops=dict(arrowstyle="<-",
+                                                        color=colormap_used[int(e[0] * 2 + j)],
+                                                        linewidth=(e[2]['weight'] / max(weight)) * 5,
+                                                        shrinkA=5, shrinkB=5,
+                                                        patchA=None, patchB=None,
+                                                        connectionstyle="arc3,rad=rrr".replace('rrr',
+                                                                                               str(0.5 * e[2]['weight'])),
+                                                        ),
+                                        )
+            bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
+                              "wear"]
+
+            labels_nx = nx.draw_networkx_labels(G, pos=pos,
+                                                labels=labels,
+                                                font_color=font_color,
+                                                font_size=12,
+                                                ax=axes[epoch-1][1])
+            axes[epoch-1][1].axis('off')
+            axes[epoch-1][1].set_title("{}-{}-{}-epoch {}".format(titles[j],patient_names[i], transition_group[k], epoch))
+
+            axes[epoch-1][1].set_xlim([1.2 * x for x in axes[epoch-1][1].get_xlim()])
+            axes[epoch-1][1].set_ylim([1.2 * y for y in axes[epoch-1][1].get_ylim()])
+
+        if i < n_subject_in_population:
+            population = 'HC'
+        else:
+            population = 'BD'
+        plt.axis('off')
+
+        plt.tight_layout()
+        plt.suptitle("{}-{}_{}_transition_epoch{}-{}".format(population, patient_names[i], n_cluster, epoch, transition_group[k]))
+        fig.show()
+
+        fname = "{}-{}_{}_transition_epoch{}-dwell.png".format(population, patient_names[i], n_cluster, transition_group[k])
+        fname_pdf = "{}-{}_{}_transition_epoch{}-dwell.pdf".format(population, patient_names[i], n_cluster, transition_group[k])
+        fig.savefig(os.path.join(pwd, fname), transparent=True)
+        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 
