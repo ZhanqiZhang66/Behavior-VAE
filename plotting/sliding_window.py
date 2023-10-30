@@ -93,7 +93,7 @@ if not load_precomputed_sliding_window:
                 dist_traveled += dist_seg
             velocity.append(dist_traveled/window_size)
         return velocity
-    #%% Sliding window of 5 min analysis
+    #%% Sliding window of 3 min analysis
 
 
     #%%
@@ -105,77 +105,88 @@ if not load_precomputed_sliding_window:
     else:
         github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
     #%%
-    project_name = 'BD20-Feb25-2023'
+    project_name = 'BD25-HC25-final-May17-2023'
     config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
                                                            project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
     cfg = read_config(config)
     dlc_path = os.path.join(cfg['project_path'], "videos",
                             "\pose_estimation")  # dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
     n_cluster = 10
+    n_scores = 11
     model_name = 'VAME'
     cluster_start = cfg['time_window'] / 2
     n_cluster = 10
     d_latent = 10
-
+    window_size = int(3 * 60 * 30)
     # %%
     b_o_colors = ['#1f77b4', '#ff7f0e']
 
-
-    # TODO gender-wise CP-male, CP-female
-    control_videos = ['BC1ANGA', 'BC1ANHE', 'BC1AASA', 'BC1ALKA', 'BC1ALPA',
-                      'BC1ALRO', 'BC1ANBU', 'BC1ANWI', 'BC1ASKA', 'BC1ATKU',
-                      'BC1MOKI', 'BC1NITA', 'BC1BRPO', 'BC1BRSC', 'BC1CERO',
-                      'BC1COGR', 'BC1DAAR', 'BC1DEBR', 'BC1FEMO', 'BC1GESA',
-                      'BC1GRLE', 'BC1HAKO', 'BC1HETR', 'BC1JECO', 'BC1JUPA']
-    # TODO gender-wise [BD-male, BD-female]
-    BD_videos = ['BC1LOKE', 'BC1MAMA', 'BC1ADPI', 'BC1CISI', 'BC1DOBO',
-                 'BC1JUST', 'BC1KEMA', 'BC1LABO', 'BC1LACA', 'BC1BRBU',
-                 'BC1MISE', 'BC1OKBA', 'CASH1', 'GRCH', 'BC1AMMU',
-                 'GRJO1', 'HESN1', 'JEPT1', 'JETH1', 'LABO1',
-                 'MAFL', 'MIHA1', 'MIRU1', 'PANU', 'ROEA1']
+    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+    control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+    BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
+    score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
+                            "wear", "exercise"]
     n_subject_in_population = len(control_videos)
-    start_frame = pd.read_csv(os.path.join(onedrive_path, 'Behavior_VAE_data', 'start_frame_vic_50.csv'),
-                              usecols=[0, 1])
-    diagnosis_score = pd.read_csv(os.path.join(onedrive_path, 'Behavior_VAE_data', 'start_frame_vic_50.csv'),
-                                  usecols=[0, 4,
-                                           5])  # pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-n_subject_in_population52')
-    YMRS = diagnosis_score[
-        ['video_name', 'YMRS']]  # diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > n_subject_in_population)']]
-    YMRS = YMRS.set_index('video_name').T.to_dict('list')  # YMRS.set_index('Subject ID').T.to_dict('list')
-    HAM_D = diagnosis_score[['video_name', 'HAMD']]  # diagnosis_score[['Subject ID','HAM-D']]
-    HAM_D = HAM_D.set_index('video_name').T.to_dict('list')  # HAM_D.set_index('Subject ID').T.to_dict('list')
 
     titles = ["CP", "BD"]
 
     slide_window = {
-      "subject": [],
-      "start_frame": [],
-      "is_BD": [],
-      "entropy": [],
-      "num_zero_row":[],
-      "num_one_item": [],
-      "num_zero_item":[],
-      "motif0_usage_freq": [],
-      "motif1_usage_freq": [],
-      "motif2_usage_freq": [],
-      "motif3_usage_freq": [],
-      "motif4_usage_freq": [],
-      "motif5_usage_freq": [],
-      "motif6_usage_freq": [],
-      "motif7_usage_freq": [],
-      "motif8_usage_freq": [],
-      "motif9_usage_freq": [],
-      "latent_volume_all_motifs": [],
-      "latent_volume_motif0": [],
-      "latent_volume_motif1": [],
-      "latent_volume_motif2": [],
-      "latent_volume_motif3": [],
-      "latent_volume_motif4": [],
-      "latent_volume_motif5": [],
-      "latent_volume_motif6": [],
-      "latent_volume_motif7": [],
-      "latent_volume_motif8": [],
-      "latent_volume_motif9": [],
+        "subject": [],
+        "start_frame": [],
+        "is_BD": [],
+        "entropy": [],
+        "num_zero_row":[],
+        "num_one_item": [],
+        "num_zero_item":[],
+        "motif0_usage_freq": [],
+        "motif1_usage_freq": [],
+        "motif2_usage_freq": [],
+        "motif3_usage_freq": [],
+        "motif4_usage_freq": [],
+        "motif5_usage_freq": [],
+        "motif6_usage_freq": [],
+        "motif7_usage_freq": [],
+        "motif8_usage_freq": [],
+        "motif9_usage_freq": [],
+        "latent_volume_all_motifs": [],
+        "latent_volume_motif0": [],
+        "latent_volume_motif1": [],
+        "latent_volume_motif2": [],
+        "latent_volume_motif3": [],
+        "latent_volume_motif4": [],
+        "latent_volume_motif5": [],
+        "latent_volume_motif6": [],
+        "latent_volume_motif7": [],
+        "latent_volume_motif8": [],
+        "latent_volume_motif9": [],
+        "entropy_score": [],
+        "num_zero_row_score": [],
+        "num_one_item_score": [],
+        "num_zero_item_score": [],
+        "motif0_usage_freq_score": [],
+        "motif1_usage_freq_score": [],
+        "motif2_usage_freq_score": [],
+        "motif3_usage_freq_score": [],
+        "motif4_usage_freq_score": [],
+        "motif5_usage_freq_score": [],
+        "motif6_usage_freq_score": [],
+        "motif7_usage_freq_score": [],
+        "motif8_usage_freq_score": [],
+        "motif9_usage_freq_score": [],
+        "entropy_ctl": [],
+        "num_zero_row_ctl": [],
+        "num_one_item_ctl": [],
+        "num_zero_item_ctl": [],
+        "motif0_usage_freq_ctl": [],
+        "motif1_usage_freq_ctl": [],
+        "motif2_usage_freq_ctl": [],
+        "motif3_usage_freq_ctl": [],
+        "motif4_usage_freq_ctl": [],
+        "motif5_usage_freq_ctl": [],
+        "motif6_usage_freq_ctl": [],
+        "motif7_usage_freq_ctl": [],
+        "motif8_usage_freq_ctl": [],
+        "motif9_usage_freq_ctl": [],
     }
 
     csv_path = os.path.join(cfg['project_path'],"videos","pose_estimation")
@@ -193,10 +204,22 @@ if not load_precomputed_sliding_window:
             label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path,project_name, v,n_cluster,n_cluster,v))
             latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
 
-            v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
-            door_close_time = int(start_frame.loc[v_index, 'door_close'])
-            start_time = start_frame.loc[v_index, 'door_close'] #start_frame.loc[v_index, 'n']
-            window_size = int(3 * 60 * 30)
+            control_label = np.load(
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                                   project_name, v,
+                                                                                                   n_cluster, n_cluster,
+                                                                                                   v))
+            control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
+            score_label = np.load(
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path,
+                                                                                                project_name, v,
+                                                                                                n_cluster, v))
+            score_label = score_label[: 27000]
+            score_transition = compute_transition_matrices([v], [score_label], n_cluster)[0]
+
+            door_close_time = int(start_frame[v][0])
+            start_time = door_close_time
+
             offset = 0# int(door_close_time - start_time)
 
 
@@ -216,6 +239,14 @@ if not load_precomputed_sliding_window:
                 window_transition_matrix = compute_transition_matrices([v], [window_label], n_cluster)
                 num_zero_row, num_one_item, num_zero_item = count_zeros(window_transition_matrix[0])
                 entropy = compute_l0_entropy(window_transition_matrix[0], window_label[-1])
+
+                num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
+                entropy_score = compute_l0_entropy(score_transition, control_label[-1])
+                control_motif_usage = get_motif_usage(control_label, n_cluster)
+
+                num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
+                entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
+                score_motif_usage = get_motif_usage(score_label, n_scores)
                 #velocity = compute_velocity(data_mat[offset + k: window_size + offset + k], window_size)
 
                 slide_window["subject"].append(v)
@@ -225,9 +256,20 @@ if not load_precomputed_sliding_window:
                 slide_window["num_zero_row"].append(num_zero_row)
                 slide_window["num_one_item"].append(num_one_item)
                 slide_window["num_zero_item"].append(num_zero_item)
+
+                slide_window["entropy_score"].append(entropy_score)
+                slide_window["num_zero_row_score"].append(num_zero_row_score)
+                slide_window["num_one_item_score"].append(num_one_item_score)
+                slide_window["num_zero_item_score"].append(num_zero_item_score)
+
+                slide_window["entropy_ctl"].append(entropy_ctl)
+                slide_window["num_zero_row_ctl"].append(num_zero_row_ctl)
+                slide_window["num_one_item_ctl"].append(num_one_item_ctl)
+                slide_window["num_zero_item_ctl"].append(num_zero_item_ctl)
                 for i in range(n_cluster):
                     slide_window['motif{}_usage_freq'.format(i)].append(window_motif_usage[i]/np.sum(window_motif_usage))
-
+                    slide_window['motif{}_usage_freq_ctl'.format(i)].append(control_motif_usage[i] / np.sum(control_motif_usage))
+                    slide_window['motif{}_usage_freq_score'.format(i)].append(score_motif_usage[i] / np.sum(score_motif_usage))
                 # slide_window["motif_usage_freq"].append(window_motif_usage/np.sum(window_motif_usage))
 
                 K = np.cov(window_latent_vector.T)
@@ -255,10 +297,10 @@ if not load_precomputed_sliding_window:
     ds_new.to_csv(pwd)
 #%%
 if load_precomputed_sliding_window:
-    pwd = r'D:\OneDrive - UC San Diego\Behavior_VAE_data\BD20-Jun5-2022\data\slide_window3.csv'
+    pwd = r'{}\Behavior_VAE_data\{}\data\slide_window3.csv'.format(onedrive_path, project_name)
     ds = pd.read_csv(pwd)
 
-    project_name = 'BD20-Feb25-2023'
+    project_name = 'BD25-HC25-final-May17-2023'
     config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
                                                            project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
     cfg = read_config(config)

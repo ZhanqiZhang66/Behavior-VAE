@@ -535,31 +535,102 @@ fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 
 #%% Plot L1, l2 distance
-from scipy.spatial.distance import cityblock
+from scipy.spatial.distance import squareform
+import scipy.spatial as sp
+import scipy.cluster.hierarchy as sch
+import scipy.spatial.distance as ssd
 def similarity_func(u, v):
-    return 1/(1+np.linalg.norm(np.asarray(u)-np.asarray(v)))
+    dis = np.linalg.norm(np.asarray(u)-np.asarray(v))
+    sim = 1/(1+np.linalg.norm(np.asarray(u)-np.asarray(v)))
+    return dis, sim
+def cosine_similarity_func(u, v):
+    #https://stackoverflow.com/questions/30152599/cosine-similarity-calculation-between-two-matrices
+    return 1 - sp.distance.cdist(u, v, 'cosine')
+#https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors/64338609#64338609
+def argsort_sim_mat(sm):
+    idx = [np.argmax(np.sum(sm, axis=1))]  # a
+    for i in range(1, len(sm)):
+        sm_i = sm[idx[-1]].copy()
+        sm_i[idx] = -1
+        idx.append(np.argmax(sm_i))  # b
+    return np.array(idx)
 
 l2_matrix = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
 l2_matrix_ctl = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
 l2_matrix_score = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-# l1_matrix = np.zeros((24,24))
+sim_matrix = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
+sim_matrix_ctl = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
+sim_matrix_score = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
 for i in range(n_subject_in_population*2):
     for j in range(n_subject_in_population*2):
-        l2_matrix[i][j] = np.linalg.norm(transition_matrices[i]-transition_matrices[j])
-        l2_matrix_ctl[i][j] = np.linalg.norm(transition_matrices_ctl[i]-transition_matrices_ctl[j])
-        l2_matrix_score[i][j] = np.linalg.norm(transition_matrices_score[i]-transition_matrices_score[j])
-        # l1_matrix[i][j] = cityblock(transition_matrices[i],transition_matrices[j])
+        l2_matrix[i][j] = similarity_func(transition_matrices[i],transition_matrices[j])[0]
+        l2_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i],transition_matrices_ctl[j])[0]
+        l2_matrix_score[i][j] = similarity_func(transition_matrices_score[i],transition_matrices_score[j])[0]
+
+        sim_matrix[i][j] = similarity_func(transition_matrices[i],transition_matrices[j])[1]
+        sim_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i],transition_matrices_ctl[j])[1]
+        sim_matrix_score[i][j] = similarity_func(transition_matrices_score[i],transition_matrices_score[j])[1]
+
 
 for j in range(len(transition_group)):
-    l2_matrix_to_plot = eval("l2_matrix{}".format(transition_group[j]))
-    fig, ax = plt.subplots(1, 1, figsize=(20, 20))
-    im = ax.imshow(l2_matrix_to_plot)
-    ax.set_title('15-min L2 distance of transition matrix')
-    patient_names = control_videos + BD_videos
-    ax.set_xticks(np.arange(n_subject_in_population*2), patient_names, rotation=45)
-    ax.set_yticks(np.arange(n_subject_in_population*2), patient_names, rotation=45)
-    plt.colorbar(im)
+    dis_mat, sim_mat = eval("l2_matrix{}".format(transition_group[j])), eval("sim_matrix{}".format(transition_group[j]))
+
+    idx = argsort_sim_mat(dis_mat[:n_subject_in_population, :n_subject_in_population])
+    idx2 = argsort_sim_mat(dis_mat[n_subject_in_population:,n_subject_in_population:])
+    idx2 = idx2 + n_subject_in_population
+    idx_all = np.concatenate((idx[::-1], idx2[::-1]))
+    # apply reordering for rows and columns
+    sim_mat2 = sim_mat[idx_all,:][:, idx_all]
+    dis_mat2 = dis_mat[idx_all,:][:, idx_all]
+    dist_condensed = squareform(dis_mat)
+    # https://stackoverflow.com/questions/2982929/plotting-results-of-hierarchical-clustering-on-top-of-a-matrix-of-data
+    # Compute and plot first dendrogram.
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15))
+    ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
+    Y = sch.linkage(dist_condensed, method='ward')
+    Z1 = sch.dendrogram(Y, orientation='left')
+    ax1.set_xticks([])
+    ax1.set_yticks([])
+    ax1.grid(None)
+
+    # # Compute and plot second dendrogram.
+    ax2 = fig.add_axes([0.3, 0.71, 0.6, 0.2])
+    Y = sch.linkage(dist_condensed, method='ward')
+    Z2 = sch.dendrogram(Y)
+    ax2.set_xticks([])
+    ax2.set_yticks([])
+    ax2.grid(None)
+
+    # Plot similarity matrix
+    axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.6])
+    idx1 = Z1['leaves']
+    idx2 = Z2['leaves']
+    D = dis_mat[idx1, :]
+    D = D[:, idx2]
+    im = axmatrix.imshow(D, cmap='plasma')
+    axmatrix.grid(None)
+
+    patient_names = np.array(control_videos + BD_videos)
+    axmatrix.set_xticks(np.arange(n_subject_in_population*2), patient_names[idx1], rotation=-90)
+    axmatrix.set_yticks(np.arange(n_subject_in_population*2))
+    axmatrix.set_yticklabels(patient_names[idx1], minor=False)
+    axmatrix.yaxis.set_label_position('right')
+    axmatrix.yaxis.tick_right()
+    BD = [idx for idx, p in enumerate(patient_names[idx1]) if p in BD_videos]
+    CP = [idx for idx, p in enumerate(patient_names[idx1]) if p in control_videos]
+    for idx in BD:
+        axmatrix.get_xticklabels()[idx].set_color(b_o_colors[1])
+        axmatrix.get_yticklabels()[idx].set_color(b_o_colors[1])
+    for idx in CP:
+        axmatrix.get_xticklabels()[idx].set_color(b_o_colors[0])
+        axmatrix.get_yticklabels()[idx].set_color(b_o_colors[0])
+    axcolor = fig.add_axes([0.96, 0.1, 0.02, 0.6])
+    plt.colorbar(im, cax=axcolor)
+    plt.grid(None)
+    #plt.title('15-min L2 distance of transition matrix{}'.format(transition_group[j]))
     fig.show()
+
+
     pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "TM-similarity_{}.png".format(transition_group[j])
@@ -567,14 +638,6 @@ for j in range(len(transition_group)):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-# fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-# im = ax.imshow(l1_matrix)
-# ax.set_title('15-min L1 distance of transition matrix')
-# patient_names = control_videos + BD_videos
-# ax.set_xticks(np.arange(24), patient_names, rotation=45)
-# ax.set_yticks(np.arange(24), patient_names, rotation=45)
-# plt.colorbar(im)
-# fig.show()
 #%% inspect high similarity ones
 patient_names = control_videos + BD_videos
 idx = [[11, 4], [17, 12], [16, 13]]
@@ -659,10 +722,13 @@ for epoch in range(1,4):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
+
+
 from scipy.spatial.distance import euclidean, pdist, squareform
 for k in range(len(transition_group)):
     for epoch in range(1,4):
         sim_matrix = np.zeros((n_subject_in_population * 2,n_subject_in_population * 2))
+        dis_mat = np.zeros((n_subject_in_population * 2,n_subject_in_population * 2))
         epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
         epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1])
         epoch_label = eval('Epoch{}_labels{}'.format(epoch, transition_group[k]))
@@ -670,19 +736,78 @@ for k in range(len(transition_group)):
         BD_label = np.concatenate(epoch_label[1], axis=0)
         CP_transition_matrix = compute_transition_matrices([titles[0]], [CP_label], n_cluster)
         BD_transition_matrix = compute_transition_matrices([titles[1]], [BD_label], n_cluster)
+
         for i in range(n_subject_in_population * 2):
             for j in range(n_subject_in_population * 2):
-                sim_matrix[i][j] = np.linalg.norm(epoch_tm_[i]-epoch_tm_[j])
+                dis_mat[i][j] = similarity_func(epoch_tm_[i], epoch_tm_[j])[0]
+                sim_matrix[i][j] = similarity_func(epoch_tm_[i], epoch_tm_[j])[1]
 
-        sim_matrix_copy = sim_matrix.copy()
-        sim_matrix_copy[]
-        fig, ax = plt.subplots(1, 1, figsize=(20, 20))
-        im = ax.imshow(sim_matrix)
-        ax.set_title('Epoch {} similarity of transition matrix {}'.format(epoch, transition_group[k]))
-        patient_names = control_videos + BD_videos
-        ax.set_xticks(np.arange(n_subject_in_population * 2), patient_names, rotation=45)
-        ax.set_yticks(np.arange(n_subject_in_population * 2), patient_names, rotation=45)
-        plt.colorbar(im)
+        sim_mat = sim_matrix.copy()
+        idx = argsort_sim_mat(dis_mat[:n_subject_in_population, :n_subject_in_population])
+        idx2 = argsort_sim_mat(dis_mat[n_subject_in_population:, n_subject_in_population:])
+        idx2 = idx2 + n_subject_in_population
+        idx_all_ = np.concatenate((idx, idx2))
+        idx_all = np.concatenate((idx[::-1], idx2[::-1]))
+        # apply reordering for rows and columns
+        sim_mat2 = sim_mat[idx_all, :][:, idx_all]
+        dis_mat2 = dis_mat[idx_all, :][:, idx_all]
+
+        # epoch_tm_sorted = epoch_tm_[idx_all]
+        # dist_vec = np.zeros(int(scipy.special.comb(n_subject_in_population*2, 2)))
+        # for i in range(n_subject_in_population * 2):
+        #     for j in range(n_subject_in_population * 2):
+        #         dist_vec[50 * i + j - ((i + 2) * (i + 1)) // 2] = dis_mat2[i][j]
+        #
+        # tmp1 = np.asarray([tm.flatten() for tm in epoch_tm_sorted])
+        # dist_condensed = squareform(pdist(tmp1))
+        dist_condensed = squareform(dis_mat)
+        # https://stackoverflow.com/questions/2982929/plotting-results-of-hierarchical-clustering-on-top-of-a-matrix-of-data
+        # Compute and plot first dendrogram.
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15))
+        ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
+        Y = sch.linkage(dist_condensed, method='ward')
+        Z1 = sch.dendrogram(Y, orientation='left')
+        ax1.set_xticks([])
+        ax1.set_yticks([])
+        ax1.grid(None)
+
+        # Compute and plot second dendrogram.
+        ax2 = fig.add_axes([0.3, 0.71, 0.6, 0.2])
+        Y = sch.linkage(dist_condensed, method='ward')
+        Z2 = sch.dendrogram(Y)
+        ax2.set_xticks([])
+        ax2.set_yticks([])
+        ax2.grid(None)
+
+        # Plot similarity matrix
+        axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.6])
+        idx1 = Z1['leaves']
+        idx2 = Z2['leaves']
+        D = dis_mat[idx1, :]
+        D = D[:, idx2]
+        im = axmatrix.imshow(D, cmap='plasma')
+        axmatrix.grid(None)
+
+        patient_names = np.array(control_videos + BD_videos)
+        axmatrix.set_xticks(np.arange(n_subject_in_population * 2), patient_names[idx1], rotation=-90)
+        axmatrix.set_yticks(np.arange(n_subject_in_population * 2))
+        axmatrix.set_yticklabels(patient_names[idx1], minor=False)
+        axmatrix.yaxis.set_label_position('right')
+        axmatrix.yaxis.tick_right()
+        BD = [idx for idx, p in enumerate(patient_names[idx1]) if p in BD_videos]
+        CP = [idx for idx, p in enumerate(patient_names[idx1]) if p in control_videos]
+        for idx in BD:
+            axmatrix.get_xticklabels()[idx].set_color(b_o_colors[1])
+            axmatrix.get_yticklabels()[idx].set_color(b_o_colors[1])
+        for idx in CP:
+            axmatrix.get_xticklabels()[idx].set_color(b_o_colors[0])
+            axmatrix.get_yticklabels()[idx].set_color(b_o_colors[0])
+
+
+        axcolor = fig.add_axes([0.96, 0.1, 0.02, 0.6])
+        plt.colorbar(im, cax=axcolor)
+        plt.grid(None)
+        # plt.title('15-min L2 distance of transition matrix{}'.format(transition_group[j]))
         fig.show()
         pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
         Path(pwd).mkdir(exist_ok=True)
@@ -786,10 +911,11 @@ for i in range(n_subject_in_population * 2):
         plt.suptitle("{}-{}_{}_transition_epoch{}-{}".format(population, patient_names[i], n_cluster, epoch, transition_group[k]))
         fig.show()
 
+
         fname = "{}-{}_{}_transition_epoch{}-dwell.png".format(population, patient_names[i], n_cluster, transition_group[k])
         fname_pdf = "{}-{}_{}_transition_epoch{}-dwell.pdf".format(population, patient_names[i], n_cluster, transition_group[k])
-        fig.savefig(os.path.join(pwd, fname), transparent=True)
-        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+        # fig.savefig(os.path.join(pwd, fname), transparent=True)
+        # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 
