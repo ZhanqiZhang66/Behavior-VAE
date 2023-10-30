@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import scipy
 from scipy import stats
-from scipy.stats import permutation_test
+# from scipy.stats import permutation_test
 from pathlib import Path
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
@@ -36,21 +36,11 @@ n_cluster = 10
 n_scores = 11
 model_name = 'VAME'
 
-data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub\Behavior-VAE\data\video-information.csv')
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 score_bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
 n_subject_in_population = len(control_videos)
-# start_frame = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,1])
-# diagnosis_score = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,4,5])#pd.read_csv('D:\OneDrive - UC San Diego\Behavior_VAE_data\Participant_videos_attributes\First-24-Videos\Subject_24ID-BDs-HCs-Victoria-PC.csv',encoding='windows-1252')
-# gender_list = pd.read_csv(os.path.join(onedrive_path,'Behavior_VAE_data', 'start_frame_vic_50.csv'),  usecols=[0,7])
-#
-# YMRS = diagnosis_score[['video_name', 'YMRS']] #diagnosis_score[['Subject ID', 'YMRS (max score, 60. Pts are ineligible > 12)']]
-# YMRS = YMRS.set_index('video_name').T.to_dict('list') #YMRS.set_index('Subject ID').T.to_dict('list')
-# HAM_D = diagnosis_score[['video_name','HAMD']] #diagnosis_score[['Subject ID','HAM-D']]
-# HAM_D = HAM_D.set_index('video_name').T.to_dict('list') #HAM_D.set_index('Subject ID').T.to_dict('list')
-# gender = gender_list[['video_name','Gender']]
-# gender = gender.set_index('video_name').T.to_dict('list')
 #%%
 YMRS_score = []
 HAM_D_score = []
@@ -108,6 +98,9 @@ Epoch2_motif_usage_cat_score = [[],[]]
 Epoch3_labels_score = [[], []]
 Epoch3_motif_usage_score = [[], []]
 Epoch3_motif_usage_cat_score = [[],[]]
+def get_motif_usage(label, n_cluster):
+    motif_usage = np.asarray([label.tolist().count(i) for i in range(n_cluster)])
+    return motif_usage
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
@@ -117,8 +110,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
         print("Loading {}-{} data {}/{}...".format(v, titles[j], i+1, len(videos)))
         label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
         cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
-        motif_usage = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
-
+        motif_usage = get_motif_usage(label, n_cluster)
+        np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v), motif_usage)
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
 
         control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
@@ -168,13 +161,13 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch2_labels_ctl[j].append(epoch_2_label_ctl)
         Epoch2_motif_usage_ctl[j].append(epoch_2_motif_usage_ctl/ np.sum(epoch_2_motif_usage_ctl))
 
-        Epoch3_labels_ctl[j].append(epoch_3_label)
+        Epoch3_labels_ctl[j].append(epoch_3_label_ctl)
         Epoch3_motif_usage_ctl[j].append(epoch_3_motif_usage_ctl/ np.sum(epoch_3_motif_usage_ctl))
 
         # ----------SCORES-----------concat labels, motif usage for 3 epochs for scores--------
-        epoch_1_label_score = control_label[:five_min_frame_no + offset]
-        epoch_2_label_score = control_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
-        epoch_3_label_score = control_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+        epoch_1_label_score = score_label[:five_min_frame_no + offset]
+        epoch_2_label_score = score_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
+        epoch_3_label_score = score_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
 
         epoch_1_motif_usage_score = get_motif_usage(epoch_1_label_score, n_scores)
         epoch_2_motif_usage_score = get_motif_usage(epoch_2_label_score, n_scores)
@@ -186,7 +179,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch2_labels_score[j].append(epoch_2_label_score)
         Epoch2_motif_usage_score[j].append(epoch_2_motif_usage_score / np.sum(epoch_2_motif_usage_score))
 
-        Epoch3_labels_score[j].append(epoch_3_label)
+        Epoch3_labels_score[j].append(epoch_3_label_score)
         Epoch3_motif_usage_score[j].append(epoch_3_motif_usage_score / np.sum(epoch_3_motif_usage_score))
 
 
@@ -259,8 +252,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Epoch1_motif_usage_cat_score[j] = m_e1_score
     Epoch2_motif_usage_cat_score[j] = m_e2_score
     Epoch3_motif_usage_cat_score[j] = m_e3_score
-    Motif_usages_score[j] = m_control
-    Motif_usage_pct_score[j] = m_control / n
+    Motif_usages_score[j] = m_score
+    Motif_usage_pct_score[j] = m_score / n
     Labels_score[j] = l_control
 
 #%% Population-wise analysis
@@ -280,7 +273,8 @@ for i in range(n_cluster):
     # `n_resamples=np.inf` indicates that an exact test is to be performed
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
     # res = p.permutation_test(BD, CP)
-    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic[0], s.pvalue[0]))
+    print("Motif {}".format(i))
+    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s.statistic[0], s.pvalue[0]))
     # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score = scipy.stats.pearsonr(motif_usage_cat[0,:,i], HAM_D_score[:n_subject_in_population])
     corr_YMRS_score = scipy.stats.pearsonr(motif_usage_cat[0,:,i], YMRS_score[:n_subject_in_population])
@@ -300,7 +294,7 @@ for i in range(n_cluster):
     # `n_resamples=np.inf` indicates that an exact test is to be performed
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
     # res = p.permutation_test(BD, CP)
-    print("Control \n")
+    print(" Control \n")
     print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_ctl.statistic[0], s_ctl.pvalue[0]))
     # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[0,:,i], HAM_D_score[:n_subject_in_population])

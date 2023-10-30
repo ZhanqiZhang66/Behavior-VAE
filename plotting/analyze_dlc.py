@@ -339,6 +339,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         print(v)
 
         data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
         labels = []
         vame_label = np.load(
             r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
@@ -365,27 +366,23 @@ for j, videos in enumerate([control_videos, BD_videos]):
         labels = [vame_label,
                   dlc_cluster_label[temp_win // 2:-temp_win // 2],
                   score_label,
-                  score_label_merged
+                  score_label_merged,
                   ]
 
         # a colored line plot for every body keypoint
-        for body_i in range(1, 41, 2):
-
-            fig, axs = plt.subplots(4, 1, figsize=(12, 20))
+        for body_i in range(39, 41, 2):
+            fig, axs = plt.subplots(4, 1, figsize=(12, 12))
             # plot motif segmentation in three approaches [vame, dlc, score]
             for fig_i in range(4):
                 d = np.concatenate((labels[fig_i].reshape(-1, 1), data[temp_win // 2:-temp_win // 2]), axis=1)
+
                 df = pd.DataFrame(d, columns=dlc_labels)
 
-                # plot time sequence and motif segmentation
-                x = df.iloc[:, body_i]
-                y = df.iloc[:, body_i + 1]
 
-                lx = axs[fig_i].plot(x, label='x', color='k', )
-                ly = axs[fig_i].plot(y, label='y', color='r')
-                axs[fig_i].legend()
 
                 cmap = plt.get_cmap('tab20')
+                cividis_cmap = plt.get_cmap('cividis')
+                uniform_colors = cividis_cmap(np.linspace(0, 1, 20))
                 condition = df['label']
                 current_c = condition[0]
                 spans = [[0, 0]]
@@ -407,49 +404,79 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
                 X = np.arange(len(x))
                 if fig_i == 0 or fig_i == 1:
+                    spans[-1][-1] = len(condition) - 1
+                    # span_label.append(condition[-1])
+                    for iii in range(len(spans)):
+                        span = spans[iii]
+                        l_label = span_label[iii]
+                        axs[fig_i].axvspan(span[0], span[1], alpha=1, color=cmap.colors[int(l_label * 2 + j)])
+
                     legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
-                              Line2D(X, df.iloc[:, body_i + 1], color='r', label='y'),
-                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label=0),
-                              Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=0.2, label=1),
-                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label=2),
-                              Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=0.2, label=3),
-                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label=4),
-                              Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=0.2, label=5),
-                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label=6),
-                              Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=0.2, label=7),
-                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label=8),
-                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label=9),
-                            ]
+                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=1, label=0),
+                              Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=1, label=1),
+                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=1, label=2),
+                              Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=1, label=3),
+                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=1, label=4),
+                              Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=1, label=5),
+                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=1, label=6),
+                              Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=1, label=7),
+                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=1, label=8),
+                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=1, label=9),
+                              ]
                 elif fig_i == 2:
+                    spans[-1][-1] = len(condition) - 1
+                    # span_label.append(condition[-1])
+                    for iii in range(len(spans)):
+                        span = spans[iii]
+                        l_label = span_label[iii]
+                        axs[fig_i].axvspan(span[0], span[1], alpha=1, color=uniform_colors[int(l_label * 2 + j)])
+
                     legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
-                              Line2D(X, df.iloc[:, body_i + 1], color='r', label='y'),
-                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label="sit"),
-                              Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=0.2, label="sit_obj"),
-                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label="stand"),
-                              Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=0.2, label="stand-obj"),
-                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label="walk"),
-                              Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=0.2, label="walk_obj"),
-                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label="lie"),
-                              Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=0.2, label="lie_obj"),
-                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label="interact"),
-                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label="wear"),
+                              Patch(facecolor=uniform_colors[int(0 * 2 + j)], alpha=0.8, label="sit"),
+                              Patch(facecolor=uniform_colors[int(1 * 2 + j)], alpha=0.8, label="sit_obj"),
+                              Patch(facecolor=uniform_colors[int(2 * 2 + j)], alpha=0.8, label="stand"),
+                              Patch(facecolor=uniform_colors[int(3 * 2 + j)], alpha=0.8, label="stand-obj"),
+                              Patch(facecolor=uniform_colors[int(4 * 2 + j)], alpha=0.8, label="walk"),
+                              Patch(facecolor=uniform_colors[int(5 * 2 + j)], alpha=0.8, label="walk_obj"),
+                              Patch(facecolor=uniform_colors[int(6 * 2 + j)], alpha=0.8, label="lie"),
+                              Patch(facecolor=uniform_colors[int(7 * 2 + j)], alpha=0.8, label="lie_obj"),
+                              Patch(facecolor=uniform_colors[int(8 * 2 + j)], alpha=0.8, label="interact"),
+                              Patch(facecolor=uniform_colors[int(9 * 2 + j)], alpha=0.8, label="wear"),
                               ]
                 else:
+                    spans[-1][-1] = len(condition) - 1
+                    # span_label.append(condition[-1])
+                    for iii in range(len(spans)):
+                        span = spans[iii]
+                        l_label = span_label[iii]
+                        axs[fig_i].axvspan(span[0], span[1], alpha=1, color=uniform_colors[int(l_label * 2 + j)])
                     legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
-                              Line2D(X, df.iloc[:, body_i + 1], color='r', label='y'),
-                              Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=0.2, label="sit"),
-                              Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=0.2, label="stand"),
-                              Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=0.2, label="walk"),
-                              Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=0.2, label="lie"),
-                              Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=0.2, label="interact"),
-                              Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=0.2, label="wear"),
+                              Patch(facecolor=uniform_colors[int(0 * 2 + j)], alpha=0.8, label="sit"),
+                              Patch(facecolor=uniform_colors[int(2 * 2 + j)], alpha=0.8, label="stand"),
+                              Patch(facecolor=uniform_colors[int(4 * 2 + j)], alpha=0.8, label="walk"),
+                              Patch(facecolor=uniform_colors[int(6 * 2 + j)], alpha=0.8, label="lie"),
+                              Patch(facecolor=uniform_colors[int(8 * 2 + j)], alpha=0.8, label="interact"),
+                              Patch(facecolor=uniform_colors[int(9 * 2 + j)], alpha=0.8, label="wear"),
                               ]
+                # plot time sequence and motif segmentation
+                x = df.iloc[:, body_i]
+                y = df.iloc[:, body_i + 1]
+                c = np.linspace(0, 1, len(x))
+                t = np.arange(0, len(x))
+                axs[fig_i].scatter(t, x, c=c, cmap=plt.get_cmap('plasma'), s=20, label='x')
+                axs[fig_i].scatter(t, y, c=c, cmap=plt.get_cmap('viridis'), s=20, label='y')
+                # lx = axs[fig_i].plot(x, label='x', c=c, color=plt.get_cmap('plasma'))
+                # ly = axs[fig_i].plot(y, label='y', c=c, color=plt.get_cmap('viridis'))
+
+
                 axs[fig_i].set_title(titles[fig_i])
                 axs[fig_i].legend(handles=legend, bbox_to_anchor=(1.04, 1), loc="upper left", ncol=1)
                 axs[fig_i].grid(False)
                 axs[fig_i].set_xlabel('time')
                 axs[fig_i].set_ylabel('marker position in pixels')
                 axs[fig_i].set_ylim([0, 720])
+
+
 
             plt.suptitle('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
             plt.show()
@@ -460,49 +487,199 @@ for j, videos in enumerate([control_videos, BD_videos]):
             fig.savefig(os.path.join(pwd, fname), transparent=True)
             fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-            # plot keypoint transparent trajectory over time
-            fig, ax = plt.subplots(figsize=(10, 5))
-            cmap = plt.get_cmap('plasma')
-            c = np.linspace(0, 1, len(x))
-            t = np.arange(0, len(x))
-            scatter_plt = ax.scatter(t, x, c=c, cmap=cmap, s=30)
-            ax.set_xlabel('time')
-            ax.set_ylabel('marker position in pixels')
-            ax.set_ylim([0, 720])
-            ax.grid(False)
-            ax.set_title('{}-{}-{} x position'.format(group[j], v, df.columns[body_i][:-1]))
-            fig.colorbar(scatter_plt)
-            fig.show()
-            pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
-            fname = "{}-{}_{}_{}_dwell_time_dlc_plain_xpos.png".format(group[j], v, n_cluster,
-                                                                       df.columns[body_i][:-1])
-            fname_pdf = "{}-{}_{}_{}_trajectory_dlc_plain_xpos.pdf".format(group[j], v, n_cluster,
-                                                                           df.columns[body_i][:-1])
-            fig.savefig(os.path.join(pwd, fname), transparent=True)
-            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+            # # plot keypoint transparent trajectory over time
+            # fig, ax = plt.subplots(figsize=(10, 5))
+            # cmap = plt.get_cmap('plasma')
+            # c = np.linspace(0, 1, len(x))
+            # t = np.arange(0, len(x))
+            # scatter_plt = ax.scatter(t, x, c=c, cmap=cmap, s=30)
+            # ax.set_xlabel('time')
+            # ax.set_ylabel('marker position in pixels')
+            # ax.set_ylim([0, 720])
+            # ax.grid(False)
+            # ax.set_title('{}-{}-{} x position'.format(group[j], v, df.columns[body_i][:-1]))
+            # fig.colorbar(scatter_plt)
+            # fig.show()
+            # pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
+            # fname = "{}-{}_{}_{}_dwell_time_dlc_plain_xpos.png".format(group[j], v, n_cluster,
+            #                                                            df.columns[body_i][:-1])
+            # fname_pdf = "{}-{}_{}_{}_trajectory_dlc_plain_xpos.pdf".format(group[j], v, n_cluster,
+            #                                                                df.columns[body_i][:-1])
+            # fig.savefig(os.path.join(pwd, fname), transparent=True)
+            # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-            # plot spatial trajectory
-            fig, ax = plt.subplots(figsize=(10, 5))
-            img = matplotlib.image.imread(r'{}\Behavior_VAE_data\DLC raw\background.png'.format(onedrive_path))
-            img = cv2.flip(img, 0)
-            room = ax.imshow(img)
-            cmap = plt.get_cmap('plasma')
-            c = np.linspace(0, 1, len(x))
-            scatter_plt = ax.scatter(x, y, c=c, cmap=cmap, s=30)
-            ax.set_ylim([0, 540])
-            ax.set_xlim([0, 720])
-            ax.grid(False)
-            ax.axis('off')
-            ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
-            fig.colorbar(scatter_plt)
-            fig.show()
-            pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
-            fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-            fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-            fig.savefig(os.path.join(pwd, fname), transparent=True)
-            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+            # # plot spatial trajectory
+            # fig, ax = plt.subplots(figsize=(10, 5))
+            # img = matplotlib.image.imread(r'{}\Behavior_VAE_data\DLC raw\background.png'.format(onedrive_path))
+            # img = cv2.flip(img, 0)
+            # room = ax.imshow(img)
+            # cmap = plt.get_cmap('plasma')
+            # c = np.linspace(0, 1, len(x))
+            # scatter_plt = ax.scatter(x, y, c=c, cmap=cmap, s=30)
+            # ax.set_ylim([0, 540])
+            # ax.set_xlim([0, 720])
+            # ax.grid(False)
+            # ax.axis('off')
+            # ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
+            # fig.colorbar(scatter_plt)
+            # fig.show()
+            # pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
+            # fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            # fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            # fig.savefig(os.path.join(pwd, fname), transparent=True)
+            # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
             plt.close('all')
+
+# %% Plot latent trajactory overlapping motif segmentations [three approaches]
+from sklearn.decomposition import PCA
+titles = ["vame", 'dlc k-means', 'scores', 'scored_merged']
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+        print(v)
+
+        data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy'))  # L x 30
+        labels = []
+        vame_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, n_cluster, v))
+
+        dlc_cluster_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\filtered_DLC_{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                                        project_name, v,
+                                                                                                        n_cluster,
+                                                                                                        n_cluster,
+                                                                                                        v))
+
+        score_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, v))
+        score_label[score_label < 0] = -1
+        # bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+        score_label_merged = score_label.copy()
+        score_label_merged[score_label_merged == 1] = 0
+        score_label_merged[score_label_merged == 3] = 2
+        score_label_merged[score_label_merged == 5] = 4
+        score_label_merged[score_label_merged == 7] = 6
+        # latent vector has time window of temp_win, thus is temp_win shorter than data
+        # we need to crop data to match latent vector
+        labels = [vame_label,
+                  dlc_cluster_label[temp_win // 2:-temp_win // 2],
+                  score_label,
+                  score_label_merged,
+                  ]
+
+        # a colored line plot for every body keypoint
+
+        fig, axs = plt.subplots(4, 1, figsize=(12, 12))
+        # plot motif segmentation in three approaches [vame, dlc, score]
+        for fig_i in range(4):
+            d = np.concatenate((labels[fig_i].reshape(-1, 1), data[temp_win // 2:-temp_win // 2]), axis=1)
+
+            df = pd.DataFrame(d, columns=dlc_labels)
+            cmap_latent = plt.get_cmap('tab20')
+            cmap_light = plt.get_cmap('Wistia')
+            orange_colors = cmap_light(np.linspace(0, 1, 20))
+            # plot time sequence and motif segmentation
+            for latent_i in range(10):
+                x = df.iloc[:, latent_i]
+                c = np.linspace(0, 1, len(x))
+                lx = axs[fig_i].plot(x, color=orange_colors[int(latent_i * 2 + j)], label=latent_i)
+            axs[fig_i].legend()
+
+            cmap = plt.get_cmap('tab20')
+            cividis_cmap = plt.get_cmap('cividis')
+            uniform_colors = cividis_cmap(np.linspace(0, 1, 20))
+            condition = df['label']
+            current_c = condition[0]
+            spans = [[0, 0]]
+            span_label = [current_c]
+            for ii, c in enumerate(condition):
+                if c != current_c:
+                    # change to i-1 if gap between two conditions is to be left empty
+                    spans[-1][-1] = ii
+                    spans.append([ii, None])
+                    span_label.append(c)
+                    current_c = c
+            # assumes that the last condition is not on its own but same as previous
+
+            X = np.arange(len(x))
+            if fig_i == 0 or fig_i == 1:
+                spans[-1][-1] = len(condition) - 1
+                # span_label.append(condition[-1])
+                for iii in range(len(spans)):
+                    span = spans[iii]
+                    l_label = span_label[iii]
+                    axs[fig_i].axvspan(span[0], span[1], alpha=1, color=cmap.colors[int(l_label * 2 + j)])
+
+                legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
+                          Patch(facecolor=cmap.colors[int(0 * 2 + j)], alpha=1, label=0),
+                          Patch(facecolor=cmap.colors[int(1 * 2 + j)], alpha=1, label=1),
+                          Patch(facecolor=cmap.colors[int(2 * 2 + j)], alpha=1, label=2),
+                          Patch(facecolor=cmap.colors[int(3 * 2 + j)], alpha=1, label=3),
+                          Patch(facecolor=cmap.colors[int(4 * 2 + j)], alpha=1, label=4),
+                          Patch(facecolor=cmap.colors[int(5 * 2 + j)], alpha=1, label=5),
+                          Patch(facecolor=cmap.colors[int(6 * 2 + j)], alpha=1, label=6),
+                          Patch(facecolor=cmap.colors[int(7 * 2 + j)], alpha=1, label=7),
+                          Patch(facecolor=cmap.colors[int(8 * 2 + j)], alpha=1, label=8),
+                          Patch(facecolor=cmap.colors[int(9 * 2 + j)], alpha=1, label=9),
+                          ]
+            elif fig_i == 2:
+                spans[-1][-1] = len(condition) - 1
+                # span_label.append(condition[-1])
+                for iii in range(len(spans)):
+                    span = spans[iii]
+                    l_label = span_label[iii]
+                    axs[fig_i].axvspan(span[0], span[1], alpha=1, color=uniform_colors[int(l_label * 2 + j)])
+
+                legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
+                          Patch(facecolor=uniform_colors[int(0 * 2 + j)], alpha=0.8, label="sit"),
+                          Patch(facecolor=uniform_colors[int(1 * 2 + j)], alpha=0.8, label="sit_obj"),
+                          Patch(facecolor=uniform_colors[int(2 * 2 + j)], alpha=0.8, label="stand"),
+                          Patch(facecolor=uniform_colors[int(3 * 2 + j)], alpha=0.8, label="stand-obj"),
+                          Patch(facecolor=uniform_colors[int(4 * 2 + j)], alpha=0.8, label="walk"),
+                          Patch(facecolor=uniform_colors[int(5 * 2 + j)], alpha=0.8, label="walk_obj"),
+                          Patch(facecolor=uniform_colors[int(6 * 2 + j)], alpha=0.8, label="lie"),
+                          Patch(facecolor=uniform_colors[int(7 * 2 + j)], alpha=0.8, label="lie_obj"),
+                          Patch(facecolor=uniform_colors[int(8 * 2 + j)], alpha=0.8, label="interact"),
+                          Patch(facecolor=uniform_colors[int(9 * 2 + j)], alpha=0.8, label="wear"),
+                          ]
+            else:
+                spans[-1][-1] = len(condition) - 1
+                # span_label.append(condition[-1])
+                for iii in range(len(spans)):
+                    span = spans[iii]
+                    l_label = span_label[iii]
+                    axs[fig_i].axvspan(span[0], span[1], alpha=1, color=uniform_colors[int(l_label * 2 + j)])
+                legend = [Line2D(X, df.iloc[:, body_i], color='k', label='x'),
+                          Patch(facecolor=uniform_colors[int(0 * 2 + j)], alpha=0.8, label="sit"),
+                          Patch(facecolor=uniform_colors[int(2 * 2 + j)], alpha=0.8, label="stand"),
+                          Patch(facecolor=uniform_colors[int(4 * 2 + j)], alpha=0.8, label="walk"),
+                          Patch(facecolor=uniform_colors[int(6 * 2 + j)], alpha=0.8, label="lie"),
+                          Patch(facecolor=uniform_colors[int(8 * 2 + j)], alpha=0.8, label="interact"),
+                          Patch(facecolor=uniform_colors[int(9 * 2 + j)], alpha=0.8, label="wear"),
+                          ]
+            axs[fig_i].set_title(titles[fig_i])
+            axs[fig_i].legend(handles=legend, bbox_to_anchor=(1.04, 1), loc="upper left", ncol=1)
+            axs[fig_i].grid(False)
+            axs[fig_i].set_xlabel('time')
+            axs[fig_i].set_ylabel('latent (d = 10)')
+            axs[fig_i].set_ylim([0, 720])
+
+        plt.suptitle('{}-{}'.format(group[j], v))
+        plt.show()
+        pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_latent'.format(onedrive_path, project_name)
+        Path(pwd).mkdir(parents=True, exist_ok=True)
+        fname = "{}-{}_{}_dwell_time_latent.png".format(group[j], v, n_cluster)
+        fname_pdf = "{}-{}_{}_dwell_time_latent.pdf".format(group[j], v, n_cluster)
+        fig.savefig(os.path.join(pwd, fname), transparent=True)
+        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+        plt.close('all')
 
 
 #%%  OLD STUFF
