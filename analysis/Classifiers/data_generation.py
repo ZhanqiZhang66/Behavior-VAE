@@ -1,3 +1,18 @@
+def compute_l0_entropy(transition_m, last_state):
+    # https://stackoverflow.com/questions/31791728/python-code-explanation-for-stationary-distribution-of-a-markov-chain
+    invertible_T = add_self_transition(transition_m, last_state)
+    if len(invertible_T):
+        S, U = scipy.linalg.eig(invertible_T.T)
+        stationary = np.array(U[:, np.where(np.abs(S - 1.) < 1e-8)[0][0]].flat)
+        stationary = stationary / np.sum(stationary)
+        stationary = stationary.real
+        H = scipy.stats.entropy(invertible_T, base=2, axis=1)
+        entropy = stationary.dot(H)
+    else:
+        entropy = 0
+    return entropy
+
+
 #%% 
 import csv
 import os
