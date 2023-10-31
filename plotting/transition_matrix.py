@@ -60,18 +60,24 @@ transition_matrices_score = []
 Epoch1_labels = [[], []]
 Epoch1_transition_matrix = [[], []]
 Epoch1_Entropies = [[],[]]
+Epoch1_Effective_num_every_state = [[], []]
+Epoch1_Effective_num_avg = [[], []]
 Epoch1_num_zero_rows = [[],[]]
 Epoch1_num_zeros = [[],[]]
 Epoch1_num_ones = [[],[]]
 Epoch1_labels_ctl = [[], []]
 Epoch1_transition_matrix_ctl = [[], []]
 Epoch1_Entropies_ctl = [[],[]]
+Epoch1_Effective_num_every_state_ctl = [[], []]
+Epoch1_Effective_num_avg_ctl = [[], []]
 Epoch1_num_zero_rows_ctl = [[],[]]
 Epoch1_num_zeros_ctl = [[],[]]
 Epoch1_num_ones_ctl = [[],[]]
 Epoch1_labels_score = [[], []]
 Epoch1_transition_matrix_score = [[], []]
 Epoch1_Entropies_score = [[],[]]
+Epoch1_Effective_num_every_state_score = [[], []]
+Epoch1_Effective_num_avg_score = [[], []]
 Epoch1_num_zero_rows_score = [[],[]]
 Epoch1_num_zeros_score = [[],[]]
 Epoch1_num_ones_score = [[],[]]
@@ -79,18 +85,24 @@ Epoch1_num_ones_score = [[],[]]
 Epoch2_labels = [[], []]
 Epoch2_transition_matrix = [[], []]
 Epoch2_Entropies = [[],[]]
+Epoch2_Effective_num_every_state = [[], []]
+Epoch2_Effective_num_avg = [[], []]
 Epoch2_num_zero_rows = [[],[]]
 Epoch2_num_zeros = [[],[]]
 Epoch2_num_ones = [[],[]]
 Epoch2_labels_ctl = [[], []]
 Epoch2_transition_matrix_ctl = [[], []]
 Epoch2_Entropies_ctl = [[],[]]
+Epoch2_Effective_num_every_state_ctl = [[], []]
+Epoch2_Effective_num_avg_ctl = [[], []]
 Epoch2_num_zero_rows_ctl = [[],[]]
 Epoch2_num_zeros_ctl = [[],[]]
 Epoch2_num_ones_ctl = [[],[]]
 Epoch2_labels_score = [[], []]
 Epoch2_transition_matrix_score = [[], []]
 Epoch2_Entropies_score = [[],[]]
+Epoch2_Effective_num_every_state_score = [[], []]
+Epoch2_Effective_num_avg_score = [[], []]
 Epoch2_num_zero_rows_score = [[],[]]
 Epoch2_num_zeros_score = [[],[]]
 Epoch2_num_ones_score = [[],[]]
@@ -98,31 +110,45 @@ Epoch2_num_ones_score = [[],[]]
 Epoch3_labels = [[], []]
 Epoch3_transition_matrix = [[], []]
 Epoch3_Entropies = [[],[]]
+Epoch3_Effective_num_every_state = [[], []]
+Epoch3_Effective_num_avg = [[], []]
 Epoch3_num_zero_rows = [[],[]]
 Epoch3_num_zeros = [[],[]]
 Epoch3_num_ones = [[],[]]
 Epoch3_labels_ctl = [[], []]
 Epoch3_transition_matrix_ctl = [[], []]
 Epoch3_Entropies_ctl = [[],[]]
+Epoch3_Effective_num_every_state_ctl = [[], []]
+Epoch3_Effective_num_avg_ctl = [[], []]
 Epoch3_num_zero_rows_ctl = [[],[]]
 Epoch3_num_zeros_ctl = [[],[]]
 Epoch3_num_ones_ctl = [[],[]]
 Epoch3_labels_score = [[], []]
 Epoch3_transition_matrix_score = [[], []]
 Epoch3_Entropies_score = [[],[]]
+Epoch3_Effective_num_every_state_score = [[], []]
+Epoch3_Effective_num_avg_score = [[], []]
 Epoch3_num_zero_rows_score = [[],[]]
 Epoch3_num_zeros_score = [[],[]]
 Epoch3_num_ones_score = [[],[]]
 
 Entropies = [[],[]]
+Effective_num_states = [[],[]]
+Effective_num_states_list = [[],[]]
 num_zero_rows = [[],[]]
 num_zeros = [[],[]]
 num_ones = [[],[]]
+
 Entropies_ctl = [[],[]]
+Effective_num_states_ctl = [[],[]]
+Effective_num_states_list_ctl = [[],[]]
 num_zero_rows_ctl = [[],[]]
 num_zeros_ctl = [[],[]]
 num_ones_ctl = [[],[]]
+
 Entropies_score = [[],[]]
+Effective_num_states_score = [[],[]]
+Effective_num_states_list_score = [[],[]]
 num_zero_rows_score = [[],[]]
 num_zeros_score = [[],[]]
 num_ones_score = [[],[]]
@@ -175,7 +201,13 @@ def compute_l0_entropy(transition_m, last_state):
     else:
         entropy = 0
     return entropy
-
+def effective_num_states(transtion_m):
+    effective_num_every_state = []
+    for row in transtion_m:
+        sum_p_ij = np.sum(np.square(row))
+        effective_num_every_state.append(1/sum_p_ij)
+    effective_num_avg = np.mean(effective_num_every_state)
+    return effective_num_every_state, effective_num_avg
 
 # https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors
 
@@ -210,13 +242,24 @@ for j, videos in enumerate([control_videos, BD_videos]):
         # Entropy, and classic metrics of transition matrix
         num_zero_row, num_one_item, num_zero_item = count_zeros(transition_m)
         entropy = compute_l0_entropy(transition_m, label[-1])
+        effective_num_every_state, effective_num_avg = effective_num_states(transition_m)
         Entropies[j].append(entropy)
+        Effective_num_states[j].append(effective_num_avg)
+        Effective_num_states_list[j].append(effective_num_every_state)
+
         num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
         entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
+        effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
         Entropies_ctl[j].append(entropy_ctl)
+        Effective_num_states_ctl[j].append(effective_num_avg_ctl)
+        Effective_num_states_list_ctl[j].append(effective_num_every_state_ctl)
+
         num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
         entropy_score = compute_l0_entropy(score_transition, control_label[-1])
+        effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
         Entropies_score[j].append(entropy_score)
+        Effective_num_states_score[j].append(effective_num_avg_score)
+        Effective_num_states_list_score[j].append(effective_num_every_state_score)
 
         num_state = n_cluster
         num_zero_rows[j].append(num_zero_row)
@@ -274,59 +317,108 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch3_labels_score[j].append(epoch_3_label_score)
         Epoch3_transition_matrix_score[j].append(epoch_3_transition_matrix_score)
 
+
+        # ==== Epoch 1 ====
         num_zero_row, num_one_item, num_zero_item = count_zeros(epoch_1_transition_matrix[0])
+        num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(epoch_1_transition_matrix_ctl[0])
+        num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(epoch_1_transition_matrix_score[0])
+
         entropy = compute_l0_entropy(epoch_1_transition_matrix[0], epoch_1_label[-1])
-        num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl= count_zeros(epoch_1_transition_matrix_ctl[0])
         entropy_ctl = compute_l0_entropy(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
-        num_zero_row_score, num_one_item_score, num_zero_item_score= count_zeros(epoch_1_transition_matrix_score[0])
         entropy_score = compute_l0_entropy(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
+
+        effective_num_every_state, effective_num_avg = effective_num_states(epoch_1_transition_matrix[0])
+        effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(epoch_1_transition_matrix_ctl[0])
+        effective_num_every_state_score, effective_num_avg_score = effective_num_states(epoch_1_transition_matrix_score[0])
+
         Epoch1_Entropies[j].append(entropy)
+        Epoch1_Effective_num_every_state[j].append(effective_num_every_state)
+        Epoch1_Effective_num_avg[j].append(effective_num_avg)
         Epoch1_num_zero_rows[j].append(num_zero_row)
         Epoch1_num_ones[j].append(num_one_item)
         Epoch1_num_zeros[j].append(num_zero_item)
+
         Epoch1_Entropies_ctl[j].append(entropy_ctl)
+        Epoch1_Effective_num_every_state_ctl[j].append(effective_num_every_state_ctl)
+        Epoch1_Effective_num_avg_ctl[j].append(effective_num_avg_ctl)
         Epoch1_num_zero_rows_ctl[j].append(num_zero_row_ctl)
         Epoch1_num_ones_ctl[j].append(num_one_item_ctl)
         Epoch1_num_zeros_ctl[j].append(num_zero_item_ctl)
+
         Epoch1_Entropies_score[j].append(entropy_score)
+        Epoch1_Effective_num_every_state_score[j].append(effective_num_every_state_score)
+        Epoch1_Effective_num_avg_score[j].append(effective_num_avg_score)
         Epoch1_num_zero_rows_score[j].append(num_zero_row_score)
         Epoch1_num_ones_score[j].append(num_one_item_score)
         Epoch1_num_zeros_score[j].append(num_zero_item_score)
 
+
+        # ==== Epoch 2 ====
         num_zero_row_2, num_one_item_2, num_zero_item_2 = count_zeros(epoch_2_transition_matrix[0])
-        entropy_2 = compute_l0_entropy(epoch_2_transition_matrix[0], epoch_2_label[-1])
         num_zero_row_2_ctl, num_one_item_2_ctl, num_zero_item_2_ctl = count_zeros(epoch_2_transition_matrix_ctl[0])
+        num_zero_row_2_score, num_one_item_2_score, num_zero_item_2_score = count_zeros(
+            epoch_2_transition_matrix_score[0])
+
+        entropy_2 = compute_l0_entropy(epoch_2_transition_matrix[0], epoch_2_label[-1])
         entropy_2_ctl = compute_l0_entropy(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])
-        num_zero_row_2_score, num_one_item_2_score, num_zero_item_2_score = count_zeros(epoch_2_transition_matrix_score[0])
         entropy_2_score = compute_l0_entropy(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])
+
+        effective_num_every_state2, effective_num_avg2 = effective_num_states(epoch_2_transition_matrix[0])
+        effective_num_every_state_2ctl, effective_num_avg_2ctl = effective_num_states(epoch_2_transition_matrix_ctl[0])
+        effective_num_every_state_2score, effective_num_avg_2score = effective_num_states(epoch_2_transition_matrix_score[0])
+
         Epoch2_Entropies[j].append(entropy_2)
+        Epoch2_Effective_num_every_state[j].append(effective_num_every_state2)
+        Epoch2_Effective_num_avg[j].append(effective_num_avg2)
         Epoch2_num_zero_rows[j].append(num_zero_row_2)
         Epoch2_num_ones[j].append(num_one_item_2)
         Epoch2_num_zeros[j].append(num_zero_item_2)
+
         Epoch2_Entropies_ctl[j].append(entropy_2_ctl)
+        Epoch2_Effective_num_every_state_ctl[j].append(effective_num_every_state_2ctl)
+        Epoch2_Effective_num_avg_ctl[j].append(effective_num_avg_2ctl)
         Epoch2_num_zero_rows_ctl[j].append(num_zero_row_2_ctl)
         Epoch2_num_ones_ctl[j].append(num_one_item_2_ctl)
         Epoch2_num_zeros_ctl[j].append(num_zero_item_2_ctl)
+
         Epoch2_Entropies_score[j].append(entropy_2_score)
+        Epoch2_Effective_num_every_state_score[j].append(effective_num_every_state_2score)
+        Epoch2_Effective_num_avg_score[j].append(effective_num_avg_2score)
         Epoch2_num_zero_rows_score[j].append(num_zero_row_2_score)
         Epoch2_num_ones_score[j].append(num_one_item_2_score)
         Epoch2_num_zeros_score[j].append(num_zero_item_2_score)
 
+
+        # ==== Epoch 3 ====
         num_zero_row_3, num_one_item_3, num_zero_item_3 = count_zeros(epoch_3_transition_matrix[0])
-        entropy_3 = compute_l0_entropy(epoch_3_transition_matrix[0], epoch_3_label[-1])
         num_zero_row_3_ctl, num_one_item_3_ctl, num_zero_item_3_ctl = count_zeros(epoch_3_transition_matrix_ctl[0])
-        entropy_3_ctl = compute_l0_entropy(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
         num_zero_row_3_score, num_one_item_3_score, num_zero_item_3_score = count_zeros(epoch_3_transition_matrix_score[0])
+
+        entropy_3 = compute_l0_entropy(epoch_3_transition_matrix[0], epoch_3_label[-1])
+        entropy_3_ctl = compute_l0_entropy(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
         entropy_3_score = compute_l0_entropy(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])
+
+        effective_num_every_state3, effective_num_avg3 = effective_num_states(epoch_3_transition_matrix[0])
+        effective_num_every_state_3ctl, effective_num_avg_3ctl = effective_num_states(epoch_3_transition_matrix_ctl[0])
+        effective_num_every_state_3score, effective_num_avg_3score = effective_num_states(epoch_3_transition_matrix_score[0])
+
         Epoch3_Entropies[j].append(entropy_3)
+        Epoch3_Effective_num_every_state[j].append(effective_num_every_state3)
+        Epoch3_Effective_num_avg[j].append(effective_num_avg3)
         Epoch3_num_zero_rows[j].append(num_zero_row_3)
         Epoch3_num_ones[j].append(num_one_item_3)
         Epoch3_num_zeros[j].append(num_zero_item_3)
+
         Epoch3_Entropies_ctl[j].append(entropy_3_ctl)
+        Epoch3_Effective_num_every_state_ctl[j].append(effective_num_every_state_3ctl)
+        Epoch3_Effective_num_avg_ctl[j].append(effective_num_avg_3ctl)
         Epoch3_num_zero_rows_ctl[j].append(num_zero_row_3_ctl)
         Epoch3_num_ones_ctl[j].append(num_one_item_3_ctl)
         Epoch3_num_zeros_ctl[j].append(num_zero_item_3_ctl)
+
         Epoch3_Entropies_score[j].append(entropy_3_score)
+        Epoch3_Effective_num_every_state_score[j].append(effective_num_every_state_3score)
+        Epoch3_Effective_num_avg_score[j].append(effective_num_avg_3score)
         Epoch3_num_zero_rows_score[j].append(num_zero_row_3_score)
         Epoch3_num_ones_score[j].append(num_one_item_3_score)
         Epoch3_num_zeros_score[j].append(num_zero_item_3_score)
