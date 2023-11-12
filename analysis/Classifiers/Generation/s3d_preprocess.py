@@ -15,12 +15,16 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
 
 path = r'C:\Users\kietc\SURF\jack-data\S3D\s3d_labels'
 
-labels = {}
 motifs = set() # should we take every motif into account?
-for v in videos:
-    labels[v] = [0]*401
-    fname = "s3d_labels_{}.npy".format(v)
-    counter = Counter(np.load(os.path.join(path, fname)).tolist())
-    for i in counter:
-        labels[v][i] = counter[i]
-    
+
+def loadLabels(path):
+    labels = {}
+    for v in videos:
+        labels[v] = [0]*401
+        fname = "s3d_labels_{}.npy".format(v)
+        counter = Counter(np.load(os.path.join(path, fname)).tolist())
+        for i in counter:
+            labels[v][i] = counter[i]
+    return labels
+
+def saveMotifUsage()

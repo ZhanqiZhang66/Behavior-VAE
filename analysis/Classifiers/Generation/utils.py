@@ -1,3 +1,4 @@
+#%%
 import numpy as np
 import scipy
 
@@ -49,5 +50,15 @@ def loadLabels(path, videos, frames):
     labels = {}
     for v in videos:
         labels[v] = np.load(path.format(v, v))[:frames]
-        labels[v] = [x for x in labels[v] if x > -1]
     return labels
+# %%
+def effective_num_states(transtion_m):
+    effective_num_every_state = []
+    for row in transtion_m:
+        sum_p_ij = np.sum(np.square(row))
+        if sum_p_ij == 0:
+            effective_num_every_state.append(0)
+        else:
+            effective_num_every_state.append(1/sum_p_ij)
+    effective_num_avg = np.mean(effective_num_every_state)
+    return effective_num_every_state, effective_num_avg
