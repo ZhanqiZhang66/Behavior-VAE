@@ -60,18 +60,24 @@ transition_matrices_score = []
 Epoch1_labels = [[], []]
 Epoch1_transition_matrix = [[], []]
 Epoch1_Entropies = [[],[]]
+Epoch1_Effective_num_every_state = [[], []]
+Epoch1_Effective_num_avg = [[], []]
 Epoch1_num_zero_rows = [[],[]]
 Epoch1_num_zeros = [[],[]]
 Epoch1_num_ones = [[],[]]
 Epoch1_labels_ctl = [[], []]
 Epoch1_transition_matrix_ctl = [[], []]
 Epoch1_Entropies_ctl = [[],[]]
+Epoch1_Effective_num_every_state_ctl = [[], []]
+Epoch1_Effective_num_avg_ctl = [[], []]
 Epoch1_num_zero_rows_ctl = [[],[]]
 Epoch1_num_zeros_ctl = [[],[]]
 Epoch1_num_ones_ctl = [[],[]]
 Epoch1_labels_score = [[], []]
 Epoch1_transition_matrix_score = [[], []]
 Epoch1_Entropies_score = [[],[]]
+Epoch1_Effective_num_every_state_score = [[], []]
+Epoch1_Effective_num_avg_score = [[], []]
 Epoch1_num_zero_rows_score = [[],[]]
 Epoch1_num_zeros_score = [[],[]]
 Epoch1_num_ones_score = [[],[]]
@@ -79,18 +85,24 @@ Epoch1_num_ones_score = [[],[]]
 Epoch2_labels = [[], []]
 Epoch2_transition_matrix = [[], []]
 Epoch2_Entropies = [[],[]]
+Epoch2_Effective_num_every_state = [[], []]
+Epoch2_Effective_num_avg = [[], []]
 Epoch2_num_zero_rows = [[],[]]
 Epoch2_num_zeros = [[],[]]
 Epoch2_num_ones = [[],[]]
 Epoch2_labels_ctl = [[], []]
 Epoch2_transition_matrix_ctl = [[], []]
 Epoch2_Entropies_ctl = [[],[]]
+Epoch2_Effective_num_every_state_ctl = [[], []]
+Epoch2_Effective_num_avg_ctl = [[], []]
 Epoch2_num_zero_rows_ctl = [[],[]]
 Epoch2_num_zeros_ctl = [[],[]]
 Epoch2_num_ones_ctl = [[],[]]
 Epoch2_labels_score = [[], []]
 Epoch2_transition_matrix_score = [[], []]
 Epoch2_Entropies_score = [[],[]]
+Epoch2_Effective_num_every_state_score = [[], []]
+Epoch2_Effective_num_avg_score = [[], []]
 Epoch2_num_zero_rows_score = [[],[]]
 Epoch2_num_zeros_score = [[],[]]
 Epoch2_num_ones_score = [[],[]]
@@ -98,31 +110,45 @@ Epoch2_num_ones_score = [[],[]]
 Epoch3_labels = [[], []]
 Epoch3_transition_matrix = [[], []]
 Epoch3_Entropies = [[],[]]
+Epoch3_Effective_num_every_state = [[], []]
+Epoch3_Effective_num_avg = [[], []]
 Epoch3_num_zero_rows = [[],[]]
 Epoch3_num_zeros = [[],[]]
 Epoch3_num_ones = [[],[]]
 Epoch3_labels_ctl = [[], []]
 Epoch3_transition_matrix_ctl = [[], []]
 Epoch3_Entropies_ctl = [[],[]]
+Epoch3_Effective_num_every_state_ctl = [[], []]
+Epoch3_Effective_num_avg_ctl = [[], []]
 Epoch3_num_zero_rows_ctl = [[],[]]
 Epoch3_num_zeros_ctl = [[],[]]
 Epoch3_num_ones_ctl = [[],[]]
 Epoch3_labels_score = [[], []]
 Epoch3_transition_matrix_score = [[], []]
 Epoch3_Entropies_score = [[],[]]
+Epoch3_Effective_num_every_state_score = [[], []]
+Epoch3_Effective_num_avg_score = [[], []]
 Epoch3_num_zero_rows_score = [[],[]]
 Epoch3_num_zeros_score = [[],[]]
 Epoch3_num_ones_score = [[],[]]
 
 Entropies = [[],[]]
+Effective_num_states = [[],[]]
+Effective_num_states_list = [[],[]]
 num_zero_rows = [[],[]]
 num_zeros = [[],[]]
 num_ones = [[],[]]
+
 Entropies_ctl = [[],[]]
+Effective_num_states_ctl = [[],[]]
+Effective_num_states_list_ctl = [[],[]]
 num_zero_rows_ctl = [[],[]]
 num_zeros_ctl = [[],[]]
 num_ones_ctl = [[],[]]
+
 Entropies_score = [[],[]]
+Effective_num_states_score = [[],[]]
+Effective_num_states_list_score = [[],[]]
 num_zero_rows_score = [[],[]]
 num_zeros_score = [[],[]]
 num_ones_score = [[],[]]
@@ -175,7 +201,13 @@ def compute_l0_entropy(transition_m, last_state):
     else:
         entropy = 0
     return entropy
-
+def effective_num_states(transtion_m):
+    effective_num_every_state = []
+    for row in transtion_m:
+        sum_p_ij = np.sum(np.square(row))
+        effective_num_every_state.append(1/sum_p_ij)
+    effective_num_avg = np.mean(effective_num_every_state)
+    return effective_num_every_state, effective_num_avg
 
 # https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors
 
@@ -210,13 +242,24 @@ for j, videos in enumerate([control_videos, BD_videos]):
         # Entropy, and classic metrics of transition matrix
         num_zero_row, num_one_item, num_zero_item = count_zeros(transition_m)
         entropy = compute_l0_entropy(transition_m, label[-1])
+        effective_num_every_state, effective_num_avg = effective_num_states(transition_m)
         Entropies[j].append(entropy)
+        Effective_num_states[j].append(effective_num_avg)
+        Effective_num_states_list[j].append(effective_num_every_state)
+
         num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
         entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
+        effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
         Entropies_ctl[j].append(entropy_ctl)
+        Effective_num_states_ctl[j].append(effective_num_avg_ctl)
+        Effective_num_states_list_ctl[j].append(effective_num_every_state_ctl)
+
         num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
         entropy_score = compute_l0_entropy(score_transition, control_label[-1])
+        effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
         Entropies_score[j].append(entropy_score)
+        Effective_num_states_score[j].append(effective_num_avg_score)
+        Effective_num_states_list_score[j].append(effective_num_every_state_score)
 
         num_state = n_cluster
         num_zero_rows[j].append(num_zero_row)
@@ -274,59 +317,108 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch3_labels_score[j].append(epoch_3_label_score)
         Epoch3_transition_matrix_score[j].append(epoch_3_transition_matrix_score)
 
+
+        # ==== Epoch 1 ====
         num_zero_row, num_one_item, num_zero_item = count_zeros(epoch_1_transition_matrix[0])
+        num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(epoch_1_transition_matrix_ctl[0])
+        num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(epoch_1_transition_matrix_score[0])
+
         entropy = compute_l0_entropy(epoch_1_transition_matrix[0], epoch_1_label[-1])
-        num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl= count_zeros(epoch_1_transition_matrix_ctl[0])
         entropy_ctl = compute_l0_entropy(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
-        num_zero_row_score, num_one_item_score, num_zero_item_score= count_zeros(epoch_1_transition_matrix_score[0])
         entropy_score = compute_l0_entropy(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
+
+        effective_num_every_state, effective_num_avg = effective_num_states(epoch_1_transition_matrix[0])
+        effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(epoch_1_transition_matrix_ctl[0])
+        effective_num_every_state_score, effective_num_avg_score = effective_num_states(epoch_1_transition_matrix_score[0])
+
         Epoch1_Entropies[j].append(entropy)
+        Epoch1_Effective_num_every_state[j].append(effective_num_every_state)
+        Epoch1_Effective_num_avg[j].append(effective_num_avg)
         Epoch1_num_zero_rows[j].append(num_zero_row)
         Epoch1_num_ones[j].append(num_one_item)
         Epoch1_num_zeros[j].append(num_zero_item)
+
         Epoch1_Entropies_ctl[j].append(entropy_ctl)
+        Epoch1_Effective_num_every_state_ctl[j].append(effective_num_every_state_ctl)
+        Epoch1_Effective_num_avg_ctl[j].append(effective_num_avg_ctl)
         Epoch1_num_zero_rows_ctl[j].append(num_zero_row_ctl)
         Epoch1_num_ones_ctl[j].append(num_one_item_ctl)
         Epoch1_num_zeros_ctl[j].append(num_zero_item_ctl)
+
         Epoch1_Entropies_score[j].append(entropy_score)
+        Epoch1_Effective_num_every_state_score[j].append(effective_num_every_state_score)
+        Epoch1_Effective_num_avg_score[j].append(effective_num_avg_score)
         Epoch1_num_zero_rows_score[j].append(num_zero_row_score)
         Epoch1_num_ones_score[j].append(num_one_item_score)
         Epoch1_num_zeros_score[j].append(num_zero_item_score)
 
+
+        # ==== Epoch 2 ====
         num_zero_row_2, num_one_item_2, num_zero_item_2 = count_zeros(epoch_2_transition_matrix[0])
-        entropy_2 = compute_l0_entropy(epoch_2_transition_matrix[0], epoch_2_label[-1])
         num_zero_row_2_ctl, num_one_item_2_ctl, num_zero_item_2_ctl = count_zeros(epoch_2_transition_matrix_ctl[0])
+        num_zero_row_2_score, num_one_item_2_score, num_zero_item_2_score = count_zeros(
+            epoch_2_transition_matrix_score[0])
+
+        entropy_2 = compute_l0_entropy(epoch_2_transition_matrix[0], epoch_2_label[-1])
         entropy_2_ctl = compute_l0_entropy(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])
-        num_zero_row_2_score, num_one_item_2_score, num_zero_item_2_score = count_zeros(epoch_2_transition_matrix_score[0])
         entropy_2_score = compute_l0_entropy(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])
+
+        effective_num_every_state2, effective_num_avg2 = effective_num_states(epoch_2_transition_matrix[0])
+        effective_num_every_state_2ctl, effective_num_avg_2ctl = effective_num_states(epoch_2_transition_matrix_ctl[0])
+        effective_num_every_state_2score, effective_num_avg_2score = effective_num_states(epoch_2_transition_matrix_score[0])
+
         Epoch2_Entropies[j].append(entropy_2)
+        Epoch2_Effective_num_every_state[j].append(effective_num_every_state2)
+        Epoch2_Effective_num_avg[j].append(effective_num_avg2)
         Epoch2_num_zero_rows[j].append(num_zero_row_2)
         Epoch2_num_ones[j].append(num_one_item_2)
         Epoch2_num_zeros[j].append(num_zero_item_2)
+
         Epoch2_Entropies_ctl[j].append(entropy_2_ctl)
+        Epoch2_Effective_num_every_state_ctl[j].append(effective_num_every_state_2ctl)
+        Epoch2_Effective_num_avg_ctl[j].append(effective_num_avg_2ctl)
         Epoch2_num_zero_rows_ctl[j].append(num_zero_row_2_ctl)
         Epoch2_num_ones_ctl[j].append(num_one_item_2_ctl)
         Epoch2_num_zeros_ctl[j].append(num_zero_item_2_ctl)
+
         Epoch2_Entropies_score[j].append(entropy_2_score)
+        Epoch2_Effective_num_every_state_score[j].append(effective_num_every_state_2score)
+        Epoch2_Effective_num_avg_score[j].append(effective_num_avg_2score)
         Epoch2_num_zero_rows_score[j].append(num_zero_row_2_score)
         Epoch2_num_ones_score[j].append(num_one_item_2_score)
         Epoch2_num_zeros_score[j].append(num_zero_item_2_score)
 
+
+        # ==== Epoch 3 ====
         num_zero_row_3, num_one_item_3, num_zero_item_3 = count_zeros(epoch_3_transition_matrix[0])
-        entropy_3 = compute_l0_entropy(epoch_3_transition_matrix[0], epoch_3_label[-1])
         num_zero_row_3_ctl, num_one_item_3_ctl, num_zero_item_3_ctl = count_zeros(epoch_3_transition_matrix_ctl[0])
-        entropy_3_ctl = compute_l0_entropy(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
         num_zero_row_3_score, num_one_item_3_score, num_zero_item_3_score = count_zeros(epoch_3_transition_matrix_score[0])
+
+        entropy_3 = compute_l0_entropy(epoch_3_transition_matrix[0], epoch_3_label[-1])
+        entropy_3_ctl = compute_l0_entropy(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
         entropy_3_score = compute_l0_entropy(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])
+
+        effective_num_every_state3, effective_num_avg3 = effective_num_states(epoch_3_transition_matrix[0])
+        effective_num_every_state_3ctl, effective_num_avg_3ctl = effective_num_states(epoch_3_transition_matrix_ctl[0])
+        effective_num_every_state_3score, effective_num_avg_3score = effective_num_states(epoch_3_transition_matrix_score[0])
+
         Epoch3_Entropies[j].append(entropy_3)
+        Epoch3_Effective_num_every_state[j].append(effective_num_every_state3)
+        Epoch3_Effective_num_avg[j].append(effective_num_avg3)
         Epoch3_num_zero_rows[j].append(num_zero_row_3)
         Epoch3_num_ones[j].append(num_one_item_3)
         Epoch3_num_zeros[j].append(num_zero_item_3)
+
         Epoch3_Entropies_ctl[j].append(entropy_3_ctl)
+        Epoch3_Effective_num_every_state_ctl[j].append(effective_num_every_state_3ctl)
+        Epoch3_Effective_num_avg_ctl[j].append(effective_num_avg_3ctl)
         Epoch3_num_zero_rows_ctl[j].append(num_zero_row_3_ctl)
         Epoch3_num_ones_ctl[j].append(num_one_item_3_ctl)
         Epoch3_num_zeros_ctl[j].append(num_zero_item_3_ctl)
+
         Epoch3_Entropies_score[j].append(entropy_3_score)
+        Epoch3_Effective_num_every_state_score[j].append(effective_num_every_state_3score)
+        Epoch3_Effective_num_avg_score[j].append(effective_num_avg_3score)
         Epoch3_num_zero_rows_score[j].append(num_zero_row_3_score)
         Epoch3_num_ones_score[j].append(num_one_item_3_score)
         Epoch3_num_zeros_score[j].append(num_zero_item_3_score)
@@ -535,31 +627,102 @@ fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 
 #%% Plot L1, l2 distance
-from scipy.spatial.distance import cityblock
+from scipy.spatial.distance import squareform
+import scipy.spatial as sp
+import scipy.cluster.hierarchy as sch
+import scipy.spatial.distance as ssd
 def similarity_func(u, v):
-    return 1/(1+np.linalg.norm(np.asarray(u)-np.asarray(v)))
+    dis = np.linalg.norm(np.asarray(u)-np.asarray(v))
+    sim = 1/(1+np.linalg.norm(np.asarray(u)-np.asarray(v)))
+    return dis, sim
+def cosine_similarity_func(u, v):
+    #https://stackoverflow.com/questions/30152599/cosine-similarity-calculation-between-two-matrices
+    return 1 - sp.distance.cdist(u, v, 'cosine')
+#https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors/64338609#64338609
+def argsort_sim_mat(sm):
+    idx = [np.argmax(np.sum(sm, axis=1))]  # a
+    for i in range(1, len(sm)):
+        sm_i = sm[idx[-1]].copy()
+        sm_i[idx] = -1
+        idx.append(np.argmax(sm_i))  # b
+    return np.array(idx)
 
 l2_matrix = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
 l2_matrix_ctl = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
 l2_matrix_score = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-# l1_matrix = np.zeros((24,24))
+sim_matrix = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
+sim_matrix_ctl = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
+sim_matrix_score = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
 for i in range(n_subject_in_population*2):
     for j in range(n_subject_in_population*2):
-        l2_matrix[i][j] = np.linalg.norm(transition_matrices[i]-transition_matrices[j])
-        l2_matrix_ctl[i][j] = np.linalg.norm(transition_matrices_ctl[i]-transition_matrices_ctl[j])
-        l2_matrix_score[i][j] = np.linalg.norm(transition_matrices_score[i]-transition_matrices_score[j])
-        # l1_matrix[i][j] = cityblock(transition_matrices[i],transition_matrices[j])
+        l2_matrix[i][j] = similarity_func(transition_matrices[i],transition_matrices[j])[0]
+        l2_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i],transition_matrices_ctl[j])[0]
+        l2_matrix_score[i][j] = similarity_func(transition_matrices_score[i],transition_matrices_score[j])[0]
+
+        sim_matrix[i][j] = similarity_func(transition_matrices[i],transition_matrices[j])[1]
+        sim_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i],transition_matrices_ctl[j])[1]
+        sim_matrix_score[i][j] = similarity_func(transition_matrices_score[i],transition_matrices_score[j])[1]
+
 
 for j in range(len(transition_group)):
-    l2_matrix_to_plot = eval("l2_matrix{}".format(transition_group[j]))
-    fig, ax = plt.subplots(1, 1, figsize=(20, 20))
-    im = ax.imshow(l2_matrix_to_plot)
-    ax.set_title('15-min L2 distance of transition matrix')
-    patient_names = control_videos + BD_videos
-    ax.set_xticks(np.arange(n_subject_in_population*2), patient_names, rotation=45)
-    ax.set_yticks(np.arange(n_subject_in_population*2), patient_names, rotation=45)
-    plt.colorbar(im)
+    dis_mat, sim_mat = eval("l2_matrix{}".format(transition_group[j])), eval("sim_matrix{}".format(transition_group[j]))
+
+    idx = argsort_sim_mat(dis_mat[:n_subject_in_population, :n_subject_in_population])
+    idx2 = argsort_sim_mat(dis_mat[n_subject_in_population:,n_subject_in_population:])
+    idx2 = idx2 + n_subject_in_population
+    idx_all = np.concatenate((idx[::-1], idx2[::-1]))
+    # apply reordering for rows and columns
+    sim_mat2 = sim_mat[idx_all,:][:, idx_all]
+    dis_mat2 = dis_mat[idx_all,:][:, idx_all]
+    dist_condensed = squareform(dis_mat)
+    # https://stackoverflow.com/questions/2982929/plotting-results-of-hierarchical-clustering-on-top-of-a-matrix-of-data
+    # Compute and plot first dendrogram.
+    fig, ax = plt.subplots(1, 1, figsize=(15, 15))
+    ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
+    Y = sch.linkage(dist_condensed, method='ward')
+    Z1 = sch.dendrogram(Y, orientation='left')
+    ax1.set_xticks([])
+    ax1.set_yticks([])
+    ax1.grid(None)
+
+    # # Compute and plot second dendrogram.
+    ax2 = fig.add_axes([0.3, 0.71, 0.6, 0.2])
+    Y = sch.linkage(dist_condensed, method='ward')
+    Z2 = sch.dendrogram(Y)
+    ax2.set_xticks([])
+    ax2.set_yticks([])
+    ax2.grid(None)
+
+    # Plot similarity matrix
+    axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.6])
+    idx1 = Z1['leaves']
+    idx2 = Z2['leaves']
+    D = dis_mat[idx1, :]
+    D = D[:, idx2]
+    im = axmatrix.imshow(D, cmap='plasma')
+    axmatrix.grid(None)
+
+    patient_names = np.array(control_videos + BD_videos)
+    axmatrix.set_xticks(np.arange(n_subject_in_population*2), patient_names[idx1], rotation=-90)
+    axmatrix.set_yticks(np.arange(n_subject_in_population*2))
+    axmatrix.set_yticklabels(patient_names[idx1], minor=False)
+    axmatrix.yaxis.set_label_position('right')
+    axmatrix.yaxis.tick_right()
+    BD = [idx for idx, p in enumerate(patient_names[idx1]) if p in BD_videos]
+    CP = [idx for idx, p in enumerate(patient_names[idx1]) if p in control_videos]
+    for idx in BD:
+        axmatrix.get_xticklabels()[idx].set_color(b_o_colors[1])
+        axmatrix.get_yticklabels()[idx].set_color(b_o_colors[1])
+    for idx in CP:
+        axmatrix.get_xticklabels()[idx].set_color(b_o_colors[0])
+        axmatrix.get_yticklabels()[idx].set_color(b_o_colors[0])
+    axcolor = fig.add_axes([0.96, 0.1, 0.02, 0.6])
+    plt.colorbar(im, cax=axcolor)
+    plt.grid(None)
+    #plt.title('15-min L2 distance of transition matrix{}'.format(transition_group[j]))
     fig.show()
+
+
     pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "TM-similarity_{}.png".format(transition_group[j])
@@ -567,14 +730,6 @@ for j in range(len(transition_group)):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-# fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-# im = ax.imshow(l1_matrix)
-# ax.set_title('15-min L1 distance of transition matrix')
-# patient_names = control_videos + BD_videos
-# ax.set_xticks(np.arange(24), patient_names, rotation=45)
-# ax.set_yticks(np.arange(24), patient_names, rotation=45)
-# plt.colorbar(im)
-# fig.show()
 #%% inspect high similarity ones
 patient_names = control_videos + BD_videos
 idx = [[11, 4], [17, 12], [16, 13]]
@@ -659,10 +814,13 @@ for epoch in range(1,4):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
+
+
 from scipy.spatial.distance import euclidean, pdist, squareform
 for k in range(len(transition_group)):
     for epoch in range(1,4):
         sim_matrix = np.zeros((n_subject_in_population * 2,n_subject_in_population * 2))
+        dis_mat = np.zeros((n_subject_in_population * 2,n_subject_in_population * 2))
         epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
         epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1])
         epoch_label = eval('Epoch{}_labels{}'.format(epoch, transition_group[k]))
@@ -670,19 +828,78 @@ for k in range(len(transition_group)):
         BD_label = np.concatenate(epoch_label[1], axis=0)
         CP_transition_matrix = compute_transition_matrices([titles[0]], [CP_label], n_cluster)
         BD_transition_matrix = compute_transition_matrices([titles[1]], [BD_label], n_cluster)
+
         for i in range(n_subject_in_population * 2):
             for j in range(n_subject_in_population * 2):
-                sim_matrix[i][j] = np.linalg.norm(epoch_tm_[i]-epoch_tm_[j])
+                dis_mat[i][j] = similarity_func(epoch_tm_[i], epoch_tm_[j])[0]
+                sim_matrix[i][j] = similarity_func(epoch_tm_[i], epoch_tm_[j])[1]
 
-        sim_matrix_copy = sim_matrix.copy()
-        sim_matrix_copy[]
-        fig, ax = plt.subplots(1, 1, figsize=(20, 20))
-        im = ax.imshow(sim_matrix)
-        ax.set_title('Epoch {} similarity of transition matrix {}'.format(epoch, transition_group[k]))
-        patient_names = control_videos + BD_videos
-        ax.set_xticks(np.arange(n_subject_in_population * 2), patient_names, rotation=45)
-        ax.set_yticks(np.arange(n_subject_in_population * 2), patient_names, rotation=45)
-        plt.colorbar(im)
+        sim_mat = sim_matrix.copy()
+        idx = argsort_sim_mat(dis_mat[:n_subject_in_population, :n_subject_in_population])
+        idx2 = argsort_sim_mat(dis_mat[n_subject_in_population:, n_subject_in_population:])
+        idx2 = idx2 + n_subject_in_population
+        idx_all_ = np.concatenate((idx, idx2))
+        idx_all = np.concatenate((idx[::-1], idx2[::-1]))
+        # apply reordering for rows and columns
+        sim_mat2 = sim_mat[idx_all, :][:, idx_all]
+        dis_mat2 = dis_mat[idx_all, :][:, idx_all]
+
+        # epoch_tm_sorted = epoch_tm_[idx_all]
+        # dist_vec = np.zeros(int(scipy.special.comb(n_subject_in_population*2, 2)))
+        # for i in range(n_subject_in_population * 2):
+        #     for j in range(n_subject_in_population * 2):
+        #         dist_vec[50 * i + j - ((i + 2) * (i + 1)) // 2] = dis_mat2[i][j]
+        #
+        # tmp1 = np.asarray([tm.flatten() for tm in epoch_tm_sorted])
+        # dist_condensed = squareform(pdist(tmp1))
+        dist_condensed = squareform(dis_mat)
+        # https://stackoverflow.com/questions/2982929/plotting-results-of-hierarchical-clustering-on-top-of-a-matrix-of-data
+        # Compute and plot first dendrogram.
+        fig, ax = plt.subplots(1, 1, figsize=(15, 15))
+        ax1 = fig.add_axes([0.09, 0.1, 0.2, 0.6])
+        Y = sch.linkage(dist_condensed, method='ward')
+        Z1 = sch.dendrogram(Y, orientation='left')
+        ax1.set_xticks([])
+        ax1.set_yticks([])
+        ax1.grid(None)
+
+        # Compute and plot second dendrogram.
+        ax2 = fig.add_axes([0.3, 0.71, 0.6, 0.2])
+        Y = sch.linkage(dist_condensed, method='ward')
+        Z2 = sch.dendrogram(Y)
+        ax2.set_xticks([])
+        ax2.set_yticks([])
+        ax2.grid(None)
+
+        # Plot similarity matrix
+        axmatrix = fig.add_axes([0.3, 0.1, 0.6, 0.6])
+        idx1 = Z1['leaves']
+        idx2 = Z2['leaves']
+        D = dis_mat[idx1, :]
+        D = D[:, idx2]
+        im = axmatrix.imshow(D, cmap='plasma')
+        axmatrix.grid(None)
+
+        patient_names = np.array(control_videos + BD_videos)
+        axmatrix.set_xticks(np.arange(n_subject_in_population * 2), patient_names[idx1], rotation=-90)
+        axmatrix.set_yticks(np.arange(n_subject_in_population * 2))
+        axmatrix.set_yticklabels(patient_names[idx1], minor=False)
+        axmatrix.yaxis.set_label_position('right')
+        axmatrix.yaxis.tick_right()
+        BD = [idx for idx, p in enumerate(patient_names[idx1]) if p in BD_videos]
+        CP = [idx for idx, p in enumerate(patient_names[idx1]) if p in control_videos]
+        for idx in BD:
+            axmatrix.get_xticklabels()[idx].set_color(b_o_colors[1])
+            axmatrix.get_yticklabels()[idx].set_color(b_o_colors[1])
+        for idx in CP:
+            axmatrix.get_xticklabels()[idx].set_color(b_o_colors[0])
+            axmatrix.get_yticklabels()[idx].set_color(b_o_colors[0])
+
+
+        axcolor = fig.add_axes([0.96, 0.1, 0.02, 0.6])
+        plt.colorbar(im, cax=axcolor)
+        plt.grid(None)
+        # plt.title('15-min L2 distance of transition matrix{}'.format(transition_group[j]))
         fig.show()
         pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
         Path(pwd).mkdir(exist_ok=True)
@@ -786,10 +1003,11 @@ for i in range(n_subject_in_population * 2):
         plt.suptitle("{}-{}_{}_transition_epoch{}-{}".format(population, patient_names[i], n_cluster, epoch, transition_group[k]))
         fig.show()
 
+
         fname = "{}-{}_{}_transition_epoch{}-dwell.png".format(population, patient_names[i], n_cluster, transition_group[k])
         fname_pdf = "{}-{}_{}_transition_epoch{}-dwell.pdf".format(population, patient_names[i], n_cluster, transition_group[k])
-        fig.savefig(os.path.join(pwd, fname), transparent=True)
-        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+        # fig.savefig(os.path.join(pwd, fname), transparent=True)
+        # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 
