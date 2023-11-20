@@ -6,6 +6,8 @@ import os
 import seaborn as sns 
 import matplotlib.pyplot as plt
 import random
+import copy
+import json
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -23,34 +25,35 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
                   "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
 
 #%%
-def loadDataframe(path, scores = False, gender = False, scaled = False):
-    dataframe = {}
-    with open(path, 'r') as file:
-        csvreader = csv.reader(file, delimiter=',')
-        e = 5 if gender else 4
-        next(csvreader)
-        for row in csvreader:
-            dataframe[row[0]] = [int(row[1])]
-            if scores:
-                vec = np.array(row[2:e]).astype(float).tolist()
-            if scaled:
-                vec = [i * 30 for i in vec]
-            if scores:
-                dataframe[row[0]].extend(vec)
-    return dataframe
+def combineDf(df1, df2):
+    copyDf1 = copy.deepcopy(df1)
+    for key in copyDf1:
+        copyDf1[key].extend(df2[key])
+    return copyDf1
 
-
-def loadMotifUsage(path, diagnosticPath, scaled = False):
-    dataframe = loadDataframe(diagnosticPath)
+def loadData(path,  idf = None, end = 0, scale = 1):
+    df = {}
+    if idf:
+        df = copy.deepcopy(idf)
     with open(path, 'r') as file:
         csvreader = csv.reader(file, delimiter=',')
         next(csvreader)
         for row in csvreader:
-            vec = np.array(row[1:]).astype(float).tolist()
-            if scaled:
-                vec = [x/27000 for x in vec]
-            dataframe[row[0]].extend(vec)
-    return dataframe
+            if end:
+                vec = np.array(row[1:end]).astype(float).tolist()
+            else:
+                vec = np.array(row[1:]).astype(float).tolist()
+            vec = [x/scale for x in vec]
+            if row[0] not in df:
+                df[row[0]] = []
+            df[row[0]].extend(vec)
+    return df
+
+def epochSub(idf, indexA, indexB):
+    df = {}
+    for v in videos:
+        df[v] = [idf[v][indexA] - idf[v][indexB]]
+    return df
 
 def classify(dataframe):
     X = []
@@ -77,22 +80,6 @@ def classify(dataframe):
         classifier = LogisticRegression(random_state = 0)
         classifier.fit(xtrain, ytrain)
         y_pred = classifier.predict(xtest)
-
-        # nX = np.array(xtest)
-        # nY = np.array(ytest)
-
-        # x_min, x_max = nX[:, 0].min() - 1, nX[:, 0].max() + 1
-        # y_min, y_max = nX[:, 1].min() - 1, nX[:, 1].max() + 1
-        # xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.01), np.arange(y_min, y_max, 0.01))
-
-        # Z = classifier.predict(np.c_[xx.ravel(), yy.ravel()])
-        # Z = Z.reshape(xx.shape)
-
-        # plt.contourf(xx, yy, Z, alpha=0.4)
-        # plt.scatter(nX[:, 0], nX[:, 1], c=nY, marker='o', edgecolor='k')
-        # plt.xlabel('YMRS')
-        # plt.ylabel('HAMD')
-        # plt.show()
     
         acc.append(accuracy_score(ytest, y_pred))
         pre.append(precision_score(ytest, y_pred))
@@ -107,68 +94,127 @@ def classify(dataframe):
         rec.extend(scores['test_recall'])
         seeds.append(i)
 
-    print('Accuracy: %.05f' % np.mean(acc))
-    print('Precision: %.05f' % np.mean(pre))
-    print('Recall: %.05f' % np.mean(rec))
+    print('Accuracy: %.05f (%.05f)' % (np.mean(acc), np.std(acc)))
+    print('Precision: %.05f (%.05f)' % (np.mean(pre), np.std(pre)))
+    print('Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
     data = [acc, pre, rec]
     return data
 
-def export(path, input, data):
-    labels = ['Accuracy', 'Precision', 'Recall']
+def export(path, data):
+    print(path)
+    np.save(path, np.array(data))
 
-    # Create a box plot
-    bp = plt.boxplot(data, labels=labels, showmeans=True, meanline=True)
-
-    # Set the title and labels
-    plt.title(input)
-
-    # Display the mean values as markers
-    for i, line in enumerate(bp['medians']):
-        x, y = line.get_data()
-        mean_value = np.mean(data[i])
-        plt.text(x[0] + 0.15, y[1] + 0.01, f'{mean_value:.3f}', horizontalalignment='center', verticalalignment='bottom', fontsize=12)
-
-    fname = "{}_50_tests.png".format(input)
-    fname_pdf = "{}_50_tests.pdf".format(input)
-
-    plt.savefig(os.path.join(path, fname), transparent=True)
-    plt.savefig(os.path.join(path, fname_pdf), transparent=True)
-
-    np.save(os.path.join(path, input + '_50_tests.npy'), np.array([data[0], data[1], data[2]]))
+def loadResult(path):
+    return np.load(path).tolist()
 
 #%%
 diagnosticPath = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
+
 VAMEMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
-hBPMMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
+HBPMMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
 S3DMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
 MMActionMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
 
+VAMEENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
+HBPMENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_spli.csv'
+S3DENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_spli.csv'
+MMActionENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_spli.csv'
 
-exportPath =  r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification"
+exportPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
+exportResultPath =  r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 
 #%%
-assessment = loadDataframe(diagnosticPath, scores=True)
-vame = loadMotifUsage(VAMEMotifPath, diagnosticPath, True)
-hBPM = loadMotifUsage(hBPMMotifPath, diagnosticPath, True)
-S3D = loadMotifUsage(S3DMotifPath, diagnosticPath, True)
-MMAction = loadMotifUsage(MMActionMotifPath, diagnosticPath, True)
+BD = loadData(diagnosticPath, end=2)
+assessment = loadData(diagnosticPath, end=-1)
 
+#%%
+VAMEMotif = loadData(VAMEMotifPath, idf=BD, scale=27000)
+HBPMMotif = loadData(HBPMMotifPath, idf=BD, scale=27000)
+S3DMotif = loadData(S3DMotifPath, idf=BD, scale=27000)
+MMActionMotif = loadData(MMActionMotifPath, idf=BD, scale=27000)
+
+#%%
+VAMEENS = loadData(VAMEENSPath, idf=BD)
+HBPMENS = loadData(HBPMENSPath, idf=BD)
+S3DENS = loadData(S3DENSPath, idf=BD)
+MMActionENS = loadData(MMActionENSPath, idf=BD)
+
+#%%
+VAMEENS1 = epochSub(VAMEENS, 3, 1)
+VAMEENS1 = combineDf(BD, VAMEENS1)
+HBPMENS1 = epochSub(HBPMENS, 3, 1)
+HBPMENS1  = combineDf(BD, HBPMENS1)
+S3DENS1 = epochSub(S3DENS, 3, 1)
+S3DENS1 = combineDf(BD, S3DENS1)
+MMActionENS1 = epochSub(MMActionENS, 3, 1)
+MMActionENS1 = combineDf(BD, MMActionENS1)
+
+#%%
+VAMEMotif = loadData(VAMEMotifPath, idf=BD, scale=27000)
+VAMEENS = loadData(VAMEENSPath, idf=BD)
+VAME_AM = loadData(VAMEMotifPath, idf=assessment, scale=27000)
+VAME_AE = loadData(VAMEENSPath, idf=assessment)
+VAME_AME = loadData(VAMEENSPath, idf=VAME_AM)
 
 #%%
 print("Assessment")
 a = classify(assessment)
-print("VAME")
-v = classify(vame)
-print("hBPM")
-h = classify(hBPM)
-print("S3D")
-s = classify(S3D)
-print("MMAction")
-m = classify(MMAction)
+print("VAME Motif")
+vm = classify(VAMEMotif)
+print("hBPM Motif")
+hm = classify(HBPMMotif)
+print("S3D Motif")
+sm = classify(S3DMotif)
+print("MMAction Motif")
+mm = classify(MMActionMotif)
 
 #%%
-data_sets = {'Assessment': a, 'VAME': v, 'hBPM': h, 'S3D': s, '': m}
-name = ['a', 'v', 'h', 's', 'm']
+print("VAME ENS")
+ve = classify(VAMEENS)
+print("hBPM ENS")
+he = classify(HBPMENS)
+print("S3D ENS")
+se = classify(S3DENS)
+print("MMAction ENS")
+me = classify(MMActionENS)
+
+#%%
+print("Assessment")
+a = classify(assessment)
+print("VAME Motif")
+m = classify(VAMEMotif)
+print("VAME ENS")
+e = classify(VAMEENS)
+print("VAME Motif + Assessment")
+am = classify(VAME_AM)
+print("VAME ENS + Assessment")
+ae = classify(VAME_AE)
+print("VAME Motif + ENS + Assessment")
+ame = classify(VAME_AME)
+
+
+#%%
+export(exportPath.format("assessments_scales_50.npy"), a)
+export(exportPath.format("vame_motif_50.npy"), vm)
+export(exportPath.format("hbpm_motif_50.npy"), hm)
+export(exportPath.format("s3d_motif_50.npy"), sm)
+export(exportPath.format("mmaction_motif_50.npy"), mm)
+export(exportPath.format("vame_ens_50.npy"), ve)
+export(exportPath.format("hbpm_ens_50.npy"), he)
+export(exportPath.format("s3d_ens_50.npy"), se)
+export(exportPath.format("mmaction_ens_50.npy"), me)
+
+#%%
+export(exportPath.format("assessments_scales_50.npy"), a)
+export(exportPath.format("vame_motif_50.npy"), m)
+export(exportPath.format("vame_ens_50.npy"), e)
+export(exportPath.format("vame_am_50.npy"), am)
+export(exportPath.format("vame_ae_50.npy"), ae)
+export(exportPath.format("vame_ame_50.npy"), ame)
+
+#%%
+data_sets = {'Assessment': a, 'Motif': m, 'ENS': e, 'AM': am, 'AE': ae, 'AME': ame}
+name = list(data_sets.values())
 df_list = []
 for data_name, data_set in data_sets.items():
     for j, metric in enumerate(['acc', 'pre', 'rec']):
@@ -186,61 +232,8 @@ sns.boxplot(x='Data', y='Score', hue='Metric', data=df, palette='Set3')
 # Add labels and title
 plt.xlabel('Models')
 plt.ylabel('Score')
-plt.title('Motif Usage')
+plt.title('VAME')
 
 # Show the plot
 plt.show()
-
-
-#%%
-export("Diagnostic_scales")
-#%%
-export("VAME_motif_usage")
-#%%
-export("hBPM_motif_usage")
-#%%
-export("VAME_transition_matrix")
-#%%
-export("hBPM_transition_matrix")
-
-
-
-
-#%%
-# #%% VAME motif usages in 30 sec intervals
-# # 10 motifs x 30 intervals = 300 columns
-# motifPath = r"C:\Users\kietc\SURF\jack-data\motif_usage_30s_interval.csv"
-
-# with open(motifPath, 'r') as file:
-#     csvreader = csv.reader(file, delimiter=',')
-#     next(csvreader)
-#     for row in csvreader:
-#         vec = np.array(row[1:]).astype(float).tolist()
-#         dataframe[row[0]].extend(vec)
-
-# #%% VAME transition matrix
-# # 10 motifs x 10 motifs = 100 columns
-# transitionPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\transition_matrix\{}.npy"
-# for v in videos:
-#     transition = np.load(transitionPath.format(v)).flatten()
-#     dataframe[v].extend(transition)
-
-# #%% hBPM motif usages in 30 sec intervals
-
-# # 11 motifs x 30 intervals = 330 columns
-# motifPath = r"C:\Users\kietc\SURF\jack-data\hBPM_motif_usage_30s_interval.csv"
-
-# with open(motifPath, 'r') as file:
-#     csvreader = csv.reader(file, delimiter=',')
-#     next(csvreader)
-#     for row in csvreader:
-#         vec = np.array(row[1:]).astype(float).tolist()
-#         dataframe[row[0]].extend(vec)
-
-# #%% hBPM transition matrix
-# # 11 motifs x 11 motifs = 121 columns
-# transitionPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\transition_matrix\{}.npy"
-# for v in videos:
-#     transition = np.load(transitionPath.format(v)).flatten()
-#     dataframe[v].extend(transition)
-
+# %%
