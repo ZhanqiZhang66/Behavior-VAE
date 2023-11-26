@@ -25,13 +25,13 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
                   "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
 
 #%%
-def combineDf(df1, df2):
+def combine_df(df1, df2):
     copyDf1 = copy.deepcopy(df1)
     for key in copyDf1:
         copyDf1[key].extend(df2[key])
     return copyDf1
 
-def loadData(path,  idf = None, end = 0, scale = 1):
+def load_data(path,  idf = None, end = 0, scale = 1):
     df = {}
     if idf:
         df = copy.deepcopy(idf)
@@ -49,10 +49,10 @@ def loadData(path,  idf = None, end = 0, scale = 1):
             df[row[0]].extend(vec)
     return df
 
-def epochSub(idf, indexA, indexB):
+def epoch_sub(idf, indexA, indexB):
     df = {}
     for v in videos:
-        df[v] = [idf[v][indexA] - idf[v][indexB]]
+        df[v] = [(abs(idf[v][indexA]+1 - idf[v][indexB]+1)) / min(idf[v][indexA]+1,idf[v][indexB]+1)]
     return df
 
 def classify(dataframe):
@@ -100,12 +100,35 @@ def classify(dataframe):
     data = [acc, pre, rec]
     return data
 
-def export(path, data):
+def save_classifier_results(path, data):
     print(path)
     np.save(path, np.array(data))
 
-def loadResult(path):
+def load_result(path):
     return np.load(path).tolist()
+
+def graph_classifier_results(data):
+    df_list = []
+    for data_name, data_set in data.items():
+        for j, metric in enumerate(['acc', 'pre', 'rec']):
+            df_list.extend({
+                'Data': data_name,
+                'Metric': metric,
+                'Score': score
+            } for score in data_set[j])
+    df = pd.DataFrame(df_list)
+    # Create a boxplot using Seaborn
+    plt.figure(figsize=(12, 8))
+    sns.set(style="whitegrid")
+    sns.boxplot(x='Data', y='Score', hue='Metric', data=df, palette='Set3')
+
+    # Add labels and title
+    plt.xlabel('Models')
+    plt.ylabel('Score')
+    plt.title('VAME')
+
+    # Show the plot
+    plt.show()
 
 #%%
 diagnosticPath = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
@@ -123,40 +146,40 @@ MMActionENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy
 exportPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 exportResultPath =  r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 
-#%%
-BD = loadData(diagnosticPath, end=2)
-assessment = loadData(diagnosticPath, end=-1)
+#%% Create DF for each model
+BD = load_data(diagnosticPath, end=2)
+assessment = load_data(diagnosticPath, end=-1)
 
 #%%
-VAMEMotif = loadData(VAMEMotifPath, idf=BD, scale=27000)
-HBPMMotif = loadData(HBPMMotifPath, idf=BD, scale=27000)
-S3DMotif = loadData(S3DMotifPath, idf=BD, scale=27000)
-MMActionMotif = loadData(MMActionMotifPath, idf=BD, scale=27000)
+VAMEMotif = load_data(VAMEMotifPath, idf=BD, scale=27000)
+HBPMMotif = load_data(HBPMMotifPath, idf=BD, scale=27000)
+S3DMotif = load_data(S3DMotifPath, idf=BD, scale=27000)
+MMActionMotif = load_data(MMActionMotifPath, idf=BD, scale=27000)
 
 #%%
-VAMEENS = loadData(VAMEENSPath, idf=BD)
-HBPMENS = loadData(HBPMENSPath, idf=BD)
-S3DENS = loadData(S3DENSPath, idf=BD)
-MMActionENS = loadData(MMActionENSPath, idf=BD)
+VAMEENS = load_data(VAMEENSPath, idf=BD)
+HBPMENS = load_data(HBPMENSPath, idf=BD)
+S3DENS = load_data(S3DENSPath, idf=BD)
+MMActionENS = load_data(MMActionENSPath, idf=BD)
 
-#%%
-VAMEENS1 = epochSub(VAMEENS, 3, 1)
-VAMEENS1 = combineDf(BD, VAMEENS1)
-HBPMENS1 = epochSub(HBPMENS, 3, 1)
-HBPMENS1  = combineDf(BD, HBPMENS1)
-S3DENS1 = epochSub(S3DENS, 3, 1)
-S3DENS1 = combineDf(BD, S3DENS1)
-MMActionENS1 = epochSub(MMActionENS, 3, 1)
-MMActionENS1 = combineDf(BD, MMActionENS1)
+#%% ENS epoch 3 - epoch 1
+VAMEENS1 = epoch_sub(VAMEENS, 3, 1)
+VAMEENS1 = combine_df(BD, VAMEENS1)
+HBPMENS1 = epoch_sub(HBPMENS, 3, 1)
+HBPMENS1  = combine_df(BD, HBPMENS1)
+S3DENS1 = epoch_sub(S3DENS, 3, 1)
+S3DENS1 = combine_df(BD, S3DENS1)
+MMActionENS1 = epoch_sub(MMActionENS, 3, 1)
+MMActionENS1 = combine_df(BD, MMActionENS1)
 
-#%%
-VAMEMotif = loadData(VAMEMotifPath, idf=BD, scale=27000)
-VAMEENS = loadData(VAMEENSPath, idf=BD)
-VAME_AM = loadData(VAMEMotifPath, idf=assessment, scale=27000)
-VAME_AE = loadData(VAMEENSPath, idf=assessment)
-VAME_AME = loadData(VAMEENSPath, idf=VAME_AM)
+#%% VAME Comparisons
+VAMEMotif = load_data(VAMEMotifPath, idf=BD, scale=27000)
+VAMEENS = load_data(VAMEENSPath, idf=BD)
+VAME_AM = load_data(VAMEMotifPath, idf=assessment, scale=27000)
+VAME_AE = load_data(VAMEENSPath, idf=assessment)
+VAME_AME = load_data(VAMEENSPath, idf=VAME_AM)
 
-#%%
+#%% Classify
 print("Assessment")
 a = classify(assessment)
 print("VAME Motif")
@@ -179,6 +202,16 @@ print("MMAction ENS")
 me = classify(MMActionENS)
 
 #%%
+print("VAME ENS")
+ve = classify(VAMEENS1)
+print("hBPM ENS")
+he = classify(HBPMENS1)
+print("S3D ENS")
+se = classify(S3DENS1)
+print("MMAction ENS")
+me = classify(MMActionENS1)
+
+#%% 
 print("Assessment")
 a = classify(assessment)
 print("VAME Motif")
@@ -193,47 +226,26 @@ print("VAME Motif + ENS + Assessment")
 ame = classify(VAME_AME)
 
 
-#%%
-export(exportPath.format("assessments_scales_50.npy"), a)
-export(exportPath.format("vame_motif_50.npy"), vm)
-export(exportPath.format("hbpm_motif_50.npy"), hm)
-export(exportPath.format("s3d_motif_50.npy"), sm)
-export(exportPath.format("mmaction_motif_50.npy"), mm)
-export(exportPath.format("vame_ens_50.npy"), ve)
-export(exportPath.format("hbpm_ens_50.npy"), he)
-export(exportPath.format("s3d_ens_50.npy"), se)
-export(exportPath.format("mmaction_ens_50.npy"), me)
+#%% Save results
+save_classifier_results(exportPath.format("assessments_scales_50.npy"), a)
+save_classifier_results(exportPath.format("vame_motif_50.npy"), vm)
+save_classifier_results(exportPath.format("hbpm_motif_50.npy"), hm)
+save_classifier_results(exportPath.format("s3d_motif_50.npy"), sm)
+save_classifier_results(exportPath.format("mmaction_motif_50.npy"), mm)
+save_classifier_results(exportPath.format("vame_ens_50.npy"), ve)
+save_classifier_results(exportPath.format("hbpm_ens_50.npy"), he)
+save_classifier_results(exportPath.format("s3d_ens_50.npy"), se)
+save_classifier_results(exportPath.format("mmaction_ens_50.npy"), me)
 
 #%%
-export(exportPath.format("assessments_scales_50.npy"), a)
-export(exportPath.format("vame_motif_50.npy"), m)
-export(exportPath.format("vame_ens_50.npy"), e)
-export(exportPath.format("vame_am_50.npy"), am)
-export(exportPath.format("vame_ae_50.npy"), ae)
-export(exportPath.format("vame_ame_50.npy"), ame)
+save_classifier_results(exportPath.format("assessments_scales_50.npy"), a)
+save_classifier_results(exportPath.format("vame_motif_50.npy"), m)
+save_classifier_results(exportPath.format("vame_ens_50.npy"), e)
+save_classifier_results(exportPath.format("vame_am_50.npy"), am)
+save_classifier_results(exportPath.format("vame_ae_50.npy"), ae)
+save_classifier_results(exportPath.format("vame_ame_50.npy"), ame)
 
-#%%
-data_sets = {'Assessment': a, 'Motif': m, 'ENS': e, 'AM': am, 'AE': ae, 'AME': ame}
-name = list(data_sets.values())
-df_list = []
-for data_name, data_set in data_sets.items():
-    for j, metric in enumerate(['acc', 'pre', 'rec']):
-        df_list.extend({
-            'Data': data_name,
-            'Metric': metric,
-            'Score': score
-        } for score in data_set[j])
-df = pd.DataFrame(df_list)
-# Create a boxplot using Seaborn
-plt.figure(figsize=(12, 8))
-sns.set(style="whitegrid")
-sns.boxplot(x='Data', y='Score', hue='Metric', data=df, palette='Set3')
 
-# Add labels and title
-plt.xlabel('Models')
-plt.ylabel('Score')
-plt.title('VAME')
-
-# Show the plot
-plt.show()
-# %%
+#%% Graph classifier results
+data = {'Assessment': a, 'Motif': m, 'ENS': e, 'AM': am, 'AE': ae, 'AME': ame}
+graph_classifier_results(data)

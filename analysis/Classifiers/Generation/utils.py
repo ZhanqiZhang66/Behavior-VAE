@@ -1,6 +1,7 @@
 #%%
 import numpy as np
 import scipy
+import json
 
 def add_self_transition(transition_m, last_state):
     transition = transition_m.copy()
@@ -31,7 +32,7 @@ def add_self_transition(transition_m, last_state):
     #     transition[last_state - n_rows_removed][last_state - n_rows_removed] = 1
     return transition
 
-def compute_entropy(transition_m, last_state):
+def compute_l0_entropy(transition_m, last_state):
     # https://stackoverflow.com/questions/31791728/python-code-explanation-for-stationary-distribution-of-a-markov-chain
     invertible_T = add_self_transition(transition_m, last_state)
     if len(invertible_T):
@@ -45,10 +46,46 @@ def compute_entropy(transition_m, last_state):
         entropy = 0
     return entropy
 
+def count_zeros(transition_m):
+    transition = transition_m.copy()
+    zero_rows = np.all(transition == 0, axis=1)
+    zero_rows_i =  np.where(zero_rows == True)
+    zero_cols = np.all(transition == 0, axis=0)
+    return len(zero_rows_i[0]),  np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
+
+def effective_num_states(transtion_m):
+    effective_num_every_state = []
+    for row in transtion_m:
+        sum_p_ij = np.sum(np.square(row))
+        if sum_p_ij == 0:
+            effective_num_every_state.append(0)
+        else:
+            effective_num_every_state.append(1/sum_p_ij)
+    effective_num_avg = np.mean(effective_num_every_state)
+    return effective_num_every_state, effective_num_avg
+
+
 #%% Retrieve and truncate motif labels
-def loadLabels(path, videos, frames):
+def load_motif_labels(path, videos, frames):
     labels = {}
     for v in videos:
         labels[v] = np.load(path.format(v, v))[:frames]
     return labels
+# %%
+def load_tmatrices(path, videos, split=1):
+    matrices = {}
+    for v in videos:
+        matrices[v] = []
+        for i in range(split):
+            cpath = path.format(v, i, split)
+            matrices[v].append(np.load(cpath).tolist())
+    return matrices
+
+def save_tmatrices(path, videos, matrices, split=1):
+    for v in videos:
+        for i in range(split):
+            cpath = path.format(v, i, split)
+            np.save(cpath, np.array(matrices[v][i]))
+
+
 # %%
