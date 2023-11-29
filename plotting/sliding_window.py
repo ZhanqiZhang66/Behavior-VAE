@@ -58,11 +58,16 @@ if not load_precomputed_sliding_window:
         # if len_reduced:
         #     transition[last_state - n_rows_removed][last_state - n_rows_removed] = 1
         return transition
+
+
     def effective_num_states(transtion_m):
         effective_num_every_state = []
         for row in transtion_m:
             sum_p_ij = np.sum(np.square(row))
-            effective_num_every_state.append(1/sum_p_ij)
+            if sum_p_ij == 0:
+                effective_num_every_state.append(0)
+            else:
+                effective_num_every_state.append(1 / sum_p_ij)
         effective_num_avg = np.mean(effective_num_every_state)
         return effective_num_every_state, effective_num_avg
 
@@ -139,61 +144,67 @@ if not load_precomputed_sliding_window:
 
     slide_window = {
         "subject": [],
-        "start_frame": [],
-        "is_BD": [],
-        "entropy": [],
-        "num_zero_row":[],
-        "num_one_item": [],
-        "num_zero_item":[],
-        "motif0_usage_freq": [],
-        "motif1_usage_freq": [],
-        "motif2_usage_freq": [],
-        "motif3_usage_freq": [],
-        "motif4_usage_freq": [],
-        "motif5_usage_freq": [],
-        "motif6_usage_freq": [],
-        "motif7_usage_freq": [],
-        "motif8_usage_freq": [],
-        "motif9_usage_freq": [],
-        "latent_volume_all_motifs": [],
-        "latent_volume_motif0": [],
-        "latent_volume_motif1": [],
-        "latent_volume_motif2": [],
-        "latent_volume_motif3": [],
-        "latent_volume_motif4": [],
-        "latent_volume_motif5": [],
-        "latent_volume_motif6": [],
-        "latent_volume_motif7": [],
-        "latent_volume_motif8": [],
-        "latent_volume_motif9": [],
-        "entropy_score": [],
-        "num_zero_row_score": [],
-        "num_one_item_score": [],
-        "num_zero_item_score": [],
-        "motif0_usage_freq_score": [],
-        "motif1_usage_freq_score": [],
-        "motif2_usage_freq_score": [],
-        "motif3_usage_freq_score": [],
-        "motif4_usage_freq_score": [],
-        "motif5_usage_freq_score": [],
-        "motif6_usage_freq_score": [],
-        "motif7_usage_freq_score": [],
-        "motif8_usage_freq_score": [],
-        "motif9_usage_freq_score": [],
-        "entropy_ctl": [],
-        "num_zero_row_ctl": [],
-        "num_one_item_ctl": [],
-        "num_zero_item_ctl": [],
-        "motif0_usage_freq_ctl": [],
-        "motif1_usage_freq_ctl": [],
-        "motif2_usage_freq_ctl": [],
-        "motif3_usage_freq_ctl": [],
-        "motif4_usage_freq_ctl": [],
-        "motif5_usage_freq_ctl": [],
-        "motif6_usage_freq_ctl": [],
-        "motif7_usage_freq_ctl": [],
-        "motif8_usage_freq_ctl": [],
-        "motif9_usage_freq_ctl": [],
+        # "start_frame": [],
+        # "is_BD": [],
+        # "entropy": [],
+        "effective_num_every_state": [],
+        "effective_num_avg": [],
+        # "num_zero_row":[],
+        # "num_one_item": [],
+        # "num_zero_item":[],
+        # "motif0_usage_freq": [],
+        # "motif1_usage_freq": [],
+        # "motif2_usage_freq": [],
+        # "motif3_usage_freq": [],
+        # "motif4_usage_freq": [],
+        # "motif5_usage_freq": [],
+        # "motif6_usage_freq": [],
+        # "motif7_usage_freq": [],
+        # "motif8_usage_freq": [],
+        # "motif9_usage_freq": [],
+        # "latent_volume_all_motifs": [],
+        # "latent_volume_motif0": [],
+        # "latent_volume_motif1": [],
+        # "latent_volume_motif2": [],
+        # "latent_volume_motif3": [],
+        # "latent_volume_motif4": [],
+        # "latent_volume_motif5": [],
+        # "latent_volume_motif6": [],
+        # "latent_volume_motif7": [],
+        # "latent_volume_motif8": [],
+        # "latent_volume_motif9": [],
+        # "entropy_score": [],
+        "effective_num_every_state_score": [],
+        "effective_num_avg_score": [],
+        # "num_zero_row_score": [],
+        # "num_one_item_score": [],
+        # "num_zero_item_score": [],
+        # "motif0_usage_freq_score": [],
+        # "motif1_usage_freq_score": [],
+        # "motif2_usage_freq_score": [],
+        # "motif3_usage_freq_score": [],
+        # "motif4_usage_freq_score": [],
+        # "motif5_usage_freq_score": [],
+        # "motif6_usage_freq_score": [],
+        # "motif7_usage_freq_score": [],
+        # "motif8_usage_freq_score": [],
+        # "motif9_usage_freq_score": [],
+        # "entropy_ctl": [],
+        "effective_num_every_state_ctl": [],
+        "effective_num_avg_ctl": [],
+        # "num_zero_row_ctl": [],
+        # "num_one_item_ctl": [],
+        # "num_zero_item_ctl": [],
+        # "motif0_usage_freq_ctl": [],
+        # "motif1_usage_freq_ctl": [],
+        # "motif2_usage_freq_ctl": [],
+        # "motif3_usage_freq_ctl": [],
+        # "motif4_usage_freq_ctl": [],
+        # "motif5_usage_freq_ctl": [],
+        # "motif6_usage_freq_ctl": [],
+        # "motif7_usage_freq_ctl": [],
+        # "motif8_usage_freq_ctl": [],
+        # "motif9_usage_freq_ctl": [],
     }
 
     csv_path = os.path.join(cfg['project_path'],"videos","pose_estimation")
@@ -250,51 +261,59 @@ if not load_precomputed_sliding_window:
 
                 num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
                 entropy_score = compute_l0_entropy(score_transition, control_label[-1])
+                effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
                 control_motif_usage = get_motif_usage(control_label, n_cluster)
 
                 num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
                 entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
+                effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
                 score_motif_usage = get_motif_usage(score_label, n_scores)
                 #velocity = compute_velocity(data_mat[offset + k: window_size + offset + k], window_size)
 
-                slide_window["subject"].append(v)
-                slide_window["start_frame"].append(k)
-                slide_window["is_BD"].append(j)
-                slide_window["entropy"].append(entropy)
-                slide_window["num_zero_row"].append(num_zero_row)
-                slide_window["num_one_item"].append(num_one_item)
-                slide_window["num_zero_item"].append(num_zero_item)
+                # slide_window["subject"].append(v)
+                # slide_window["start_frame"].append(k)
+                # slide_window["is_BD"].append(j)
+                # slide_window["entropy"].append(entropy)
+                # slide_window["num_zero_row"].append(num_zero_row)
+                # slide_window["num_one_item"].append(num_one_item)
+                # slide_window["num_zero_item"].append(num_zero_item)
+                slide_window["effective_num_every_state"].append(effective_num_every_state)
+                slide_window["effective_num_avg"].append(effective_num_avg)
 
-                slide_window["entropy_score"].append(entropy_score)
-                slide_window["num_zero_row_score"].append(num_zero_row_score)
-                slide_window["num_one_item_score"].append(num_one_item_score)
-                slide_window["num_zero_item_score"].append(num_zero_item_score)
+                # slide_window["entropy_score"].append(entropy_score)
+                # slide_window["num_zero_row_score"].append(num_zero_row_score)
+                # slide_window["num_one_item_score"].append(num_one_item_score)
+                # slide_window["num_zero_item_score"].append(num_zero_item_score)
+                slide_window["effective_num_every_state_score"].append(effective_num_every_state_score)
+                slide_window["effective_num_avg_score"].append(effective_num_avg_score)
 
-                slide_window["entropy_ctl"].append(entropy_ctl)
-                slide_window["num_zero_row_ctl"].append(num_zero_row_ctl)
-                slide_window["num_one_item_ctl"].append(num_one_item_ctl)
-                slide_window["num_zero_item_ctl"].append(num_zero_item_ctl)
-                for i in range(n_cluster):
-                    slide_window['motif{}_usage_freq'.format(i)].append(window_motif_usage[i]/np.sum(window_motif_usage))
-                    slide_window['motif{}_usage_freq_ctl'.format(i)].append(control_motif_usage[i] / np.sum(control_motif_usage))
-                    slide_window['motif{}_usage_freq_score'.format(i)].append(score_motif_usage[i] / np.sum(score_motif_usage))
-                # slide_window["motif_usage_freq"].append(window_motif_usage/np.sum(window_motif_usage))
-
-                K = np.cov(window_latent_vector.T)
-                volume_of_all = np.trace(K)
-                slide_window["latent_volume_all_motifs"].append(volume_of_all)
-
-                latent_volume_per_motif = []
-                for g in range(n_cluster):
-                    i = np.where(window_label == g)
-                    if len(i[0]):
-                        latent_sub_g = window_latent_vector[i]
-                        K_sub = np.cov(latent_sub_g.T)
-                        volume_of_group_sub = np.trace(K_sub)
-                    else:
-                        volume_of_group_sub = 0
-                    latent_volume_per_motif.append(volume_of_group_sub)
-                    slide_window['latent_volume_motif{}'.format(g)].append(volume_of_group_sub)
+                # slide_window["entropy_ctl"].append(entropy_ctl)
+                # slide_window["num_zero_row_ctl"].append(num_zero_row_ctl)
+                # slide_window["num_one_item_ctl"].append(num_one_item_ctl)
+                # slide_window["num_zero_item_ctl"].append(num_zero_item_ctl)
+                slide_window["effective_num_every_state_ctl"].append(effective_num_every_state_score)
+                slide_window["effective_num_avg_ctl"].append(effective_num_avg_ctl)
+                # for i in range(n_cluster):
+                #     slide_window['motif{}_usage_freq'.format(i)].append(window_motif_usage[i]/np.sum(window_motif_usage))
+                #     slide_window['motif{}_usage_freq_ctl'.format(i)].append(control_motif_usage[i] / np.sum(control_motif_usage))
+                #     slide_window['motif{}_usage_freq_score'.format(i)].append(score_motif_usage[i] / np.sum(score_motif_usage))
+                # # slide_window["motif_usage_freq"].append(window_motif_usage/np.sum(window_motif_usage))
+                #
+                # K = np.cov(window_latent_vector.T)
+                # volume_of_all = np.trace(K)
+                # slide_window["latent_volume_all_motifs"].append(volume_of_all)
+                #
+                # latent_volume_per_motif = []
+                # for g in range(n_cluster):
+                #     i = np.where(window_label == g)
+                #     if len(i[0]):
+                #         latent_sub_g = window_latent_vector[i]
+                #         K_sub = np.cov(latent_sub_g.T)
+                #         volume_of_group_sub = np.trace(K_sub)
+                #     else:
+                #         volume_of_group_sub = 0
+                #     latent_volume_per_motif.append(volume_of_group_sub)
+                #     slide_window['latent_volume_motif{}'.format(g)].append(volume_of_group_sub)
 
                 # slide_window["latent_volume_per_motif"].append(latent_volume_per_motif)
             end = time.time()
@@ -334,6 +353,7 @@ if load_precomputed_sliding_window:
 #%% plot average metric per population
 num_metrics = 5
 metric_names = ["entropy",
+                "effect_num_states"
                 "num_zero_row",
                 "num_one_item",
                 "num_zero_item",
@@ -514,6 +534,7 @@ for d in range(n_latent):
     CP_vol = np.asarray(latent_motif[:n_subject_in_population])
     BD_vol = np.asarray(latent_motif[n_subject_in_population:])
     #TODO: check what stat to use to test 25 observations of two distributions
+    #TODO: check some volume is nan or zero
     res = stats.ttest_ind(CP_vol, BD_vol)
 
     f = stats.f_oneway(CP, BD)
@@ -535,6 +556,9 @@ lims = [[-500, 2000],[-0.2, 1.2]]
 groups = ['Control', 'BD']
 CP_mean_motifs = [[],[]]
 BD_mean_motifs = [[],[]]
+
+latent_length = 27000- window_size
+
 for j, videos in enumerate([control_videos, BD_videos]):
     group = groups[j]
     mean_motif_freq = [[] for _ in range(n_cluster)]
@@ -548,8 +572,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             x = ds1["start_frame"].to_numpy()
             y = ds1['latent_volume_motif{}'.format(d)].to_numpy()
             z = ds1['motif{}_usage_freq'.format(d)].to_numpy()
-            mean_motif_freq[d].append(z)
-            mean_motif_volume[d].append(y)
+            mean_motif_freq[d].append(z[: latent_length])
+            mean_motif_volume[d].append(y[: latent_length])
             ax.scatter(x, y, norm=plt.Normalize(vmin=0, vmax=9), color=cmap(d * 2 + j), s=2, label='%d' % d)
             ax1.scatter(x, z, norm=plt.Normalize(vmin=0, vmax=9), color=cmap(d * 2 + j), s=2, label='%d' % d)
         ax.set_ylim(lims[0])
@@ -564,21 +588,21 @@ for j, videos in enumerate([control_videos, BD_videos]):
         pwd = r'{}\Behavior_VAE_data\{}\figure\latent_slide_window'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "{}_{}.png".format('latent_colume', sub_name)
-        fig.savefig(os.path.join(pwd, fname), transparent=True)
+        #fig.savefig(os.path.join(pwd, fname), transparent=True)
         fname0 = "{}_{}.pdf".format('latent_colume', sub_name)
-        fig.savefig(os.path.join(pwd, fname0), transparent=True)
+        #fig.savefig(os.path.join(pwd, fname0), transparent=True)
 
         pwd = r'{}\Behavior_VAE_data\{}\figure\motif_freq_slide_window'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "{}_{}.png".format('motif_usage', sub_name)
-        fig1.savefig(os.path.join(pwd, fname), transparent=True)
+        #fig1.savefig(os.path.join(pwd, fname), transparent=True)
         fname1 = "{}_{}.pdf".format('motif_usage', sub_name)
-        fig1.savefig(os.path.join(pwd, fname1), transparent=True)
+        #fig1.savefig(os.path.join(pwd, fname1), transparent=True)
     if j == 0:
         CP_mean_motifs = [mean_motif_freq, mean_motif_volume]
     if j == 1:
         BD_mean_motifs = [mean_motif_freq, mean_motif_volume]
-
+plt.close('all')
 #%% Plot per population change of dwell time, and latent volume
 def tolerant_mean(arrs):
     lens = [len(i) for i in arrs]
@@ -586,11 +610,13 @@ def tolerant_mean(arrs):
     arr.mask = True
     for idx, l in enumerate(arrs):
         arr[:len(l),idx] = l
-    return arr.mean(axis = -1), arr.std(axis=-1)
-
+    return arr.mean(axis=-1), arr.std(axis=-1)
+def error_bar(arrs, axis=0):
+    arrs = np.array(arrs)
+    return np.nanmean(arrs, axis=axis), np.nanstd(arrs, axis=axis, ddof=1)/np.sqrt(np.size(arrs, axis=axis))
 
 latent_d = 10
-n_cluster= 10
+n_cluster = 10
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 cmap = plt.get_cmap('tab20')
@@ -604,26 +630,25 @@ for d in range(n_cluster):
     for j, videos in enumerate([control_videos, BD_videos]):
         group = groups[j]
         mean_motif_freq = CP_mean_motifs[0][d] if j == 0 else BD_mean_motifs[0][d]
-        z, error_z = tolerant_mean(mean_motif_freq)
-
+        z, error_z = error_bar(mean_motif_freq)
 
         mean_motif_volume = CP_mean_motifs[1][d] if j == 0 else BD_mean_motifs[1][d]
-        y, error_y = tolerant_mean(mean_motif_volume)
+        y, error_y = error_bar(mean_motif_volume)
 
         x = np.arange(len(y)) + 1
         ax.fill_between(x, y - error_y, y + error_y, norm=plt.Normalize(vmin=0, vmax=9),
                         alpha=0.2, facecolor=cmap(d * 2 + j))
-        ax.plot(x, y, color=cmap(d * 2 + j), label='{}-{}'.format(group, d))
+        ax.plot(x, y, color=cmap(d * 2 + j), label='{}-{}'.format(group, d), zorder=1)
 
-        x = np.arange(len(z)) + 1
-        ax1.fill_between(x, z - error_z, z + error_z, norm=plt.Normalize(vmin=0, vmax=9),
+        x1 = np.arange(len(z)) + 1
+        ax1.fill_between(x1, z - error_z, z + error_z, norm=plt.Normalize(vmin=0, vmax=9),
                          alpha=0.2, facecolor=cmap(d * 2 + j))
-        ax1.plot(x, z, color=cmap(d * 2 + j), label='{}-{}'.format(group, d))
+        ax1.plot(x1, z, color=cmap(d * 2 + j), label='{}-{}'.format(group, d), zorder=1)
 
     ax.axhline(0, color='k',linestyle="dashed")
     ax.set_ylim(lims[0])
     ax.set_xlim([0,t_max])
-    ax.set_title('{}-{}-latent volume motif {}'.format('BD-CP', 'average', d))
+    ax.set_title('{}-{}-latent volume motif {} +- sem'.format('BD-CP', 'average', d))
     ax.set_xlabel('time (frames)')
 
     ax1.axhline(0, color='white',linestyle="dashed")
@@ -634,7 +659,11 @@ for d in range(n_cluster):
 
     ax.legend()
     ax1.legend()
+    ax.grid(False)
+    ax1.grid(False)
+
     fig.show()
+
     pwd = r'{}\Behavior_VAE_data\{}\figure\latent_slide_window'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "{}_{}_motif{}.png".format('latent_volume', 'BD-CP', d)
