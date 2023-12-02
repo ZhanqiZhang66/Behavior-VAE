@@ -9,10 +9,11 @@ def count_zeros(transition_m):
     zero_rows_i =  np.where(zero_rows == True)
     zero_cols = np.all(transition == 0, axis=0)
     return len(zero_rows_i[0]),  np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
+
 def add_self_transition(transition_m, last_state):
     transition = transition_m.copy()
     zero_rows = np.all(transition == 0, axis=1)
-    zero_rows_i =  np.where(zero_rows == True)
+    zero_rows_i = np.where(zero_rows == True)
     zero_cols = np.all(transition == 0, axis=0)
     zero_cols_i = np.where(zero_cols == True)
 
@@ -52,13 +53,6 @@ def compute_l0_entropy(transition_m, last_state):
         entropy = 0
     return entropy
 
-def count_zeros(transition_m):
-    transition = transition_m.copy()
-    zero_rows = np.all(transition == 0, axis=1)
-    zero_rows_i =  np.where(zero_rows == True)
-    zero_cols = np.all(transition == 0, axis=0)
-    return len(zero_rows_i[0]),  np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
-
 def effective_num_states(transtion_m):
     effective_num_every_state = []
     for row in transtion_m:
@@ -69,7 +63,6 @@ def effective_num_states(transtion_m):
             effective_num_every_state.append(1/sum_p_ij)
     effective_num_avg = np.mean(effective_num_every_state)
     return effective_num_every_state, effective_num_avg
-
 
 #%% Retrieve and truncate motif labels
 def load_motif_labels(path, videos, frames, split=1):
