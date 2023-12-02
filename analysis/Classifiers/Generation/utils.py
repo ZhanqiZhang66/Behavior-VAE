@@ -3,6 +3,12 @@ import numpy as np
 import scipy
 import json
 
+def count_zeros(transition_m):
+    transition = transition_m.copy()
+    zero_rows = np.all(transition == 0, axis=1)
+    zero_rows_i =  np.where(zero_rows == True)
+    zero_cols = np.all(transition == 0, axis=0)
+    return len(zero_rows_i[0]),  np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
 def add_self_transition(transition_m, last_state):
     transition = transition_m.copy()
     zero_rows = np.all(transition == 0, axis=1)
@@ -66,10 +72,15 @@ def effective_num_states(transtion_m):
 
 
 #%% Retrieve and truncate motif labels
-def load_motif_labels(path, videos, frames):
+def load_motif_labels(path, videos, frames, split=1):
     labels = {}
     for v in videos:
-        labels[v] = np.load(path.format(v, v))[:frames]
+        if split == 1:
+            labels[v] = np.load(path.format(v, v))[0: frames]
+        else:
+            labels[v] = []
+            for i in range(split):
+                labels[v].append(np.load(path.format(v, v))[i * frames // split: (i + 1) * frames // split])
     return labels
 # %%
 def load_tmatrices(path, videos, split=1):
