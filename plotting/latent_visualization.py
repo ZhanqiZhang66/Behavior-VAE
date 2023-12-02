@@ -17,6 +17,11 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
+from numpy import *
+from matplotlib import pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib.patches import FancyArrowPatch
+from mpl_toolkits.mplot3d import proj3d
 #%%
 
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
@@ -169,6 +174,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Labels[j] = l
 #%% Population-wise plot
 #%% plot PCA embedding for each video, all states
+import matplotlib
 titles = ["CP", "BD"]
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
@@ -180,6 +186,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
         latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
 
+        # 3D PCA
         pca = PCA(n_components=3)
         components = pca.fit_transform(latent_vector)
         components_cluster_center = pca.fit_transform(cluster_center)
@@ -188,17 +195,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
         finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
         finalDf.columns = ['pc 1', 'pc 2', 'pc 3','target']
 
-        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-        # 3D PCA
-        ax = fig.add_subplot(1,1,1,projection='3d')
-        t = np.arange(10)
-        for g in np.unique(label):
-            i = np.where(label == g)
-            cmap = plt.get_cmap('tab20')
-            ax.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                       color=cmap(g * 2 + j),
-                       cmap='Spectral', s=10, alpha=0.1, label='%d' % g)
-        leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+
+        fig = plt.figure(figsize=plt.figaspect(0.5))
+
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
+        # plot trajectory on latent
+
+        time = np.arange(0, len(components))
+        c = np.linspace(0, 1, len(components))
+        ax.scatter(components[:, 0], components[:, 1], components[:, 2], c=c, cmap=plt.get_cmap('plasma'),
+                   label='trajectory', s=50)
         # make simple, bare axis lines through space:
         xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
         ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
@@ -208,7 +214,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
         for lh in leg.legendHandles:
             lh.set_alpha(1)
-        ax.set_title("PCs of {}-{}\n Exp_Var:{:.2f}".format(titles[j], v, total_var))
         ax.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
         ax.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
         ax.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
@@ -217,7 +222,45 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax.set_ylim(-30, 55)
         ax.set_zlim(-55, 55)
         ax.grid(False)
+
+
+        # plot trajectory on latent
+        ax1 = fig.add_subplot(1, 2, 2, projection='3d')
+        t = np.arange(10)
+        for g in np.unique(label):
+            i = np.where(label == g)
+            cmap = plt.get_cmap('tab20')
+            # alpha_arr = np.arange(0.1, 1, (1 - 0.1) / len(components[i, 0]))
+            # r, g, b = matplotlib.colors.to_rgb(cmap(g * 2 + j))
+            # color = [(r, g, b, alpha) for alpha in alpha_arr]
+            ax1.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                       color=cmap(g * 2 + j),s=100, label='%d' % g, alpha=0.1)
+        leg =  ax1.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+        # make simple, bare axis lines through space:
+        xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+        ax1.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+        yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+        ax1.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+        zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+        ax1.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+        for lh in leg.legendHandles:
+            lh.set_alpha(1)
+        ax1.set_title("PCs of {}-{}\n Exp_Var:{:.2f}".format(titles[j], v, total_var))
+        ax1.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
+        ax1.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
+        ax1.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
+
+        ax1.set_xlim(-55, 55)
+        ax1.set_ylim(-30, 55)
+        ax1.set_zlim(-55, 55)
+        ax1.grid(False)
+
+
+
+
+
         fig.show()
+
         pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Subjects-All-Motifs'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "PCs of {}-{}-3d.png".format(titles[j], v)
@@ -248,12 +291,25 @@ for j, videos in enumerate([control_videos, BD_videos]):
 #%% Plot PCA of BD and CP population, for all state
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
-fig_pca = plt.figure(figsize=(30,30))
+fig_pca = plt.figure(figsize=plt.figaspect(2))
 fig_latent = plt.figure(figsize=(30,30))
 
 pca = PCA(n_components=3)
 K_var = np.zeros((10, 2))
 K_var_all_subjects = np.zeros((n_subject_in_population, 10, 2))
+
+latent_vector_stack = np.vstack(Latent_vectors)
+labels_stack = np.hstack(Labels)
+state_volume = []
+len_latent = [0, len(Latent_vectors[0])]
+components = pca.fit_transform(latent_vector_stack)
+for g in range(n_cluster):
+    idx = np.where(labels_stack == g)[0]
+    latent_this_state = latent_vector_stack[idx, :]
+    K = np.cov(latent_this_state.T) # 10 x
+    volume_of_group = np.trace(K)
+    state_volume.append(volume_of_group)
+
 for j, videos in enumerate([control_videos, BD_videos]):
     n = N[j]
     latent_vec = Latent_vectors[j]
@@ -261,15 +317,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
     label = Labels[j]
     label_trim = Labels[j]
     ax = fig_pca.add_subplot(2, 1, j + 1, projection='3d')
-    components = pca.fit_transform(latent_vec)
+
     total_var = pca.explained_variance_ratio_.sum() * 100
     t = np.arange(10)
     for g in np.unique(label):
         i = np.where(label == g)
+        ii = i[0] + len_latent[j]
         cmap = plt.get_cmap('tab20')
-        ax.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
+        ax.scatter(components[ii, 0], components[ii, 1], components[ii, 2], norm=plt.Normalize(vmin=0, vmax=9),
                    color=cmap(g * 2 + j),
-                   cmap='Spectral', s=10, alpha=0.05, label='%d' % g)
+                   s=30, alpha=0.05, label='%d' % g)
     leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
 
     for lh in leg.legendHandles:
@@ -295,8 +352,8 @@ pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual'.format(onedrive_path, project
 Path(pwd).mkdir(exist_ok=True)
 fname = "PCs-of-BD-CP-3d.png"
 fname_pdf = "PCs-of-BD-CP-3d.pdf"
-fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
-fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+# fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+# fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 # fname = "PCs-of-BD-CP.png"
@@ -305,30 +362,34 @@ fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # fig_pca.savefig(os.path.join(pwd, fname1), transparent=True)
 #%% Plot PCA of BD and CP population, for each state
 cmap = plt.get_cmap('tab20')
-titles = ["CP", "BD"]
+titles = ["HP", "BD"]
 
 pca = PCA(n_components=3)
 K_var = np.zeros((10, 2))
 
+len_latent = [0, len(Latent_vectors[0])]
+components = pca.fit_transform(latent_vector_stack)
 for g in np.unique(label):
     fig_pca = plt.figure(figsize=(10, 10))
     ax = fig_pca.add_subplot(1, 1, 1, projection='3d')
+    latent_this_state = []
     for j, videos in enumerate([control_videos, BD_videos]):
+
         n = N[j]
         latent_vec = Latent_vectors[j]
+
         latent_vec_trim = latent_vec
         label = Labels[j]
         label_trim = Labels[j]
 
-        components = pca.fit_transform(latent_vec)
-        total_var = pca.explained_variance_ratio_.sum() * 100
         t = np.arange(10)
 
         i = np.where(label == g)
+        ii = i[0] + len_latent[j]
         cmap = plt.get_cmap('tab20')
-        ax.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
+        ax.scatter3D(components[ii, 0], components[ii, 1], components[ii, 2], norm=plt.Normalize(vmin=0, vmax=9),
                    color=cmap(g * 2 + j),
-                   cmap='Spectral', s=10, alpha=0.05, label=titles[j])
+                   s=30, alpha=0.05,  label=titles[j])
     leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
     for lh in leg.legendHandles:
         lh.set_alpha(1)
@@ -337,9 +398,12 @@ for g in np.unique(label):
     ax.set_ylabel('PC 2')
     ax.set_zlabel('PC 3')
 
-    ax.set_xlim(-40, 40)
+    ax.set_xlim(-50, 50)
     ax.set_ylim(-30, 30)
     ax.set_zlim(-40, 40)
+
+    ax.tick_params(left=False, right=False, labelleft=False,
+                   labelbottom=False, bottom=False)
     ax.grid(False)
     # make simple, bare axis lines through space:
     xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
@@ -349,6 +413,7 @@ for g in np.unique(label):
     zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
     ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
     fig_pca.show()
+
 
     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Population-{}-motifs'.format(onedrive_path, project_name, n_cluster)
     Path(pwd).mkdir(exist_ok=True)
@@ -360,31 +425,42 @@ for g in np.unique(label):
 
 #%% Plot PCA of BD and CP population, for each state, and each subject
 K_var_all_subjects = np.zeros((n_subject_in_population, 10, 2))
+len_latent = [0, len(Latent_vectors[0])]
+components = pca.fit_transform(latent_vector_stack)
 for j, videos in enumerate([control_videos, BD_videos]):
     n = N[j]
     latent_vec = Latent_vectors[j]
-    latent_vec_trim = latent_vec
-    label = Labels[j]
-    label_trim = Labels[j]
-    for sub in range(n_subject_in_population):
-        latent_vec_sub = latent_vec_trim[0: Latent_len[j][sub]]
-        latent_vec_trim = latent_vec_trim[Latent_len[j][sub]:]
+    latent_vec_this_population = latent_vec
 
-        label_sub = label_trim[0: Latent_len[j][sub]]
-        label_trim = label_trim[Latent_len[j][sub]:]
+    # embed on PC space with all points first
+    total_var = pca.explained_variance_ratio_.sum() * 100
+    principalDf = pd.DataFrame(data=components)
+    finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
+    finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
+
+    label = Labels[j]
+    label_this_population = label
+    # now find index of this subject, and this state from the long latent vector
+    previous_subject_latent_end = 0
+    for sub in range(n_subject_in_population):
+
+        if sub > 0:
+            previous_subject_latent_end += Latent_len[j][sub - 1]
+        this_subject_latent_len = Latent_len[j][sub]
+        latent_vec_sub = latent_vec_this_population[previous_subject_latent_end: previous_subject_latent_end + this_subject_latent_len]
+
+        label_sub = label_this_population[previous_subject_latent_end: previous_subject_latent_end + this_subject_latent_len]
         sub_name = videos[sub]
         for g in np.unique(label):
             #  state-population-subject
-            i_sub = np.where(label_sub == g)
-            if len(i_sub[0]):
-                latent_sub_g = latent_vec_sub[i_sub]
+            #  find the index of this subject, and in this state g
+
+            i_sub_ = np.where(label_sub == g)
+            i_sub = i_sub_[0] + previous_subject_latent_end + len_latent[j]
+            if len(i_sub):
+                latent_sub_g = latent_vec_sub[i_sub_]
                 if latent_sub_g.shape[0] < 3:
                     continue
-                components = pca.fit_transform(latent_sub_g)
-                total_var = pca.explained_variance_ratio_.sum() * 100
-                principalDf = pd.DataFrame(data=components)
-                finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
-                finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
                 K_sub = np.cov(latent_sub_g.T)
                 volume_of_group_sub = np.trace(K_sub)
                 K_var_all_subjects[sub][g][j] = volume_of_group_sub
@@ -393,8 +469,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 K_var_all_subjects[sub][g][j] = volume_of_group_sub
             fig_pca_per_state = plt.figure(figsize=(10, 10))
             ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
-            ax2.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                        color=cmap(g * 2 + j), s=10, alpha=0.1, label='%d' % g)
+            ax2.scatter(components[i_sub, 0], components[i_sub, 1], components[i_sub, 2], norm=plt.Normalize(vmin=0, vmax=9),
+                        color=cmap(g * 2 + j), s=30, alpha=0.1, label='%d' % g)
 
             # make simple, bare axis lines through space:
             xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
@@ -406,17 +482,18 @@ for j, videos in enumerate([control_videos, BD_videos]):
             for lh in leg.legendHandles:
                 lh.set_alpha(1)
             ax2.set_title("PCs of {}-{}-State- {}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, total_var))
-            ax2.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
-            ax2.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
-            ax2.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
+            # ax2.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
+            # ax2.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
+            # ax2.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
             ax2.set_xlim(-50, 50)
             ax2.set_ylim(-30, 50)
             ax2.set_zlim(-50, 50)
             fig_pca_per_state.show()
+
             pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Subject-{}-Motifs'.format(onedrive_path, project_name, n_cluster)
             Path(pwd).mkdir(exist_ok=True)
             fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
-            fname_pdf =  "PCs of {}-{} State {}.pdf".format(titles[j], sub_name, g)
+            fname_pdf = "PCs of {}-{} State {}.pdf".format(titles[j], sub_name, g)
             fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
             fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
             plt.close('all')
@@ -485,6 +562,8 @@ pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch'.format(onedrive_path, p
 Path(pwd).mkdir(exist_ok=True)
 fname = "Volume of state {}.png".format(g)
 fig.savefig(os.path.join(pwd, fname))
+fname_pdf = "Volume of state {}.pdf".format(g)
+fig.savefig(os.path.join(pwd, fname))
 #%%
 from matplotlib.animation import FuncAnimation
 fig, ax = plt.subplots(figsize=(10, 10))
@@ -507,7 +586,7 @@ def animation(i):
             ax.set_title('{}-{} Volume of state'.format(titles[j], sub_name))
 
 
-ani = FuncAnimation(fig, animation, frames = 240, interval = 500, blit = True)
+ani = FuncAnimation(fig, animation, frames=240, interval = 500, blit = True)
 
 plt.show()
 #%%
@@ -557,15 +636,480 @@ fig.savefig(os.path.join(pwd, fname_pdf),transparent=True)
 #%% Epoch-wise plot
 
 
+#%% Helper function
+import numpy as np
+
+# https://stackoverflow.com/questions/22867620/putting-arrowheads-on-vectors-in-a-3d-plot
+class Arrow3D(FancyArrowPatch):
+    def __init__(self, xs, ys, zs, *args, **kwargs):
+        FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
+        self._verts3d = xs, ys, zs
+
+    def do_3d_projection(self, renderer=None):
+        xs3d, ys3d, zs3d = self._verts3d
+        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
+        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
+
+        return np.min(zs)
+#%%   PCs of each epoch, showing distance between epochs
+
+# First, Get the centroids of each epoch of each population
+centroids = [] #epoch 1 control epoch 1 hp state 0, #epoch 1 control epoch 1 hp state 1, ....epoch 2 control epoch 2 bd, ...
+latent_all = [] # epoch 1 control, epoch 1 hp, epoch 2 control, epoch 2 bd, ...
+label_all = []
+counter = 0
+for epoch in range(1, 4):
+    # for each population, get the centroid of each epoch
+    for j, videos in enumerate([control_videos, BD_videos]):
+
+        latent_vec_epoch_pop = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
+        len_latent_each_epoch_each_population = len(latent_vec_epoch_pop)
+        label_epoch_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
+
+        latent_all.append(latent_vec_epoch_pop) # (6, 225000, 10)
+        label_all.append(label_epoch_pop) # (6, 225000)
+
+        for g in range(n_cluster):
+            idx_g = np.where(label_epoch_pop == g)[0]
+            centroid = np.mean(latent_vec_epoch_pop[idx_g, :], axis=0)
+            centroids.append(centroid)
+        counter += 1
+
+subject_end = [[0],[0]]
+subject_latent_len = [[],[]]
+
+latent_all_ = np.vstack(latent_all) # (1350000, 10)
+label_all_ = np.hstack(label_all) # (1350000, 1)
+centroids = np.squeeze(np.array(centroids)) # (60 x 10)
+
+# Next, I need to get the embedding of all latent in all three epochs
+components_pop = pca.fit_transform(np.vstack((latent_all_, centroids))) # (1350060, 10)
+labels_pop = list(label_all_)
+centroids_labels = [-1] * 60
+labels_pop += centroids_labels
+
+colors = ['k', 'r']
+# for 10 states, plot the distance between epochs, within and between groups
+state_epoch_centroids = []
+state_epoch_volume = []
+len_latent_epoch = [0, 5*30*60, 10*30*60, 15*30*60]
+len_latent = [0, len(Latent_vectors[0])]
+
+for g in range(10):
+    fig_pca_per_state = plt.figure(figsize=(15, 10))
+    ax = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
+    epoch_centroids = [[],[]] # 2 x 3
+    epoch_volume = [[], []]
+    markers = ['o', '^', 'D']
+    alphas = [0.4, 0.7, 1]
+    count = 0
+    for epoch in range(1, 4):
+        # for each population, get the centroid of each epoch
+        for j, videos in enumerate([control_videos, BD_videos]):
+            latent_vec = latent_all[count]  # (1, 225000, 10)
+            label_vec = label_all[count] # (1, 225000)
 
 
-#%% PCs of {}-State-{}-Epoch-{}
+
+            latent_vec_this_population = latent_vec
+            # Then, I need to get the index of state g in label_vec
+            idx = np.where(label_vec == g)[0]
+            latent_vec_g = latent_vec[idx, :]
+            print('latent_vec_g shape: {}'.format(latent_vec_g.shape))
+
+            # Now need to find these idx  in the (1350000, 10) array of latent_vec,
+            # which is how many len_latent_epoch[225000] is away from the start
+            idx_g = len_latent_each_epoch_each_population * count + idx
+            count += 1
+
+            centroid_idx = n_cluster * (j + (epoch-1)*2) + g
+            transformed_centroid = components_pop[centroid_idx-60, :]
+            epoch_centroids[j].append(transformed_centroid) # centroid of HP epoch 1, centroid of BD epoch 1, ...
+
+            principalDf_pop = pd.DataFrame(data=components_pop)
+            principalDf_pop_labels = pd.DataFrame(data=labels_pop)
+            finalDf = pd.concat([principalDf_pop, principalDf_pop_labels], axis=1)
+            finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
+            if len(latent_vec_g):
+                KK = np.cov(latent_vec_g.T)
+                volume_of_group = np.trace(KK)
+                epoch_volume[j].append(volume_of_group)
+                # Plot latent swarms
+                ax.plot3D(components_pop[idx_g, 0], components_pop[idx_g, 1], components_pop[idx_g, 2],
+                          # norm=plt.Normalize(vmin=0, vmax=9),
+                           color=cmap(g * 2 + j),
+                            # s=5,
+                             alpha=0.9,
+                             label='%d' % g,linewidth=10, zorder=-1)
+            # plot centroid
+            ax.scatter3D(transformed_centroid[0], transformed_centroid[1], transformed_centroid[2],
+                       norm=plt.Normalize(vmin=0, vmax=9),
+                       color=colors[j],
+                       marker='.',
+                       s=200,
+                       label='{} epoch{} centroid'.format(titles[j], epoch),zorder=1)
+        # plot distance between centroids between groups in same epoch
+        xs = [epoch_centroids[0][epoch - 1][0], epoch_centroids[1][epoch - 1][0]]
+        ys = [epoch_centroids[0][epoch - 1][1], epoch_centroids[1][epoch - 1][1]]
+        zs = [epoch_centroids[0][epoch - 1][2], epoch_centroids[1][epoch - 1][2]]
+        ax.plot3D(xs, ys, zs, linewidth=3, linestyle='--',
+                color='m', label='epoch{}centroid between BD-HP'.format(epoch),zorder=1)
+
+    state_epoch_centroids.append(epoch_centroids)
+    state_epoch_volume.append(epoch_volume)
+
+    # plot distance between centroids within groups over time
+    xs = [epoch_centroids[0][0][0], epoch_centroids[0][1][0]]
+    ys = [epoch_centroids[0][0][1], epoch_centroids[0][1][1]]
+    zs = [epoch_centroids[0][0][2], epoch_centroids[0][1][2]]
+    a = Arrow3D(xs, ys,
+                zs, mutation_scale=20,
+                lw=3, arrowstyle="-|>", color="k")
+    ax.add_artist(a)
+    # ax.plot3D(xs, ys, zs, linestyle='-', linewidth=5, color='k',
+    #         label='HP centroid between epoch 1 and 2',zorder=1)
+    xs = [epoch_centroids[0][1][0], epoch_centroids[0][2][0]]
+    ys = [epoch_centroids[0][1][1], epoch_centroids[0][2][1]]
+    zs = [epoch_centroids[0][1][2], epoch_centroids[0][2][2]]
+    a = Arrow3D(xs, ys,
+                zs, mutation_scale=20,
+                lw=3, arrowstyle="-|>", color="k")
+    ax.add_artist(a)
+
+    xs = [epoch_centroids[1][0][0], epoch_centroids[1][1][0]]
+    ys = [epoch_centroids[1][0][1], epoch_centroids[1][1][1]]
+    zs = [epoch_centroids[1][0][2], epoch_centroids[1][1][2]]
+    a = Arrow3D(xs, ys,
+                zs, mutation_scale=20,
+                lw=3, arrowstyle="-|>", color="r")
+    ax.add_artist(a)
+    xs = [epoch_centroids[1][1][0], epoch_centroids[1][2][0]]
+    ys = [epoch_centroids[1][1][1], epoch_centroids[1][2][1]]
+    zs = [epoch_centroids[1][1][2], epoch_centroids[1][2][2]]
+    a = Arrow3D(xs, ys,
+                zs, mutation_scale=20,
+                lw=3, arrowstyle="-|>", color="r")
+    ax.add_artist(a)
+
+    ax.set_title("PCs of {}-State-{} \n".format(titles[j], g))
+    ax.set_xlabel('PC 1')
+    ax.set_ylabel('PC 2')
+    ax.set_zlabel('PC 3')
+    # make simple, bare axis lines through space:
+    # xAxisLine = ((np.min(components_pop[:, 0]), np.max(components_pop[:, 0])), (0, 0), (0, 0))
+    # ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+    # yAxisLine = ((0, 0), (np.min(components_pop[:, 1]), np.max(components_pop[:, 1])), (0, 0))
+    # ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+    # zAxisLine = ((0, 0), (0, 0), (np.min(components_pop[:, 2]), np.max(components_pop[:, 2])))
+    # ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+
+    ax.set_xlim(-50, 50)
+    ax.set_ylim(-30, 30)
+    ax.set_zlim(-40, 40)
+
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    ax.tick_params(left=False, right=False, labelleft=False,
+                   labelbottom=False, bottom=False)
+    fig_pca_per_state.show()
+
+
+
+    pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
+    fname = "PCs of {} State {}-centroid.png".format(titles[j], g)
+    fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
+    fname_pdf = "PCs of {} State {}-centroid.pdf".format(titles[j], g)
+    fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+#%% for 10 states, plot the distance between groups in each epoch
+# First, Get the centroids of each epoch of each population
+centroids = []  # epoch 1 control epoch 1 hp state 0, #epoch 1 control epoch 1 hp state 1, ....epoch 2 control epoch 2 bd, ...
+latent_all = []  # epoch 1 control, epoch 1 hp, epoch 2 control, epoch 2 bd, ...
+label_all = []
+counter = 0
+for epoch in range(1, 4):
+    # for each population, get the centroid of each epoch
+    for j, videos in enumerate([control_videos, BD_videos]):
+
+        latent_vec_epoch_pop = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
+        len_latent_each_epoch_each_population = len(latent_vec_epoch_pop)
+        label_epoch_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
+
+        latent_all.append(latent_vec_epoch_pop)  # (6, 225000, 10)
+        label_all.append(label_epoch_pop)  # (6, 225000)
+
+        for g in range(n_cluster):
+            idx_g = np.where(label_epoch_pop == g)[0]
+            centroid = np.mean(latent_vec_epoch_pop[idx_g, :], axis=0)
+            centroids.append(centroid)
+        counter += 1
+
+subject_end = [[0], [0]]
+subject_latent_len = [[], []]
+
+latent_all_ = np.vstack(latent_all)  # (1350000, 10)
+label_all_ = np.hstack(label_all)  # (1350000, 1)
+centroids = np.squeeze(np.array(centroids))  # (60 x 10)
+
+# Next, I need to get the embedding of all latent in all three epochs
+components_pop = pca.fit_transform(np.vstack((latent_all_, centroids)))  # (1350060, 10)
+labels_pop = list(label_all_)
+centroids_labels = [-1] * 60
+labels_pop += centroids_labels
+
+colors = ['k', 'r']
+# for 10 states, plot the distance between epochs, within and between groups
+state_epoch_centroids = []
+state_epoch_volume = []
+state_volume_ = []
+len_latent_epoch = [0, 5 * 30 * 60, 10 * 30 * 60, 15 * 30 * 60]
+len_latent = [0, len(Latent_vectors[0])]
+
+for g in range(10):
+
+    epoch_centroids = [[], []]  # 2 x 3
+    epoch_volume = [[], []]
+    markers = ['o', '^', 'D']
+    alphas = [0.4, 0.7, 1]
+    count = 0
+    idx_g = np.where(label_all_ == g)[0]
+    latent_vec_all_epoch = latent_all_[idx_g, :]
+    nK_g = latent_vec_all_epoch.T @ latent_vec_all_epoch
+    volume_of_group = np.trace(nK_g)
+    state_volume_.append(volume_of_group)
+
+    for epoch in range(1, 4):
+        fig_pca_per_state = plt.figure(figsize=(15, 10))
+        ax = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
+        # for each population, get the centroid of each epoch
+        for j, videos in enumerate([control_videos, BD_videos]):
+            latent_vec = latent_all[count]  # (1, 225000, 10)
+            label_vec = label_all[count]  # (1, 225000)
+
+            latent_vec_this_population = latent_vec
+            # Then, I need to get the index of state g in label_vec
+            idx = np.where(label_vec == g)[0]
+            latent_vec_g = latent_vec[idx, :]
+            print('latent_vec state{}-epoch{}-population{} shape: {}'.format(g, epoch, j, latent_vec_g.shape))
+
+            # Now need to find these idx  in the (1350000, 10) array of latent_vec,
+            # which is how many len_latent_epoch[225000] is away from the start
+            idx_g = len_latent_each_epoch_each_population * count + idx
+            count += 1
+
+            centroid_idx = n_cluster * (j + (epoch - 1) * 2) + g
+            transformed_centroid = components_pop[centroid_idx - 60, :]
+            epoch_centroids[j].append(transformed_centroid)  # centroid of HP epoch 1, centroid of BD epoch 1, ...
+
+            principalDf_pop = pd.DataFrame(data=components_pop)
+            principalDf_pop_labels = pd.DataFrame(data=labels_pop)
+            finalDf = pd.concat([principalDf_pop, principalDf_pop_labels], axis=1)
+            finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
+            if len(latent_vec_g):
+                ng_K1 = latent_vec_g.T @ latent_vec_g
+                volume_of_group_epoch = np.trace(ng_K1)
+                epoch_volume[j].append(volume_of_group_epoch)
+                # Plot latent swarms
+                ax.plot3D(components_pop[idx_g, 0], components_pop[idx_g, 1], components_pop[idx_g, 2],
+                          # norm=plt.Normalize(vmin=0, vmax=9),
+                          color=cmap(g * 2 + j),
+                          # s=5,
+                          alpha=0.9,
+                          label='%d' % g, linewidth=10, zorder=-1)
+            # plot centroid
+            ax.scatter3D(transformed_centroid[0], transformed_centroid[1], transformed_centroid[2],
+                         norm=plt.Normalize(vmin=0, vmax=9),
+                         color=colors[j],
+                         marker='.',
+                         s=200,
+                         label='{} epoch{} centroid'.format(titles[j], epoch), zorder=1)
+        # plot distance between centroids between groups in same epoch
+        xs = [epoch_centroids[0][epoch - 1][0], epoch_centroids[1][epoch - 1][0]]
+        ys = [epoch_centroids[0][epoch - 1][1], epoch_centroids[1][epoch - 1][1]]
+        zs = [epoch_centroids[0][epoch - 1][2], epoch_centroids[1][epoch - 1][2]]
+        ax.plot3D(xs, ys, zs, linewidth=3, linestyle='--',
+                  color='m', label='epoch{}centroid between BD-HP'.format(epoch), zorder=1)
+
+
+
+
+        ax.set_title("PCs of {}-State-{}-Epoch-{} \n".format(titles[j], g, epoch))
+        ax.set_xlabel('PC 1')
+        ax.set_ylabel('PC 2')
+        ax.set_zlabel('PC 3')
+        # make simple, bare axis lines through space:
+        # xAxisLine = ((np.min(components_pop[:, 0]), np.max(components_pop[:, 0])), (0, 0), (0, 0))
+        # ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+        # yAxisLine = ((0, 0), (np.min(components_pop[:, 1]), np.max(components_pop[:, 1])), (0, 0))
+        # ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+        # zAxisLine = ((0, 0), (0, 0), (np.min(components_pop[:, 2]), np.max(components_pop[:, 2])))
+        # ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+
+        ax.set_xlim(-50, 50)
+        ax.set_ylim(-30, 30)
+        ax.set_zlim(-40, 40)
+
+        ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+        ax.tick_params(left=False, right=False, labelleft=False,
+                       labelbottom=False, bottom=False)
+        fig_pca_per_state.show()
+
+        pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
+        Path(pwd).mkdir(parents=True, exist_ok=True)
+        fname = "PCs of State {}-epoch{}-centroid.png".format(g, epoch)
+        fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
+        fname_pdf = "PCs of State {}-epoch{}-centroid.pdf".format(g, epoch)
+        fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    state_epoch_centroids.append(epoch_centroids)
+    state_epoch_volume.append(epoch_volume)
+# state_epoch_centroids = []
+# state_epoch_volume = []
+# for g in range(10):
+#
+#     epoch_centroids = [[],[]] # 2 x 3
+#     epoch_volume = [[], []]
+#     markers = ['o', '^', 'D']
+#     alphas = [0.4, 0.7, 1]
+#     for epoch in range(1, 4):
+#         fig_pca_per_state_per_epoch = plt.figure(figsize=(15, 10))
+#         ax = fig_pca_per_state_per_epoch.add_subplot(1, 1, 1, projection='3d')
+#         # for each population, get the centroid of each epoch
+#         for j, videos in enumerate([control_videos, BD_videos]):
+#             latent_vec_epoch_pop = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
+#             label_epoch_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
+#
+#             i_pop = np.where(label_epoch_pop == g)
+#             latent_vec_epoch_pop_this_state = latent_vec_epoch_pop[label_epoch_pop == g]
+#             centroid = np.array(np.mean(latent_vec_epoch_pop, axis=0))[np.newaxis, :]
+#
+#             components_pop = pca.fit_transform(np.vstack((latent_vec_epoch_pop_this_state, centroid)))
+#
+#             transformed_centroid = components_pop[-1, :]
+#             components_pop = components_pop[:-1, :]
+#             epoch_centroids[j].append(transformed_centroid)
+#
+#             total_var_pop = pca.explained_variance_ratio_.sum() * 100
+#             principalDf_pop = pd.DataFrame(data=components_pop)
+#             finalDf = pd.concat([principalDf_pop, pd.DataFrame(label_epoch_pop[label_epoch_pop == g])], axis=1)
+#             finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
+#             if len(latent_vec_epoch_pop_this_state):
+#                 K = np.cov(latent_vec_epoch_pop_this_state.T)
+#                 volume_of_group = np.trace(K)
+#                 epoch_volume[j].append(volume_of_group)
+#                 # Plot latent swarms
+#                 ax.plot3D(components_pop[:, 0], components_pop[:, 1], components_pop[:, 2],
+#                           # norm=plt.Normalize(vmin=0, vmax=9),
+#                            color=cmap(g * 2 + j),
+#                             # s=5,
+#                              alpha=1,
+#                              label='%d' % g,linewidth=10, zorder=-1)
+#             # plot centroid
+#             ax.scatter3D(transformed_centroid[0], transformed_centroid[1], transformed_centroid[2],
+#                        norm=plt.Normalize(vmin=0, vmax=9),
+#                        color=colors[j],
+#                        marker='.',
+#                        s=200,
+#                        label='{} epoch{} centroid'.format(titles[j], epoch),zorder=1)
+#         # plot distance between centroids between groups in same epoch
+#         xs = [epoch_centroids[0][epoch - 1][0], epoch_centroids[1][epoch - 1][0]]
+#         ys = [epoch_centroids[0][epoch - 1][1], epoch_centroids[1][epoch - 1][1]]
+#         zs = [epoch_centroids[0][epoch - 1][2], epoch_centroids[1][epoch - 1][2]]
+#         ax.plot3D(xs, ys, zs, linewidth=3, linestyle='--',
+#                 color='m', label='epoch{}centroid between BD-HP'.format(epoch),zorder=1)
+#
+#         ax.set_title("PCs of {}-State-{} \n".format(titles[j], g))
+#         ax.set_xlabel('PC 1')
+#         ax.set_ylabel('PC 2')
+#         ax.set_zlabel('PC 3')
+#         # make simple, bare axis lines through space:
+#         # xAxisLine = ((np.min(components_pop[:, 0]), np.max(components_pop[:, 0])), (0, 0), (0, 0))
+#         # ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+#         # yAxisLine = ((0, 0), (np.min(components_pop[:, 1]), np.max(components_pop[:, 1])), (0, 0))
+#         # ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+#         # zAxisLine = ((0, 0), (0, 0), (np.min(components_pop[:, 2]), np.max(components_pop[:, 2])))
+#         # ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+#
+#         ax.set_xlim(-50, 50)
+#         ax.set_ylim(-30, 30)
+#         ax.set_zlim(-40, 40)
+#
+#         ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+#         ax.tick_params(left=False, right=False, labelleft=False,
+#                        labelbottom=False, bottom=False)
+#
+#         fig_pca_per_state_per_epoch.show()
+#
+#         pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
+#         Path(pwd).mkdir(parents=True, exist_ok=True)
+#         fname = "PCs of State {}-epoch{}-centroid.png".format(g, epoch)
+#         fig_pca_per_state_per_epoch.savefig(os.path.join(pwd, fname), transparent=True)
+#         fname_pdf = "PCs of State {}-epoch{}-centroid.pdf".format(g, epoch)
+#         fig_pca_per_state_per_epoch.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+#%% plot distance between centroids between groups over time
+for state in range(n_cluster):
+    fig, axes = plt.subplots(4, 1, figsize=(5, 15))
+    this_state_centroids = state_epoch_centroids[state]
+    epoch_volume = state_epoch_volume[state] # 30 x 2 x 3
+    epoch_volume_list = [[],[]]
+    epoch_volume_normalize_list = [[], []]
+    d_zit_t_minus_BD = []
+    d_zit_t_minus_HP = []
+    d_zit_BD_HP_list = []
+    for epoch in range(1,4):
+        x = [0, 1, 2]
+        d_zit_BD_HP = np.linalg.norm(this_state_centroids[0][epoch -1] - this_state_centroids[1][epoch -1])/ (state_volume[state])
+        d_zit_BD_HP_list.append(d_zit_BD_HP)
+        if epoch <= 2:
+            d_zit_t_minus_HP.append( np.linalg.norm(this_state_centroids[0][epoch] - this_state_centroids[0][epoch - 1]) / state_volume[state])
+            d_zit_t_minus_BD.append( np.linalg.norm(this_state_centroids[1][epoch] - this_state_centroids[1][epoch - 1]) / state_volume[state])
+        epoch_volume_list[0].append(epoch_volume[0][epoch-1])
+        epoch_volume_list[1].append(epoch_volume[1][epoch - 1])
+
+        epoch_volume_normalize_list[0].append(epoch_volume[0][epoch-1]/state_volume_[state])
+        epoch_volume_normalize_list[1].append(epoch_volume[1][epoch - 1]/state_volume_[state])
+
+    axes[0].plot(x, d_zit_BD_HP_list, '-o', color='m', markersize=10)
+    axes[0].set_xticks(x)
+    axes[0].set_title("State {} distance between BD and HP centroids".format(state))
+    axes[0].grid(False)
+    x2 = [0, 1]
+    axes[1].plot(x2, d_zit_t_minus_BD, '--o', label='BD', color=b_o_colors[1], markersize=10)
+    axes[1].plot(x2, d_zit_t_minus_HP, '-o', label='HP', color=b_o_colors[0], markersize=10)
+    axes[1].set_xticks(x2)
+    axes[1].grid(False)
+    axes[1].set_title("distance between centroids within population")
+
+    axes[2].plot(x, epoch_volume_list[0], '--o', label='BD', color=b_o_colors[1], markersize=10)
+    axes[2].plot(x, epoch_volume_list[1], '-o', label='HP', color=b_o_colors[0], markersize=10)
+    axes[2].set_xticks(x)
+    axes[2].set_title("volume of BD and HP")
+    axes[2].grid(False)
+
+    axes[3].plot(x, epoch_volume_normalize_list[0], '--o', label='BD', color=b_o_colors[1], markersize=10)
+    axes[3].plot(x, epoch_volume_normalize_list[1], '-o', label='HP', color=b_o_colors[0], markersize=10)
+    axes[3].set_xticks(x)
+    axes[3].set_title("relative volume portion/volume(state)")
+    axes[3].grid(False)
+
+    fig.show()
+
+    #ToDO; why epoch_volume_normalize_list == 1 in 3????
+
+    pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
+    fname = "State {}-centroid-distance.png".format(state)
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fname_pdf = "State {}-centroid-distance.pdf".format(state)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+
+#%%  PCs of {}-State-{}-Epoch-{}
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
 pca = PCA(n_components=3)
 K_var = [np.zeros((10, 3)), np.zeros((10, 3))]
 K_var_all_subjects = [np.zeros((n_subject_in_population,10, 3)), np.zeros((n_subject_in_population, 10, 3))]
 for j, videos in enumerate([control_videos, BD_videos]):
+    alphas = [0.4, 0.7, 1]
     for epoch in range(1, 4):
         latent_vec_epoch_pop = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
         label_epoch_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
@@ -588,11 +1132,13 @@ for j, videos in enumerate([control_videos, BD_videos]):
                     K_sub = np.cov(latent_vec_epoch_sub_this_state.T)
                     volume_of_epoch_sub_this_state = np.trace(K_sub)
                     # plot this usbject, this epoch, this state
+
                     fig_pca_per_sub_per_state = plt.figure(figsize=(10, 10))
                     ax2 = fig_pca_per_sub_per_state.add_subplot(1, 1, 1, projection='3d')
-                    ax2.scatter(components[:, 0], components[:, 1], components[:, 2],
-                                norm=plt.Normalize(vmin=0, vmax=9),
-                                color=cmap(g * 2 + j), s=5, alpha=0.05, label='%d' % g)
+                    ax2.plot3D(components[:, 0], components[:, 1], components[:, 2],
+                               linewidth=10,
+                                #norm=plt.Normalize(vmin=0, vmax=9),s=5,
+                                color=cmap(g * 2 + j),  alpha=alphas[epoch-1], label='%d' % g)
                     ax2.set_title(
                         "PCs of {}-{}-State-{}-epoch-{}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, epoch,
                                                                                  total_var))
@@ -606,10 +1152,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
                     ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
                     zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
                     ax2.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
-                    ax2.set_xlim(-40, 40)
+                    ax2.set_xlim(-50, 50)
                     ax2.set_ylim(-30, 30)
                     ax2.set_zlim(-40, 40)
                     fig_pca_per_sub_per_state.show()
+
                     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch\subject_each_state'.format(onedrive_path,
                                                                                                        project_name)
                     Path(pwd).mkdir(parents=True, exist_ok=True)
@@ -628,6 +1175,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
                 # Plot this population, this epoch, this state
                 components_pop = pca.fit_transform(latent_vec_epoch_pop_this_state)
+
+
+
+                components_pop = pca.fit_transform(np.vstack((latent_vec_epoch_pop_this_state, centroid)))
+
                 total_var_pop = pca.explained_variance_ratio_.sum() * 100
                 principalDf_pop = pd.DataFrame(data=components_pop)
                 finalDf = pd.concat([principalDf_pop, pd.DataFrame(label_epoch_pop[label_epoch_pop == g])], axis=1)
@@ -640,25 +1192,35 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
                     # ax.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
                     #            color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
-                    ax.scatter(components[:, 0], components[:, 1], components[:, 2],
-                               norm=plt.Normalize(vmin=0, vmax=9),
-                               color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
+                    ax.plot3D(components_pop[:, 0], components_pop[:, 1], components_pop[:, 2],
+                               linewidth=10,
+                               # norm=plt.Normalize(vmin=0, vmax=9),s=5,
+                               color=cmap(g * 2 + j), alpha=alphas[epoch - 1], label='%d' % g)
+
+
 
                     ax.set_title(
                         "PCs of {}-State-{}-Epoch-{} \n volume:{:.2f}".format(titles[j], g, epoch, volume_of_group))
+                    ax.tick_params(left=False, right=False, labelleft=False,
+                                    labelbottom=False, bottom=False)
                     ax.set_xlabel('PC 1')
                     ax.set_ylabel('PC 2')
                     ax.set_zlabel('PC 3')
                     # make simple, bare axis lines through space:
-                    xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
-                    ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
-                    yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
-                    ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
-                    zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
-                    ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
-                    ax.set_xlim(-40, 40)
+                    # xAxisLine = ((np.min(components_pop[:, 0]), np.max(components_pop[:, 0])), (0, 0), (0, 0))
+                    # ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+                    # yAxisLine = ((0, 0), (np.min(components_pop[:, 1]), np.max(components_pop[:, 1])), (0, 0))
+                    # ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+                    # zAxisLine = ((0, 0), (0, 0), (np.min(components_pop[:, 2]), np.max(components_pop[:, 2])))
+                    # ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+                    ax.set_xlim(-50, 50)
                     ax.set_ylim(-30, 30)
                     ax.set_zlim(-40, 40)
+
+                    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+
+                    fig_pca_per_state.show()
+
                     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch'.format(onedrive_path, project_name)
                     Path(pwd).mkdir(parents=True, exist_ok=True)
                     fname = "PCs of {} State {} Epoch {}.png".format(titles[j], g, epoch)
@@ -683,7 +1245,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     for epoch in range(1, 4):
         # latent vector of the epoch
         latent_vec = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0) # [25 x 9000 ]x 10 = 225000 x 10
-        latent_vec_trim = latent_vec # 2x 25 x 9000 x 10
+        latent_vec_trim = latent_vec #  2x 25 x 9000 x 10
         label = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
         label_trim = label
         components = pca.fit_transform(latent_vec)
@@ -727,7 +1289,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
                 else:
                     volume_of_group_sub = 0
-                    #TODO K_var_all_subjects is all zeros
+
                 K_temp = K_var_all_subjects[j]
                 K_temp[sub][g][epoch - 1] = volume_of_group_sub
                 K_var_all_subjects[j] = K_temp
@@ -744,6 +1306,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 ax2.set_xlabel('PC 1')
                 ax2.set_ylabel('PC 2')
                 ax2.set_zlabel('PC 3')
+
                 # make simple, bare axis lines through space:
                 xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
                 ax2.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
@@ -793,7 +1356,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
                 zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
                 ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
-                ax.set_xlim(-40, 40)
+                ax.set_xlim(-50, 50)
                 ax.set_ylim(-30, 30)
                 ax.set_zlim(-40, 40)
                 print("I am here")

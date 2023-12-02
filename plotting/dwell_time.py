@@ -257,6 +257,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Labels_score[j] = l_control
 
 #%% Population-wise analysis
+transition_group = ['','_ctl', '_score']
 #%% between motif paired t test and score correlation
 import permutation_test as p
 def statistic(x, y, axis):
@@ -333,41 +334,48 @@ for i, motif_behavior in enumerate(score_bahavior_names):
 
 
 #%% Plot Box
+bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear"]
 states = []
 for i in range(n_cluster):
     states.append([i]*n_subject_in_population)
 states = np.asarray(states).flatten()
 sns.set_style("white")
+for k in range(3):
+    CP_idx = np.zeros(n_subject_in_population * n_cluster)
+    BD_idx = np.ones(n_subject_in_population * n_cluster)
+    motif_usage_to_plot = np.array(eval("motif_usage_cat{}".format(transition_group[k])))
+    motif_usage_to_plot_ = np.zeros((2, n_subject_in_population, n_cluster))
+    motif_usage_to_plot_ = motif_usage_to_plot[:,:,:n_cluster]
+    ds = pd.DataFrame(np.concatenate((
+        np.concatenate((motif_usage_to_plot_[0,:,:].T.flatten(), motif_usage_to_plot_[1,:,:].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
+        np.concatenate((states, states), 0).reshape(-1, 1)), 1),
+        columns=['motif frequency','is_BD','state'])
+    w = n_cluster/10 * 6
+    fig, ax = plt.subplots(1, 1, figsize=(w, 4))
+    violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
+                   data=ds, orient="v", palette=sns.color_palette("tab10"))
+    handles = violin.legend_.legendHandles
+    dict_name = {0.0:'CP', 1.0:'BD'}
+    labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
+    # sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    x = np.arange(n_cluster)
+    ax.legend(handles, labels)
+    ax.set_xticks(x)
+    if k == 2:
+        ax.set_xticklabels(bahavior_names)
 
-CP_idx = np.zeros(n_subject_in_population * n_cluster)
-BD_idx = np.ones(n_subject_in_population * n_cluster)
 
-ds = pd.DataFrame(np.concatenate((
-    np.concatenate((motif_usage_cat[0,:,:].T.flatten(), motif_usage_cat[1,:,:].T.flatten()), 0).reshape(-1, 1),
-    np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
-    np.concatenate((states, states), 0).reshape(-1, 1)), 1),
-    columns=['motif frequency','is_BD','state'])
-w = n_cluster/10 * 6
-fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
-               data=ds, orient="v", palette=sns.color_palette("tab10"))
-handles = violin.legend_.legendHandles
-dict_name = {0.0:'CP', 1.0:'BD'}
-labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
-# sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
-x = np.arange(n_cluster)
-ax.legend(handles, labels)
-ax.set_xticks(x)
-ax.set_title('15 min dwell frequency over {} motifs'.format(n_cluster))
-ax.set_xlabel('Motifs(States)')
-sns.despine()
-fig.show()
-pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
-Path(pwd).mkdir(parents=True, exist_ok=True)
-fname = "15-min-dwell.png"
-fname_pdf = "15-min-dwell.pdf"
-fig.savefig(os.path.join(pwd, fname), transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    ax.set_title('15 min dwell frequency over {} motifs {}'.format(n_cluster, transition_group[k]))
+    ax.set_xlabel('Motifs(States)')
+    sns.despine()
+    fig.show()
+    pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
+    fname = "15-min-dwell-{}.png".format(transition_group[k])
+    fname_pdf = "15-min-dwell-{}.pdf".format(transition_group[k])
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% plot box dwell per video
 sns.set_style('white')
 
@@ -543,7 +551,56 @@ for epoch in range(1, 4):
     fname_pdf = "{}-dwell.pdf".format(epoch)
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+#%% Plot three bar Box
 
+for j in range(2):
+    fig, ax = plt.subplots(1, 1, figsize=(w, 4))
+
+
+    motif_usage_1 = eval("Epoch{}_motif_usage".format(1))
+    motif_usage_cat1 = np.asarray(motif_usage_1[j])
+    motif_usage_2 = eval("Epoch{}_motif_usage".format(2))
+    motif_usage_cat2 = np.asarray(motif_usage_2[j])
+    motif_usage_3 = eval("Epoch{}_motif_usage".format(3))
+    motif_usage_cat3 = np.asarray(motif_usage_3[j])
+
+    label1 = np.ones(len(motif_usage_cat1[:, :].T.flatten()))
+    label2 = np.ones(len(motif_usage_cat1[:, :].T.flatten())) * 2
+    label3 = np.ones(len(motif_usage_cat1[:, :].T.flatten())) * 3
+    states = []
+    for i in range(n_cluster):
+        states.append([i]*n_subject_in_population)
+    states = np.asarray(states).flatten()
+    sns.set_style('white')
+
+
+    ds = pd.DataFrame(np.concatenate((
+        np.concatenate((motif_usage_cat1[:, :].T.flatten(), motif_usage_cat2[:, :].T.flatten(), motif_usage_cat3[:, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((label1, label2, label3), 0).reshape(-1, 1),
+        np.concatenate((states, states,states), 0).reshape(-1, 1)), 1),
+        columns=['motif frequency', 'epoch', 'state'])
+
+
+    violin = sns.boxplot(y="motif frequency", x='state',hue='epoch',
+                   data=ds, orient="v", color=b_o_colors[j])
+    handles = violin.legend_.legendHandles
+    dict_name = {1.0:'Epoch 1', 2.0:'Epoch 2', 3.0:'Epoch 3'}
+    labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
+    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    x = np.arange(n_cluster)
+    ax.legend(handles, labels)
+    ax.set_xticks(x)
+    ax.set_title('{} dwell frequency over {} motifs'.format(titles[j],  n_cluster))
+    ax.set_xlabel('Motifs(States)')
+    sns.despine()
+    fig.show()
+
+    pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
+    fname = "{}-dwell-{}.png".format(epoch, titles[j])
+    fname_pdf = "{}-dwell-{}.pdf".format(epoch, titles[j])
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Plot histogram
 
 from scipy import stats
