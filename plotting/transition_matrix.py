@@ -26,6 +26,7 @@ if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
+    onedrive_path = r'D:\OneDrive - UC San Diego'
 else:
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 #%%
@@ -469,7 +470,7 @@ for i in range(len(videos)*2):
         transition_matrix_to_plot = eval("transition_matrices{}".format(transition_group[j]))
         transition_matrix_to_plot = transition_matrix_to_plot[i]
         # plot transition matrix
-        im = axes[j][0].imshow(transition_matrix_to_plot, cmap='viridis', vmin=0, vmax=1)
+        im = axes[j][0].imshow(transition_matrix_to_plot, cmap='gist_gray', vmin=0, vmax=1)
         axes[j][0].set_title("{}-{}-{}".format(titles[k],patient_names[i], transition_group[j]))
         axes[j][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
         axes[j][0].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
@@ -515,7 +516,7 @@ for i in range(len(videos)*2):
         nodes = nx.draw_networkx_nodes(G, pos,
                                nodelist=nodelist,
                                node_size=node_radius,
-                               node_color=colormap_used[k::2],
+                               node_color=colormap_used[1::2],
                                alpha=1,
                                ax=axes[j][1])
         for e in list(G.edges(data=True)):
@@ -523,8 +524,8 @@ for i in range(len(videos)*2):
                                 xy=pos[e[0]], xycoords='data',
                                 xytext=pos[e[1]], textcoords='data',
                                 arrowprops=dict(arrowstyle="<-",
-                                                color=colormap_used[int(e[0] * 2 + k)],
-                                                linewidth=(e[2]['weight'] / max(weight)) * 5,
+                                                color=colormap_used[int(e[0] * 2 + 1)],
+                                                linewidth=(e[2]['weight'] / max(weight)) * 10,
                                                 shrinkA=5, shrinkB=5,
                                                 patchA=None, patchB=None,
                                                 connectionstyle="arc3,rad=rrr".replace('rrr',
@@ -1041,7 +1042,7 @@ for j in range(2):
     fname_pdf = "effective_number-three_epochs.pdf".format()
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%%
+#%% Epoch-wise transition plot
 
 
 from scipy.spatial.distance import euclidean, pdist, squareform
@@ -1145,7 +1146,7 @@ for i in range(n_subject_in_population * 2):
         for epoch in range(1,4):
             epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
             epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1]).squeeze()
-            im = axes[epoch-1][0].imshow(epoch_tm_[i], cmap='viridis', vmin=0, vmax=1)
+            im = axes[epoch-1][0].imshow(epoch_tm_[i], cmap='gist_gray', vmin=0, vmax=1)
             plt.grid(False)
             axes[epoch-1][0].set_title("{}-{}-{}-epoch {}".format(titles[j],patient_names[i], transition_group[k], epoch))
             axes[epoch-1][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
@@ -1186,7 +1187,7 @@ for i in range(n_subject_in_population * 2):
             nodes = nx.draw_networkx_nodes(G, pos,
                                            nodelist=nodelist,
                                            node_size=node_radius,
-                                           node_color=colormap_used[j::2],
+                                           node_color=colormap_used[1::2],
                                            alpha=1,
                                            ax=axes[epoch-1][1])
             font_color = 'black'
@@ -1199,8 +1200,8 @@ for i in range(n_subject_in_population * 2):
                                         xy=pos[e[0]], xycoords='data',
                                         xytext=pos[e[1]], textcoords='data',
                                         arrowprops=dict(arrowstyle="<-",
-                                                        color=colormap_used[int(e[0] * 2 + j)],
-                                                        linewidth=(e[2]['weight'] / max(weight)) * 5,
+                                                        color=colormap_used[int(e[0] * 2 + 0)],
+                                                        linewidth=(e[2]['weight'] / max(weight)) * 10,
                                                         shrinkA=5, shrinkB=5,
                                                         patchA=None, patchB=None,
                                                         connectionstyle="arc3,rad=rrr".replace('rrr',
@@ -1234,8 +1235,8 @@ for i in range(n_subject_in_population * 2):
 
         fname = "{}-{}_{}_transition_epoch{}-dwell.png".format(population, patient_names[i], n_cluster, transition_group[k])
         fname_pdf = "{}-{}_{}_transition_epoch{}-dwell.pdf".format(population, patient_names[i], n_cluster, transition_group[k])
-        # fig.savefig(os.path.join(pwd, fname), transparent=True)
-        # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+        fig.savefig(os.path.join(pwd, fname), transparent=True)
+        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 

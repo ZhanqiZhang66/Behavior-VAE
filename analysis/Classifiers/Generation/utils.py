@@ -89,3 +89,35 @@ def save_tmatrices(path, videos, matrices, split=1):
 
 
 # %%
+def my_colormap(coolors):
+    colors = []
+    if coolors == 'blue2red10':
+        # continuous specturm from dark blue to red with no orange or purple
+        # https://coolors.co/palette/033270-1368aa-4091c9-9dcee2-fedfd4-f29479-f26a4f-ef3c2d-cb1b16-65010c
+        colors = ['#033270', '#005f73','#4091c9', '#9dcee2', '#fedfd4', '#f29479', '#f26a4f', '#ef3c2d', '#cb1b16', '#65010c']
+    elif coolors == 'blackbrown10':
+        # https://coolors.co/palette/797d62-9b9b7a-baa587-d9ae94-f1dca7-ffcb69-e8ac65-d08c60-b58463-997b66
+        colors = ['#797d62', '#9b9b7a', '#baa587', '#d9ae94', '#f1dca7', '#ffcb69', '#e8ac65', '#d08c60', '#b58463', '#997b66']
+    elif colors == 'greenorange5':
+        # https://coolors.co/palette/264653-2a9d8f-e9c46a-f4a261-e76f51
+        colors = ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51']
+    elif coolors == 'blue2red5':
+        # https://coolors.co/palette/264653-2a9d8f-e9c46a-f4a261-e76f51
+        colors = ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51']
+    elif coolors == 'greyscale_categorical6':
+        # https://coolors.co/palette/3c4657-3c4e57-ced7dd-f4edea-83858c-474444
+        colors = ['#ced7dd', '#83858c', '#474444','#f4edea', '#3c4e57','#3c4657']
+    elif coolors == 'blue_n_orange10':
+        # https://coolors.co/palette/ff5400-ff6d00-ff8500-ff9100-ff9e00-00b4d8-0096c7-0077b6-023e8a-03045e
+        colors = ['#ff5400', '#ff6d00', '#ff8500', '#ff9100', '#ff9e00', '#00b4d8', '#0096c7', '#0077b6', '#023e8a', '#03045e']
+    elif coolors == 'blue_n_orange2':
+        # https://coolors.co/palette/ff5400-ff6d00-ff8500-ff9100-ff9e00-00b4d8-0096c7-0077b6-023e8a-03045e
+        colors = ['#ff9e00', '#00b4d8']
+    elif coolors == 'gold_n_purple2':
+        # https://coolors.co/palette/ffe863-ffe150-ffd93d-facb2e-f5bd1f-722e9a-682a92-5d2689-522882-47297b
+        colors = ['#f5bd1f', '#722e9a']
+    else:
+        # https://coolors.co/palette/001219-005f73-0a9396-94d2bd-e9d8a6-ee9b00-ca6702-bb3e03-ae2012-9b2226
+        colors = ['#001219', '#005f73', '#0a9396', '#94d2bd', '#e9d8a6', '#ee9b00', '#ca6702', '#bb3e03', '#ae2012', '#9b2226']
+        print("Use default color scheme")
+    return colors

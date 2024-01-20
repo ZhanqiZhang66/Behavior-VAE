@@ -172,8 +172,12 @@ for j, videos in enumerate([control_videos, BD_videos]):
     N[j] = n
     Latent_vectors[j] = latent
     Labels[j] = l
+#%% see if we can decode position latent
 #%% Population-wise plot
 #%% plot PCA embedding for each video, all states
+
+import numpy as np
+import matplotlib.ticker as ticker
 import matplotlib
 titles = ["CP", "BD"]
 for j, videos in enumerate([control_videos, BD_videos]):
@@ -212,8 +216,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
         zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
         ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
-        for lh in leg.legendHandles:
-            lh.set_alpha(1)
+        # for lh in leg.legendHandles:
+        #     lh.set_alpha(1)
         ax.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
         ax.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
         ax.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
@@ -221,6 +225,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax.set_xlim(-55, 55)
         ax.set_ylim(-30, 55)
         ax.set_zlim(-55, 55)
+        ax.xaxis.set_major_locator(ticker.NullLocator())
+        ax.yaxis.set_major_locator(ticker.NullLocator())
+        ax.zaxis.set_major_locator(ticker.NullLocator())
         ax.grid(False)
 
 
@@ -234,7 +241,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             # r, g, b = matplotlib.colors.to_rgb(cmap(g * 2 + j))
             # color = [(r, g, b, alpha) for alpha in alpha_arr]
             ax1.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                       color=cmap(g * 2 + j),s=100, label='%d' % g, alpha=0.1)
+                       color=cmap(g * 2 + 1),s=50, label='%d' % g, alpha=0.5)
         leg =  ax1.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
         # make simple, bare axis lines through space:
         xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
@@ -254,7 +261,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax1.set_ylim(-30, 55)
         ax1.set_zlim(-55, 55)
         ax1.grid(False)
-
+        ax1.xaxis.set_major_locator(ticker.NullLocator())
+        ax1.yaxis.set_major_locator(ticker.NullLocator())
+        ax1.zaxis.set_major_locator(ticker.NullLocator())
 
 
 
@@ -291,7 +300,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 #%% Plot PCA of BD and CP population, for all state
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
-fig_pca = plt.figure(figsize=plt.figaspect(2))
+fig_pca = plt.figure(figsize=(10,20))
 fig_latent = plt.figure(figsize=(30,30))
 
 pca = PCA(n_components=3)
@@ -325,8 +334,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ii = i[0] + len_latent[j]
         cmap = plt.get_cmap('tab20')
         ax.scatter(components[ii, 0], components[ii, 1], components[ii, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                   color=cmap(g * 2 + j),
-                   s=30, alpha=0.05, label='%d' % g)
+                   color=cmap(g * 2 + 1),
+                   s=50, alpha=0.5, label='%d' % g)
     leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
 
     for lh in leg.legendHandles:
@@ -339,27 +348,101 @@ for j, videos in enumerate([control_videos, BD_videos]):
     ax.set_xlim(-55, 55)
     ax.set_ylim(-30, 55)
     ax.set_zlim(-55, 55)
+    ax.xaxis.set_major_locator(ticker.NullLocator())
+    ax.yaxis.set_major_locator(ticker.NullLocator())
+    ax.zaxis.set_major_locator(ticker.NullLocator())
     ax.grid(False)
     # make simple, bare axis lines through space:
-    xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
-    ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
-    yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
-    ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
-    zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
-    ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+    # xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+    # ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+    # yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+    # ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+    # zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+    # ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
 fig_pca.show()
+
 pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual'.format(onedrive_path, project_name)
 Path(pwd).mkdir(exist_ok=True)
 fname = "PCs-of-BD-CP-3d.png"
 fname_pdf = "PCs-of-BD-CP-3d.pdf"
-# fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
-# fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 # fname = "PCs-of-BD-CP.png"
 # fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
 # fname1 = "PCs-of-BD-CP.pdf"
 # fig_pca.savefig(os.path.join(pwd, fname1), transparent=True)
+#%% Plot PCA of BD and CP population, for all state 2d
+cmap = plt.get_cmap('tab20')
+titles = ["CP", "BD"]
+fig_pca = plt.figure(figsize=(10,20))
+fig_latent = plt.figure(figsize=(30,30))
+
+pca = PCA(n_components=2)
+K_var = np.zeros((10, 2))
+K_var_all_subjects = np.zeros((n_subject_in_population, 10, 2))
+
+latent_vector_stack = np.vstack(Latent_vectors)
+labels_stack = np.hstack(Labels)
+state_volume = []
+len_latent = [0, len(Latent_vectors[0])]
+components = pca.fit_transform(latent_vector_stack)
+for g in range(n_cluster):
+    idx = np.where(labels_stack == g)[0]
+    latent_this_state = latent_vector_stack[idx, :]
+    K = np.cov(latent_this_state.T) # 10 x
+    volume_of_group = np.trace(K)
+    state_volume.append(volume_of_group)
+
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = N[j]
+    latent_vec = Latent_vectors[j]
+    latent_vec_trim = latent_vec
+    label = Labels[j]
+    label_trim = Labels[j]
+    ax = fig_pca.add_subplot(2, 1, j + 1)
+
+    total_var = pca.explained_variance_ratio_.sum() * 100
+    t = np.arange(10)
+    for g in np.unique(label):
+        i = np.where(label == g)
+        ii = i[0] + len_latent[j]
+        cmap = plt.get_cmap('tab20')
+        ax.scatter(components[ii, 0], components[ii, 1], norm=plt.Normalize(vmin=0, vmax=9),
+                   color=cmap(g * 2 + 1),
+                   s=50, alpha=0.5, label='%d' % g)
+    leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+
+    for lh in leg.legendHandles:
+        lh.set_alpha(1)
+    ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j],  total_var))
+    ax.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
+    ax.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
+
+
+    ax.set_xlim(-70, 80)
+    ax.set_ylim(-70, 80)
+
+    ax.xaxis.set_major_locator(ticker.NullLocator())
+    ax.yaxis.set_major_locator(ticker.NullLocator())
+
+    ax.grid(False)
+    # make simple, bare axis lines through space:
+    # xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
+    # ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
+    # yAxisLine = ((0, 0), (np.min(components[:, 1]), np.max(components[:, 1])), (0, 0))
+    # ax.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
+    # zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
+    # ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+fig_pca.show()
+pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual'.format(onedrive_path, project_name)
+Path(pwd).mkdir(exist_ok=True)
+fname = "PCs-of-BD-CP-2d.png"
+fname_pdf = "PCs-of-BD-CP-2d.pdf"
+fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
 #%% Plot PCA of BD and CP population, for each state
 cmap = plt.get_cmap('tab20')
 titles = ["HP", "BD"]
