@@ -5,7 +5,7 @@ import os
 import numpy as np
 from vame.analysis.community_analysis import read_config, compute_transition_matrices
 import matplotlib.pyplot as plt
-from utils import load_motif_labels, compute_l0_entropy, effective_num_states, load_tmatrices, save_tmatrices
+from utils import load_motif_labels, count_zeros, compute_l0_entropy, effective_num_states, load_tmatrices, save_tmatrices
 
 #%%
 #Behavior_VAE_data\BD25-HC25-final-May17-2023\results\BC1AASA\VAME\kmeans-10\latent_vector_BC1AASA.npy
@@ -16,6 +16,18 @@ def generate_volume(path):
         latent = np.load(path.format(v, v))
         volume[v] = np.trace(np.cov(latent.T))
     return volume
+
+# %%
+def saveVolume(path, volume):
+    with open(path, 'w') as csvfile:
+        csvwriter = csv.writer(csvfile, lineterminator="\n")
+        header = ['video', 'volume']
+        csvwriter.writerow(header)
+
+        for v in videos:
+            row = [v]
+            row.append(volume[v])
+            csvwriter.writerow(row)
 
 #%% config
 videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", 
@@ -32,18 +44,6 @@ path = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-fina
 
 #%%
 volume = generate_volume(path)
-
-# %%
-def saveVolume(path, volume):
-    with open(path, 'w') as csvfile:
-        csvwriter = csv.writer(csvfile, lineterminator="\n")
-        header = ['video', 'volume']
-        csvwriter.writerow(header)
-
-        for v in videos:
-            row = [v]
-            row.append(volume[v])
-            csvwriter.writerow(row)
 # %%
 volumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
 saveVolume(volumePath, volume)

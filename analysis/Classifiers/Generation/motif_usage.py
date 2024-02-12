@@ -3,7 +3,7 @@ import csv
 import os
 import numpy as np
 from collections import Counter
-from utils import loadLabels
+from utils import load_motif_labels
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -45,15 +45,17 @@ def saveMotifUsage(path, motifUsage, split, motifSize, missing=False):
             csvwriter.writerow(row)
 
 
-def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6):
+def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6, labelMap=None):
     population = ["BD" if v in BD else "HC" for v in videos]
     population = [item for item in population for _ in range(motifSize)]
 
     motif = [f'Motif {i}' for i in range(motifSize)] * 50
-
+    if labelMap:
+        motif = [f'{labelMap[i]}' for i in range(motifSize)] * 50
+    print(motif)
     value = [motifUsage[v][0] for v in videos]
     value = [motif for v in value for motif in v]
-    value = [motif / 27000 for motif in value]
+    #value = [motif / 27000 for motif in value]
 
     print(len(population), len(motif), len(value))
 
@@ -84,6 +86,31 @@ def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6):
     fig.savefig(os.path.join(path, fname), transparent=True)
     fig.savefig(os.path.join(path, fname_pdf), transparent=True)
 
+def loadKineticsMap(path):
+    map = {0: "none"}
+    with open(path, 'r') as file:
+        lines = file.readlines()
+        i = 1
+        for line in lines:
+            map[i] = line
+            i += 1
+    map[i] = "none"
+    return map
+
+def loadAvaMap(path):
+    map = {}
+    with open(path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            i = int(line.split(":")[0])
+            map[i-1] = line.split(": ")[1]
+    map[i] = "none"
+    for j in range(1, i):
+        if j not in map:
+            map[j] = "none"
+    return map
+
+
 
 #%%
 videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", 
@@ -106,6 +133,7 @@ BD = ["BC1ADPI", 'BC1BRBU']
 #%%
 vLabelPath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\\10_km_label_{}.npy'
 vMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
+v3MotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_3_split.csv"
 vFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification"
 
 #%%
@@ -116,49 +144,109 @@ hFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-
 #%%
 sLabelPath  = r'C:\Users\kietc\SURF\jack-data\S3D\s3d_labels\s3d_labels_{}.npy'
 sMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
-sFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification"
+sFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage"
 
 #%%
 mLabelPath  = r'C:\Users\kietc\SURF\jack-data\MMAction\mmaction_labels\mmaction_labels_{}.npy'
 mMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
-mFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification"
+mFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage"
 
 #%%
-frames = 27000
-split = 1
-motifSize = 81
-#81, 401
+dLabelPath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\DLC_10_km_label_{}.npy'
+dMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\motif_usage_overall.csv"
+dFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification"
 
 # %%
-labels = loadLabels(inPath, videos, frames)
-motifUsage = generateMotifUsage(labels, split, motifSize, False, True)
-graphMotifUsage(figPath, motifUsage, BD, motifSize, 'hBPM')
+avaPath = r'C:\Users\kietc\SURF\Behavior-VAE\analysis\Classifiers\ava_80_label_map.txt'
+avaMap = loadAvaMap(avaPath)
+# %%
+k400Path = r'C:\Users\kietc\SURF\Behavior-VAE\analysis\Classifiers\kinetics_400_label_map.txt'
+k400Map = loadKineticsMap(k400Path)
 
 # %%
-labels = loadLabels(inPath, videos, frames)
-motifUsage = generateMotifUsage(labels, split, motifSize, False, True)
-graphMotifUsage(figPath, motifUsage, BD, motifSize, 'MMAction', top=10, wmulti=9)
-
+vLabels = load_motif_labels(vLabelPath, videos, 27000)
+vMotifUsage = generateMotifUsage(vLabels, 1, 10, scaled=True, missing=False)
 
 # %%
-saveMotifUsage(outPath, motifUsage, split, motifSize)
+dLabels = load_motif_labels(dLabelPath, videos, 27000)
+dMotifUsage = generateMotifUsage(dLabels, 1, 10, scaled=True, missing=False)
+
+# %% path, motifUsage, split, motifSize, missing=False
+saveMotifUsage(dMotifPath, dMotifUsage, 1, 10)
+# %%
+graphMotifUsage(path=vFigPath, motifUsage=vMotifUsage, BD=BD, 
+                motifSize=10, title='VAME', top=0, wmulti=7, labelMap=None)
+
+# %%
+sLabels = load_motif_labels(sLabelPath, videos, 27000)
+sMotifUsage = generateMotifUsage(sLabels, 1, 401, scaled=True, missing=True)
+# %%
+graphMotifUsage(path=sFigPath, motifUsage=sMotifUsage, BD=BD, 
+                motifSize=401, title='S3D', top=10, wmulti=20, labelMap=k400Map)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #%%
-population = ["BD" if v in BD else "HC" for v in videos]
-population = [item for item in population for _ in range(motifSize)]
+mLabels = load_motif_labels(mLabelPath, videos, 27000)
+mMotifUsage = generateMotifUsage(mLabels, 1, 81, scaled=True, missing=True)
+# %%
+graphMotifUsage(path=mFigPath, motifUsage=mMotifUsage, BD=BD, 
+                motifSize=81, title='MMAction', top=10, wmulti=20, labelMap=avaMap)
 
-motif = [f'Motif {i}' for i in range(motifSize)] * 50
+# %%
+sumUsage = [0] * 81
+for v in videos:
+    for i in range(81):
+        sumUsage[i] += mMotifUsage[v][0][i]
 
-value = [motifUsage[v][0] for v in videos]
-value = [motif for v in value for motif in v]
-value = [motif / 27000 for motif in value]
+sumUsage = [item / 50 for item in sumUsage]
 
-print(len(population), len(motif), len(value))
+# %%
+# Get indices and values of the top 3 highest values
+top_indices_values = sorted(enumerate(sumUsage), key=lambda x: x[1], reverse=True)[:3]
 
-df = pd.DataFrame({'Population': population,
-                'Motif': motif,
-                'Values': value})
+# Extract the indices and values from the result
+top_indices, top_values = zip(*top_indices_values)
+
+print("Indices of top 3 highest values:", top_indices)
+print("Values of top 3 highest values:", top_values)
 
 
+# %%
+HP = [key for key in videos if key not in BD]
+
+
+#%%HP
+# Extract arrays from the dictionary values
+arrays = [np.array(sMotifUsage[key][0]) for key in HP]
+
+# Calculate the median array
+median_array = np.median(arrays, axis=0)
+
+# Calculate the interquartile range (IQR)
+q75, q25 = np.percentile(arrays, [75 ,25], axis=0)
+iqr = q75 - q25
+
+# %%
+sorted_indices = np.argsort(median_array)[::-1]
+top3_values = median_array[sorted_indices[:3]]
+top3_indices = sorted_indices[:3]
+
+# %%
+print(top3_values)
+print(top3_indices)
+print(iqr[top3_indices[0]], iqr[top3_indices[1]], iqr[top3_indices[2]])
 # %%
