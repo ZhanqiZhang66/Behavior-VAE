@@ -56,6 +56,14 @@ def generate_ens(matrices, split):
             ens[v].append(effective_num_states(matrices[v][i])[1])
     return ens
 
+def generate_ens_per_motif(matrices, split):
+    ens = {}
+    for v in videos:
+        ens[v] = []
+        for i in range(split):
+            ens[v].append(effective_num_states(matrices[v][i])[0])
+    return ens
+
 def generate_entropy(matrices, labels, split):
     entropy = {}
     for v in videos:
@@ -75,6 +83,20 @@ def export_data(path, entropy, split):
         for v in videos:
             row = [v]
             row.extend(entropy[v])
+            csvwriter.writerow(row)
+
+def export_data1(path, entropy):
+    with open(path, 'w') as csvfile:
+        csvwriter = csv.writer(csvfile, lineterminator="\n")
+        header = ['video']
+        for i in range(10):
+            header.append('motif' + str(i))
+        csvwriter.writerow(header)
+
+        for v in videos:
+            row = [v]
+            for i in range(3):
+                row.extend(entropy[v][i])
             csvwriter.writerow(row)
 
 #%% config
@@ -131,6 +153,7 @@ save_tmatrices(dMatrixPath, videos, dMatrices, 3)
 
 #%%
 vMatrices = load_tmatrices(vMatrixPath, videos, split = 3)
+dMatrices = load_tmatrices(dMatrixPath, videos, split = 3)
 hMatrices = load_tmatrices(hMatrixPath, videos, split = 3)
 sMatrices = load_tmatrices(sMatrixPath, videos, split = 3)
 mMatrices = load_tmatrices(mMatrixPath, videos, split = 3)
@@ -141,6 +164,9 @@ dEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\entropy_3_split
 hEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
 sEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
 mEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
+
+
+
 
 #%%
 #vEntropy = generate_entropy(vMatrices, vLabels, 3)
@@ -156,8 +182,6 @@ export_data(dEntropyPath, dEntropy, 3)
 #export_data(sEntropyPath, sEntropy, 3)
 #export_data(mEntropyPath, mEntropy, 3)
 
-#%%
-dENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\ens_3_split.csv'
 # %%
 vENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
 dENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\ens_3_split.csv'
@@ -165,21 +189,50 @@ hENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
 sENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
 mENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
 
-#%%
-dENS = generate_ens(dMatrices, 3)
+# %%
+vENSMPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_split.csv'
+dENSMPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\ens_per_motif_3_split.csv'
+hENSMPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_per_motif_3_split.csv'
+sENSMPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_per_motif_3_split.csv'
+mENSMPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_per_motif_3_split.csv'
+
+# %%
+vENSM3Path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_3_split.csv'
+dENSM3Path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\ens_per_motif_3_3_split.csv'
+hENSM3Path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_per_motif_3_3_split.csv'
+sENSM3Path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_per_motif_3_3_split.csv'
+mENSM3Path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_per_motif_3_3_split.csv'
+
 #%%
 vENS = generate_ens(vMatrices, 3)
+dENS = generate_ens(dMatrices, 3)
 hENS = generate_ens(hMatrices, 3)
 sENS = generate_ens(sMatrices, 3)
 mENS = generate_ens(mMatrices, 3)
 
-# %%
-export_data(dENSPath, dENS, 3)
+#%%
+vENSM = generate_ens_per_motif(vMatrices, 3)
+dENSM = generate_ens_per_motif(dMatrices, 3)
+hENSM = generate_ens_per_motif(hMatrices, 3)
+sENSM = generate_ens_per_motif(sMatrices, 3)
+mENSM = generate_ens_per_motif(mMatrices, 3)
+
 # %%
 export_data(vENSPath, vENS, 3)
+export_data(dENSPath, dENS, 3)
 export_data(hENSPath, hENS, 3)
 export_data(sENSPath, sENS, 3)
 export_data(mENSPath, mENS, 3)
+
+
+# %%
+export_data1(vENSMPath, vENSM)
+export_data1(dENSMPath, dENSM)
+export_data1(hENSMPath, hENSM)
+export_data1(sENSMPath, sENSM)
+export_data1(mENSMPath, mENSM)
+
+
 
 # %%
 dCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\count_3_split.csv'

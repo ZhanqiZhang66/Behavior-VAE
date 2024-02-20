@@ -168,6 +168,9 @@ hENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
 sENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
 mENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
 
+vENSM3Path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_3_split.csv'
+vENSMPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_split.csv'
+
 vCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\count_3_split.csv'
 vVolumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
 
@@ -197,6 +200,15 @@ DLC_ENS = load_data(dENSPath, idf=BD)
 HBPM_ENS = load_data(hENSPath, idf=BD)
 S3D_ENS = load_data(sENSPath, idf=BD)
 MMAction_ENS = load_data(mENSPath, idf=BD)
+
+#%% Models - ENS
+VAME_ENSM3 = load_data(vENSM3Path, idf=BD)
+
+#%% Models - ENS
+VAME_ENSM = load_data(vENSMPath, idf=BD)
+VAME_ENSM = epoch_sub(VAME_ENSM, 1, 21, 10)
+VAME_ENSM = combine_df(BD, VAME_ENSM)
+
 
 #%% Models - ENS epoch 3 - epoch 1
 VAME_ENS1 = epoch_sub(VAME_ENS, 3, 1)
@@ -240,9 +252,6 @@ c_assessment = classify(assessment)
 print("=======================")
 save_classifier_results(exportPath.format("assessments_scales_50.npy"), c_assessment)
 
-#%%
-c_assessment = 
-
 #%% Motif
 print("VAME Motif")
 c_VAME_Motif = classify(VAME_Motif)
@@ -278,6 +287,17 @@ save_classifier_results(exportPath.format("dlc_ens_50.npy"), c_DLC_ENS)
 save_classifier_results(exportPath.format("hbpm_ens_50.npy"), c_HBPM_ENS)
 save_classifier_results(exportPath.format("s3d_ens_50.npy"), c_S3D_ENS)
 save_classifier_results(exportPath.format("mmaction_ens_50.npy"), c_MMAction_ENS)
+
+#%% ENS
+print("VAME ENSM3")
+c_VAME_ENSM3 = classify(VAME_ENSM3)
+print("=======================")
+
+#%% ENS
+print("VAME ENSM")
+c_VAME_ENSM = classify(VAME_ENSM)
+print("=======================")
+
 
 #%% ENS Diff
 print("VAME ENS1")
