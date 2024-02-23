@@ -135,9 +135,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
         score_label_merged[score_label_merged == 8] = 4  # interact
         score_label_merged[score_label_merged == 9] = 5  # wear
 
+        # motif_usage_to_plot_[:,:,0] = motif_usage_to_plot[:,:,0] + motif_usage_to_plot[:,:,1]
+        # motif_usage_to_plot_[:,:,1] = motif_usage_to_plot[:,:,2] + motif_usage_to_plot[:,:,3]
+        # motif_usage_to_plot_[:,:,2] = motif_usage_to_plot[:,:,3] + motif_usage_to_plot[:,:,4]
+        # motif_usage_to_plot_[:,:,3] = motif_usage_to_plot[:,:,5] + motif_usage_to_plot[:,:,6]
+        # motif_usage_to_plot_[:,:,4] = motif_usage_to_plot[:,:,8]
+        # motif_usage_to_plot_[:,:,5] = motif_usage_to_plot[:,:,9]
 
-        n_scores = 6
-        score_motif_usage = get_motif_usage(score_label_merged, n_scores)
+
+        n_scores = 11
+        score_motif_usage = get_motif_usage(score_label, n_scores)
 
         door_close_time = start_frame[v]
         start_time = start_frame[v] #start_frame.loc[v_index, 'n']
@@ -274,13 +281,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
 #%% Population-wise analysis
 transition_group = ['','_ctl', '_score']
+motif_usage_cat = np.asarray(motif_usage_cat)
+motif_usage_cat_ctl = np.asarray(motif_usage_cat_ctl)
+motif_usage_cat_score = np.asarray(motif_usage_cat_score)
 #%% between motif paired t test and score correlation
 import permutation_test as p
 def statistic(x, y, axis):
     return np.mean(x, axis=axis) - np.mean(y, axis=axis)
-motif_usage_cat = np.asarray(motif_usage_cat)
-motif_usage_cat_ctl = np.asarray(motif_usage_cat_ctl)
-motif_usage_cat_score = np.asarray(motif_usage_cat_score)
+
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 for i in range(n_cluster):
@@ -394,10 +402,10 @@ for k in range(3):
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "15-min-dwell-{}.png".format(transition_group[k])
     fname_pdf = "15-min-dwell-{}.pdf".format(transition_group[k])
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
-    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-# merge state for human labels
+#%% merge state for human labels
 bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear"]
 merged_states = []
 for i in range(6):
@@ -409,8 +417,8 @@ motif_usage_to_plot = np.array(eval("motif_usage_cat{}".format(transition_group[
 motif_usage_to_plot_ = np.zeros((2, n_subject_in_population, 6))
 motif_usage_to_plot_[:,:,0] = motif_usage_to_plot[:,:,0] + motif_usage_to_plot[:,:,1]
 motif_usage_to_plot_[:,:,1] = motif_usage_to_plot[:,:,2] + motif_usage_to_plot[:,:,3]
-motif_usage_to_plot_[:,:,2] = motif_usage_to_plot[:,:,3] + motif_usage_to_plot[:,:,4]
-motif_usage_to_plot_[:,:,3] = motif_usage_to_plot[:,:,5] + motif_usage_to_plot[:,:,6]
+motif_usage_to_plot_[:,:,2] = motif_usage_to_plot[:,:,4] + motif_usage_to_plot[:,:,5]
+motif_usage_to_plot_[:,:,3] = motif_usage_to_plot[:,:,6] + motif_usage_to_plot[:,:,7]
 motif_usage_to_plot_[:,:,4] = motif_usage_to_plot[:,:,8]
 motif_usage_to_plot_[:,:,5] = motif_usage_to_plot[:,:,9]
 ds = pd.DataFrame(np.concatenate((
@@ -423,7 +431,7 @@ fig, ax = plt.subplots(1, 1, figsize=(w, 4))
 violin = sns.boxplot(y="motif frequency", x='state', hue='is_BD',
                      data=ds, orient="v", palette=sns.color_palette("tab10"))
 handles = violin.legend_.legendHandles
-dict_name = {0.0: 'CP', 1.0: 'BD'}
+dict_name = {0.0: 'HP', 1.0: 'BD'}
 labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
 # sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
 x = np.arange(6)

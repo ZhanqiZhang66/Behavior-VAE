@@ -20,7 +20,7 @@ from vame.analysis.pose_segmentation import get_motif_usage
 from sklearn.decomposition import PCA
 from data.load_data import load_pt_data
 #%%
-load_precomputed_sliding_window = False
+load_precomputed_sliding_window = True
 #%%
 #%%
 if not load_precomputed_sliding_window:
