@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from utils import load_motif_labels, compute_l0_entropy, effective_num_states, load_tmatrices, save_tmatrices
 
 #%%
-def generate_tmatrices(labels, motifSize, split = 1):
+def generate_matrices(labels, motifSize, split = 1):
     matrices = {}
     frames = len(labels[next(iter(labels))]) // split
     for v in videos:
@@ -18,7 +18,7 @@ def generate_tmatrices(labels, motifSize, split = 1):
             matrices[v].append(matrix[0].tolist())
     return matrices
 
-def generate_tgraphs(path, matrices, motifSize, split = 1):
+def generate_graphs(path, matrices, motifSize, split = 1):
     for v in videos:
         for i in range(split):
             fig, axes = plt.subplots(1, 1, figsize=(3,3))
@@ -45,13 +45,12 @@ def generate_ens(matrices, split):
             entropy[v].append(effective_num_states(matrices[v][i])[1])
     return entropy
 
-def generate_entropy(matrices, split, motifSize):
+def generate_entropy(matrices, labels, split):
     entropy = {}
     for v in videos:
         entropy[v] = []
         for i in range(split):
-            print(len(matrices[v][i]))
-            entropy[v].append(compute_l0_entropy(np.array(matrices[v][i]), motifSize))
+            entropy[v].append(compute_l0_entropy(np.array(matrices[v][i]), labels[v][i][-1]))
     return entropy
 
 def export_data(path, entropy, split):
@@ -79,72 +78,94 @@ hc = ["BC1AASA", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE
 
 
 #%%
-vamePath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\\10_km_label_{}.npy'
-vameMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\transition_matrix_3\{}_epoch_{}-{}.npy"
+vLabelPath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\\10_km_label_{}.npy'
+vMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\transition_matrix_3\{}_epoch_{}-{}.npy"
 
-hBPMPath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\score_labels_{}.npy'
-hBPMMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\transition_matrix_3\{}_epoch_{}-{}.npy"
+hLabelPath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\score_labels_{}.npy'
+hMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\transition_matrix_3\{}_epoch_{}-{}.npy"
 
-S3DPath = r'C:\Users\kietc\SURF\jack-data\S3D\s3d_labels\s3d_labels_{}.npy'
-S3DMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\transition_matrix_3\{}_epoch_{}-{}.npy"
+sLabelPath = r'C:\Users\kietc\SURF\jack-data\S3D\s3d_labels\s3d_labels_{}.npy'
+sMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\transition_matrix_3\{}_epoch_{}-{}.npy"
 
-MMActionPath = r'C:\Users\kietc\SURF\jack-data\MMAction\mmaction_labels\mmaction_labels_{}.npy'
-MMActionMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\transition_matrix_3\{}_epoch_{}-{}.npy"
-
-#%%
-vameLabels = load_motif_labels(vamePath, videos, 27000)
-hBPMLabels = load_motif_labels(hBPMPath, videos, 27000)
-S3DLabels = load_motif_labels(S3DPath, videos, 27000)
-MMActionLabels = load_motif_labels(MMActionPath, videos, 27000)
+mLabelPath = r'C:\Users\kietc\SURF\jack-data\MMAction\mmaction_labels\mmaction_labels_{}.npy'
+mMatrixPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\transition_matrix_3\{}_epoch_{}-{}.npy"
 
 #%%
-vameTMatrices = generate_tmatrices(vameLabels, 10, split = 3)
-hBPMTMatrices = generate_tmatrices(hBPMLabels, 10, split = 3)
-S3DTMatrices = generate_tmatrices(S3DLabels, 400, split = 3)
-MMActionTMatrices = generate_tmatrices(MMActionLabels, 81, split = 3)
+vLabels = load_motif_labels(vLabelPath, videos, 27000, 3)
+hLabels = load_motif_labels(hLabelPath, videos, 27000, 3)
+sLabels = load_motif_labels(sLabelPath, videos, 27000, 3)
+mLabels = load_motif_labels(mLabelPath, videos, 27000, 3)
 
 #%%
-save_tmatrices(vameMatrixPath, videos, vameTMatrices, 3)
-save_tmatrices(hBPMMatrixPath, videos, hBPMTMatrices, 3)
-save_tmatrices(S3DMatrixPath, videos, S3DTMatrices, 3)
-save_tmatrices(MMActionMatrixPath, videos, MMActionTMatrices, 3)
-
+vMatrices = generate_matrices(vLabels, 10, split = 3)
+hMatrices = generate_matrices(hLabels, 10, split = 3)
+sMatrices = generate_matrices(sLabels, 400, split = 3)
+mMatrices = generate_matrices(mLabels, 81, split = 3)
 
 #%%
-vameTMatrices = load_tmatrices(vameMatrixPath, videos, split = 3)
-hBPMTMatrices = load_tmatrices(hBPMMatrixPath, videos, split = 3)
-S3DTMatrices = load_tmatrices(S3DMatrixPath, videos, split = 3)
-MMActionTMatrices = load_tmatrices(MMActionMatrixPath, videos, split = 3)
+save_tmatrices(vMatrixPath, videos, vMatrices, 3)
+save_tmatrices(hMatrixPath, videos, hMatrices, 3)
+save_tmatrices(sMatrixPath, videos, sMatrices, 3)
+save_tmatrices(mMatrixPath, videos, mMatrices, 3)
 
 
 #%%
-vameEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
-hBPMEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
-S3DEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
-MMActionEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
+vMatrices = load_tmatrices(vMatrixPath, videos, split = 3)
+hMatrices = load_tmatrices(hMatrixPath, videos, split = 3)
+sMatrices = load_tmatrices(sMatrixPath, videos, split = 3)
+mMatrices = load_tmatrices(mMatrixPath, videos, split = 3)
+
 
 #%%
-vameEntropy = generate_entropy(vameTMatrices, 3, 9)
-hBPMEntropy = generate_entropy(hBPMTMatrices, 3, 10)
-S3DEntropy = generate_entropy(S3DTMatrices, 3, 400)
-MMActionEntropy = generate_entropy(MMActionTMatrices, 3, 80)
+vEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
+hEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
+sEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
+mEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
+
+#%%
+vEntropy = generate_entropy(vMatrices, vLabels, 3)
+hEntropy = generate_entropy(hMatrices, hLabels, 3)
+sEntropy = generate_entropy(sMatrices, sLabels, 3)
+mEntropy = generate_entropy(mMatrices, mLabels, 3)
 
 # %%
-vameENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
-hBPMENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
-S3DENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
-MMActionENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
+vENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
+hENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
+sENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
+mENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
 
 #%%
-vameENS = generate_ens(vameTMatrices, 3)
-hBPMENS = generate_ens(hBPMTMatrices, 3)
-S3DENS = generate_ens(S3DTMatrices, 3)
-MMActionENS = generate_ens(MMActionTMatrices, 3)
+vENS = generate_ens(vMatrices, 3)
+hENS = generate_ens(hMatrices, 3)
+sENS = generate_ens(sMatrices, 3)
+mENS = generate_ens(mMatrices, 3)
 
 # %%
-export_data(vameENSPath, vameENS, 3)
-export_data(hBPMENSPath, hBPMENS, 3)
-export_data(S3DENSPath, S3DENS, 3)
-export_data(MMActionENSPath, MMActionENS, 3)
+export_data(vENSPath, vENS, 3)
+export_data(hENSPath, hENS, 3)
+export_data(sENSPath, sENS, 3)
+export_data(mENSPath, mENS, 3)
 
+# %%
+tm = np.array([[0.        , 0.28571429, 0.        , 0.14285714, 0.        ,
+        0.        , 0.        , 0.42857143, 0.        , 0.14285714],
+       [0.08333333, 0.        , 0.16666667, 0.08333333, 0.        ,
+        0.        , 0.16666667, 0.        , 0.08333333, 0.41666667],
+       [0.2       , 0.6       , 0.        , 0.        , 0.        ,
+        0.        , 0.        , 0.2       , 0.        , 0.        ],
+       [0.        , 0.4       , 0.        , 0.        , 0.        ,
+        0.        , 0.        , 0.        , 0.        , 0.6       ],
+       [0.        , 0.        , 0.        , 0.        , 0.        ,
+        0.        , 0.        , 0.        , 0.        , 0.        ],
+       [0.        , 0.        , 0.        , 0.        , 0.        ,
+        0.        , 0.        , 0.        , 0.        , 0.        ],
+       [0.25      , 0.75      , 0.        , 0.        , 0.        ,
+        0.        , 0.        , 0.        , 0.        , 0.        ],
+       [0.5       , 0.25      , 0.        , 0.        , 0.        ,
+        0.        , 0.        , 0.        , 0.        , 0.25      ],
+       [0.        , 0.        , 0.        , 0.        , 0.        ,
+        0.        , 1.        , 0.        , 0.        , 0.        ],
+       [0.1       , 0.2       , 0.3       , 0.3       , 0.        ,
+        0.        , 0.1       , 0.        , 0.        , 0.        ]])
+compute_l0_entropy(tm[0], 9)
 # %%

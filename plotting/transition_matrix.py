@@ -14,7 +14,7 @@ import os
 import scipy
 from scipy import stats
 from pathlib import Path
-from vame.analysis.community_analysis import read_config, compute_transition_matrices
+from vame.analysis.community_analysis import read_config, compute_transition_matrices, get_adjacency_matrix
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
@@ -206,10 +206,7 @@ def effective_num_states(transtion_m):
     effective_num_every_state = []
     for row in transtion_m:
         sum_p_ij = np.sum(np.square(row))
-        if sum_p_ij == 0:
-            effective_num_every_state.append(0)
-        else:
-            effective_num_every_state.append(1/sum_p_ij)
+        effective_num_every_state.append(1/sum_p_ij)
     effective_num_avg = np.mean(effective_num_every_state)
     return effective_num_every_state, effective_num_avg
 
@@ -227,11 +224,13 @@ for j, videos in enumerate([control_videos, BD_videos]):
         print("Loading {}-{} data {}/{}...".format(v, titles[j], i+1, len(videos)))
 
         label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v, n_cluster, n_cluster, v))
+        adjacent_m = get_adjacency_matrix(label, n_cluster)
         transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v, n_cluster, v))
         cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
 
         control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+
         control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
 
         score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
@@ -249,8 +248,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
         effective_num_every_state, effective_num_avg = effective_num_states(transition_m)
         Entropies[j].append(entropy)
         Effective_num_states[j].append(effective_num_avg)
-        # print(effective_num_every_state)
-        print(effective_num_avg)
         Effective_num_states_list[j].append(effective_num_every_state)
 
         num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
@@ -564,67 +561,14 @@ for i in range(len(videos)*2):
     fname_pdf = "{}-{}_{}_transition.pdf".format(population, patient_names[i], n_cluster)
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-
-#%%
-#%% between motif paired t test and score correlation
-import permutation_test as p
-def statistic(x, y, axis):
-    return np.mean(x, axis=axis) - np.mean(y, axis=axis)
-effective_num_states_cat = np.asarray(Effective_num_states_list)
-effective_num_states_cat_ctl = np.asarray(Effective_num_states_list_ctl)
-
-fig, ax = plt.subplots(1, 1, figsize=(6, 4))
-for i in range(n_cluster):
-    CP = effective_num_states_cat[0,:,i].reshape(-1,1)
-    BD = effective_num_states_cat[1,:,i].reshape(-1,1)
-    s = stats.ttest_ind(CP, BD)
-    # because our statistic is vectorized, we pass `vectorized=True`
-    # `n_resamples=np.inf` indicates that an exact test is to be performed
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
-    # res = p.permutation_test(BD, CP)
-    print("Motif {}".format(i))
-    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s.statistic[0], s.pvalue[0]))
-    # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
-    corr_HAM_D_score = scipy.stats.pearsonr(effective_num_states_cat[0,:,i], HAM_D_score[:n_subject_in_population])
-    corr_YMRS_score = scipy.stats.pearsonr(effective_num_states_cat[0,:,i], YMRS_score[:n_subject_in_population])
-    print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
-    print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
-
-    # only correlate with BD list
-    corr_HAM_D_score_BD = scipy.stats.pearsonr(effective_num_states_cat[1,:,i], HAM_D_score[n_subject_in_population:])
-    corr_YMRS_score_BD = scipy.stats.pearsonr(effective_num_states_cat[1,:,i], YMRS_score[n_subject_in_population:])
-    print("          Pearson corr YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
-    print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
-
-    CP_ctl = effective_num_states_cat_ctl[0,:,i].reshape(-1,1)
-    BD_ctl = effective_num_states_cat_ctl[1,:,i].reshape(-1,1)
-    s_ctl = stats.ttest_ind(CP_ctl, BD_ctl)
-    # because our statistic is vectorized, we pass `vectorized=True`
-    # `n_resamples=np.inf` indicates that an exact test is to be performed
-    # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
-    # res = p.permutation_test(BD, CP)
-    print(" Control \n")
-    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_ctl.statistic[0], s_ctl.pvalue[0]))
-    # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
-    corr_HAM_D_score_ctl = scipy.stats.pearsonr(effective_num_states_cat_ctl[0,:,i], HAM_D_score[:n_subject_in_population])
-    corr_YMRS_score_ctl = scipy.stats.pearsonr(effective_num_states_cat_ctl[0,:,i], YMRS_score[:n_subject_in_population])
-    print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_ctl[0], corr_YMRS_score_ctl[1]))
-    print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_ctl[0], corr_HAM_D_score_ctl[1]))
-    # only correlate with BD list
-    corr_HAM_D_score_BD_ctl = scipy.stats.pearsonr(effective_num_states_cat_ctl[1,:,i], HAM_D_score[n_subject_in_population:])
-    corr_YMRS_score_BD_ctl = scipy.stats.pearsonr(effective_num_states_cat_ctl[1,:,i], YMRS_score[n_subject_in_population:])
-    print("          Pearson corr YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD_ctl[0], corr_YMRS_score_BD_ctl[1]))
-    print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD_ctl[0], corr_HAM_D_score_BD_ctl[1]))
 #%% Plot L0 measures: spasity, entropy, number of 1s, number of 0s
-
-metric_names = ['dist of effective number',
-                'dist of entropy',
+num_metrics = 4
+metric_names = ['dist of entropy',
                 'dist of #empty state',
                 'dist of #p(state) = 1',
                 'dist of #p(state) = 0',
                 'is_BD']
-num_metrics = len(metric_names)-1
-lims = [[0, 10], [-2, 4], [-5, 15], [-4, 8], [30, 120]]
+lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
 
 sns.set_style("white")
 CP_idx = np.zeros(n_subject_in_population)
@@ -632,14 +576,12 @@ BD_idx = np.ones(n_subject_in_population)
 fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(15, 15))
 for j in range(len(transition_group)):
     print(f"{transition_group[j]}\n")
-    Effective_nums_to_plot = eval("Effective_num_states{}".format(transition_group[j]))
     Entropies_to_plot = eval("Entropies{}".format(transition_group[j]))
     num_zero_rows_to_plot = eval("num_zero_rows{}".format(transition_group[j]))
     num_ones_to_plot = eval("num_ones{}".format(transition_group[j]))
     num_zeros_to_plot = eval("num_zeros{}".format(transition_group[j]))
 
     latent_ds = pd.DataFrame(np.concatenate((
-        np.concatenate((Effective_nums_to_plot[0], Effective_nums_to_plot[1]), 0).reshape(-1, 1),
         np.concatenate((Entropies_to_plot[0],Entropies_to_plot[1]),0).reshape(-1, 1),     # 2 x 12 list
         np.concatenate((num_zero_rows_to_plot[0],num_zero_rows_to_plot[1]),0).reshape(-1, 1),
         np.concatenate((num_ones_to_plot[0],num_ones_to_plot[1]),0).reshape(-1, 1),
@@ -686,79 +628,7 @@ fname_pdf = "L0-measures.pdf"
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
-#%% Plot Box of effective numbers
-states = []
-for i in range(n_cluster):
-    states.append([i]*n_subject_in_population)
-states = np.asarray(states).flatten()
-sns.set_style("white")
 
-CP_idx = np.zeros(n_subject_in_population * n_cluster)
-BD_idx = np.ones(n_subject_in_population * n_cluster)
-
-ds = pd.DataFrame(np.concatenate((
-    np.concatenate((effective_num_states_cat[0,:,:].T.flatten(), effective_num_states_cat[1,:,:].T.flatten()), 0).reshape(-1, 1),
-    np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
-    np.concatenate((states, states), 0).reshape(-1, 1)), 1),
-    columns=['effective_number','is_BD','state'])
-w = n_cluster/10 * 6
-fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-violin = sns.boxplot(y="effective_number", x='state',hue='is_BD',
-               data=ds, orient="v", palette=sns.color_palette("tab10"))
-handles = violin.legend_.legendHandles
-dict_name = {0.0:'CP', 1.0:'BD'}
-labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
-# sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
-x = np.arange(n_cluster)
-ax.legend(handles, labels)
-ax.set_xticks(x)
-ax.set_ylim([0, 10])
-ax.set_title('15 min effective_number over {} motifs'.format(n_cluster))
-ax.set_xlabel('Motifs(States)')
-sns.despine()
-fig.show()
-pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
-Path(pwd).mkdir(parents=True, exist_ok=True)
-fname = "15-min-effective_number'.png"
-fname_pdf = "15-min-effective_number'.pdf"
-fig.savefig(os.path.join(pwd, fname), transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-
-#%% plot box effective number per video
-sns.set_style('white')
-
-states = []
-for i in range(n_cluster):
-    states.append([i])
-states = np.asarray(states).flatten()
-
-for j, videos in enumerate([control_videos, BD_videos]):
-    n = 0
-    for p in range(len(videos)):
-        v = videos[p]
-
-        idx = np.ones(n_cluster) * j
-
-        ds = pd.DataFrame(np.concatenate((
-            effective_num_states_cat[j,p,:].T.flatten().reshape(-1, 1),
-            idx.reshape(-1, 1),
-            states.reshape(-1, 1)), 1),
-            columns=['effective_number','is_BD','state'])
-        w = n_cluster/10 * 6
-        fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-        violin = sns.barplot(y="effective_number", x='state',hue='is_BD',
-                       data=ds, orient="v", facecolor=b_o_colors[j])
-        x = np.arange(n_cluster)
-        ax.set_xticks(x)
-        ax.set_title('{} 15 min effective_number over {} motifs'.format(v, n_cluster))
-        ax.set_xlabel('Motifs(States)')
-        ax.set_ylim([0, 10])
-        sns.despine()
-        fig.show()
-        pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
-        Path(pwd).mkdir(parents=True, exist_ok=True)
-        fname = "{}_{}_effective_number.png".format(n_cluster, v)
-        fig.savefig(os.path.join(pwd, fname))
 #%% Plot L1, l2 distance
 from scipy.spatial.distance import squareform
 import scipy.spatial as sp
@@ -884,20 +754,14 @@ for i in idx:
     fig.show()
 #%% Epoch level plots
 
-
-
-
-
 #%% violin plot
-
-metric_names = ['dist of effective number of states',
-                'distribution of entropy',
+num_metrics = 4
+metric_names = ['distribution of entropy',
                 'distribution of #empty state',
                 'distribution of #p(state) = 1',
                 'distribution of #p(state) = 0',
                 'is_BD']
-num_metrics = len(metric_names)-1
-lims = [[-1,10], [-2, 4], [-5, 15], [-4, 8], [30, 120]]
+lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 
@@ -906,13 +770,11 @@ for epoch in range(1,4):
     sns.set_style('darkgrid')
     for k in range(len(transition_group)):
         print("\nEpoch {}-{}\n".format(epoch, transition_group[k]))
-        effective_num = eval("Epoch{}_Effective_num_avg{}".format(epoch, transition_group[k]))
         entropy = eval("Epoch{}_Entropies{}".format(epoch, transition_group[k]))
         num_zero_rows = eval("Epoch{}_num_zero_rows{}".format(epoch, transition_group[k]))
         num_ones = eval("Epoch{}_num_ones{}".format(epoch, transition_group[k]))
         num_zeros = eval("Epoch{}_num_zeros{}".format(epoch, transition_group[k]))
         latent_ds = pd.DataFrame(np.concatenate((
-            np.concatenate((effective_num[0], effective_num[1]), 0).reshape(-1, 1),
             np.concatenate((entropy[0], entropy[1]), 0).reshape(-1, 1),
             np.concatenate((num_zero_rows[0], num_zero_rows[1]), 0).reshape(-1, 1),
             np.concatenate((num_ones[0], num_ones[1]), 0).reshape(-1, 1),
@@ -954,6 +816,7 @@ for epoch in range(1,4):
     fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
 #%% Effective number box
 for epoch in range(1, 4):
     effective_num_usage_ = eval("Epoch{}_Effective_num_every_state".format(epoch))
@@ -1043,6 +906,9 @@ for j in range(2):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Epoch-wise transition plot
+
+#%%
+
 
 
 from scipy.spatial.distance import euclidean, pdist, squareform

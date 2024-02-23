@@ -25,6 +25,13 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
                   "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
 
 #%%
+def generate_volume(path):
+    volume = {}
+    for v in videos:
+        latent = np.load(path.format(v, v))
+        volume[v] = np.trace(np.cov(latent.T))
+    return volume
+
 def combine_df(df1, df2):
     copyDf1 = copy.deepcopy(df1)
     for key in copyDf1:
@@ -131,7 +138,7 @@ def graph_classifier_results(data):
     # Show the plot
     plt.show()
 
-#%%
+#%% v - vame, h - hBPM, s - S3D, m - MMAction
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
@@ -142,6 +149,7 @@ if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     HBPMMotifPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
     S3DMotifPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
     MMActionMotifPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
+
 
     VAMEENSPath = r'C:\Users\zhanq\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
     HBPMENSPath = r'C:\Users\zhanq\OneDrive - UC San Diego\SURF\hBPM\entropy_3_spli.csv'
@@ -170,36 +178,62 @@ else:
     exportPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
     exportResultPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 
+    diagnosticPath = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
+
+    vMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
+    hMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
+    sMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
+    mMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
+
+    vEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
+    hEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
+    sEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
+    mEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
+
+    vENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
+    hENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
+    sENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
+    mENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
+
+    vVolumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
+
+
+#%%
+volume = generate_volume(vVolumePath)
+
 #%% Create DF for each model
 BD = load_data(diagnosticPath, end=2)
 assessment = load_data(diagnosticPath, end=-1)
 
-#%% Motif usage (overall)
-VAMEMotif = load_data(VAMEMotifPath, idf=BD, scale=27000)
-HBPMMotif = load_data(HBPMMotifPath, idf=BD, scale=27000)
-S3DMotif = load_data(S3DMotifPath, idf=BD, scale=27000)
-MMActionMotif = load_data(MMActionMotifPath, idf=BD, scale=27000)
 
-#%% ENS
-VAMEENS = load_data(VAMEENSPath, idf=BD)
-HBPMENS = load_data(HBPMENSPath, idf=BD)
-S3DENS = load_data(S3DENSPath, idf=BD)
-MMActionENS = load_data(MMActionENSPath, idf=BD)
+#%%
+VAME_Motif = load_data(vMotifPath, idf=BD, scale=27000)
+HBPM_Motif = load_data(hMotifPath, idf=BD, scale=27000)
+S3D_Motif = load_data(sMotifPath, idf=BD, scale=27000)
+MMAction_Motif = load_data(mMotifPath, idf=BD, scale=27000)
+
+#%%
+VAME_ENS = load_data(VAMEENSPath, idf=BD)
+HBPM_ENS = load_data(HBPMENSPath, idf=BD)
+S3D_ENS = load_data(S3DENSPath, idf=BD)
+MMAction_ENS = load_data(MMActionENSPath, idf=BD)
 
 #%% ENS epoch 3 - epoch 1
-VAMEENS1 = epoch_sub(VAMEENS, 3, 1)
-VAMEENS1 = combine_df(BD, VAMEENS1)
-HBPMENS1 = epoch_sub(HBPMENS, 3, 1)
-HBPMENS1 = combine_df(BD, HBPMENS1)
-S3DENS1 = epoch_sub(S3DENS, 3, 1)
-S3DENS1 = combine_df(BD, S3DENS1)
-MMActionENS1 = epoch_sub(MMActionENS, 3, 1)
-MMActionENS1 = combine_df(BD, MMActionENS1)
+VAME_ENS1 = epoch_sub(VAME_ENS, 3, 1)
+VAME_ENS1 = combine_df(BD, VAME_ENS1)
+HBPM_ENS1 = epoch_sub(HBPM_ENS, 3, 1)
+HBPM_ENS1  = combine_df(BD, HBPM_ENS1)
+S3D_ENS1 = epoch_sub(S3D_ENS, 3, 1)
+S3D_ENS1 = combine_df(BD, S3D_ENS1)
+MMAction_ENS1 = epoch_sub(MMAction_ENS, 3, 1)
+MMAction_ENS1 = combine_df(BD, MMAction_ENS1)
+
 
 #%% VAME Comparisons
-VAMEMotif = load_data(VAMEMotifPath, idf=BD, scale=27000)
-VAMEENS = load_data(VAMEENSPath, idf=BD)
-VAME_AM = load_data(VAMEMotifPath, idf=assessment, scale=27000)
+VAME_Motif = load_data(vMotifPath, idf=BD, scale=27000)
+VAME_ENS = load_data(VAMEENSPath, idf=BD)
+VAME_Volume = load_data(vVolumePath, idf=BD)
+VAME_AM = load_data(vMotifPath, idf=assessment, scale=27000)
 VAME_AE = load_data(VAMEENSPath, idf=assessment)
 VAME_AME = load_data(VAMEENSPath, idf=VAME_AM)
 
@@ -207,23 +241,23 @@ VAME_AME = load_data(VAMEENSPath, idf=VAME_AM)
 print("Assessment")
 a = classify(assessment)
 print("VAME Motif")
-vm = classify(VAMEMotif)
+vm = classify(VAME_Motif)
 print("hBPM Motif")
-hm = classify(HBPMMotif)
+hm = classify(HBPM_Motif)
 print("S3D Motif")
-sm = classify(S3DMotif)
+sm = classify(S3D_Motif)
 print("MMAction Motif")
-mm = classify(MMActionMotif)
+mm = classify(MMAction_Motif)
 
 #%%
 print("VAME ENS")
-ve = classify(VAMEENS)
+ve = classify(VAME_ENS)
 print("hBPM ENS")
-he = classify(HBPMENS)
+he = classify(HBPM_ENS)
 print("S3D ENS")
-se = classify(S3DENS)
+se = classify(S3D_ENS)
 print("MMAction ENS")
-me = classify(MMActionENS)
+me = classify(MMAction_ENS)
 
 #%%
 print("VAME ENS")
@@ -239,9 +273,11 @@ me = classify(MMActionENS1)
 print("Assessment")
 a = classify(assessment)
 print("VAME Motif")
-m = classify(VAMEMotif)
+m = classify(VAME_Motif)
 print("VAME ENS")
-e = classify(VAMEENS)
+e = classify(VAME_ENS)
+print("VAME Volume")
+v = classify(VAME_Volume)
 print("VAME Motif + Assessment")
 am = classify(VAME_AM)
 print("VAME ENS + Assessment")
