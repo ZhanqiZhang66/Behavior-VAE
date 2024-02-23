@@ -5,6 +5,7 @@ import json
 
 def count_zeros(transition_m):
     transition = transition_m.copy()
+    print(transition)
     zero_rows = np.all(transition == 0, axis=1)
     zero_rows_i =  np.where(zero_rows == True)
     zero_cols = np.all(transition == 0, axis=0)

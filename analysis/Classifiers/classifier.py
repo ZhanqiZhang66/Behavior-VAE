@@ -56,10 +56,12 @@ def load_data(path,  idf = None, end = 0, scale = 1):
             df[row[0]].extend(vec)
     return df
 
-def epoch_sub(idf, indexA, indexB):
+def epoch_sub(idf, indexA, indexB, size = 1):
     df = {}
     for v in videos:
-        df[v] = [(abs(idf[v][indexA]+1 - idf[v][indexB]+1)) / min(idf[v][indexA]+1,idf[v][indexB]+1)]
+        df[v] = []
+        for i in range(size):
+            df[v].append(idf[v][indexB + i] - idf[v][indexA +  i])
     return df
 
 def classify(dataframe):
@@ -74,6 +76,7 @@ def classify(dataframe):
     acc = []
     pre = []
     rec = []
+    score = []
 
     rand = random.randrange(100)
     for i in range(rand, rand + 50):
@@ -86,6 +89,8 @@ def classify(dataframe):
 
         # model
         classifier = LogisticRegression(random_state = 0)
+
+        
         classifier.fit(xtrain, ytrain)
         y_pred = classifier.predict(xtest)
     
@@ -101,11 +106,14 @@ def classify(dataframe):
         pre.extend(scores['test_precision'])
         rec.extend(scores['test_recall'])
         seeds.append(i)
+        score.append(classifier.score(xtest, ytest))
 
-    print('--Accuracy: %.05f (%.05f)' % (np.mean(acc), np.std(acc)))
-    print('--Precision: %.05f (%.05f)' % (np.mean(pre), np.std(pre)))
-    print('--Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
-    data = [acc, pre, rec]
+
+    print('Accuracy: %.05f (%.05f)' % (np.mean(acc), np.std(acc)))
+    print('Precision: %.05f (%.05f)' % (np.mean(pre), np.std(pre)))
+    print('Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
+    data = [acc, pre, rec, score]
+
     return data
 
 def save_classifier_results(path, data):
@@ -115,7 +123,7 @@ def save_classifier_results(path, data):
 def load_result(path):
     return np.load(path).tolist()
 
-def graph_classifier_results(data):
+def graph_classifier_results(path, data, title):
     df_list = []
     for data_name, data_set in data.items():
         for j, metric in enumerate(['acc', 'pre', 'rec']):
@@ -133,29 +141,20 @@ def graph_classifier_results(data):
     # Add labels and title
     plt.xlabel('Models')
     plt.ylabel('Score')
-    plt.title('VAME')
+    plt.title(title)
 
     # Show the plot
+    if path:
+        plt.savefig(path + '.png', transparent=True)
+        plt.savefig(path + '.pdf', transparent=True)
+    
     plt.show()
+
 
 #%% v - vame, h - hBPM, s - S3D, m - MMAction
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
-    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 
-    diagnosticPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\scaled_diagnostic_data.csv"
-
-    VAMEMotifPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
-    HBPMMotifPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
-    S3DMotifPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
-    MMActionMotifPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
-
-
-    VAMEENSPath = r'C:\Users\zhanq\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
-    HBPMENSPath = r'C:\Users\zhanq\OneDrive - UC San Diego\SURF\hBPM\entropy_3_spli.csv'
-    S3DENSPath = r'C:\Users\zhanq\OneDrive - UC San Diego\SURF\S3D\entropy_3_spli.csv'
-    MMActionENSPath = r'C:\Users\zhanq\OneDrive - UC San Diego\SURF\MMAction\entropy_3_spli.csv'
-
+#%% v - vame, d - DLC, h - hBPM, s - S3D, m - MMAction
     exportPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\Classification\{}"
     exportResultPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\Classification\{}"
 
@@ -197,100 +196,344 @@ else:
 
     vVolumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
 
-
 #%%
-volume = generate_volume(vVolumePath)
+
+hCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\count_3_split.csv'
+sCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\count_3_split.csv'
+mCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\count_3_split.csv'
+
+
 
 #%% Create DF for each model
 BD = load_data(diagnosticPath, end=2)
 assessment = load_data(diagnosticPath, end=-1)
 
 
-#%%
+#%% Models - Motif Usage
+
 VAME_Motif = load_data(vMotifPath, idf=BD, scale=27000)
+DLC_Motif = load_data(dMotifPath, idf=BD, scale=27000)
 HBPM_Motif = load_data(hMotifPath, idf=BD, scale=27000)
 S3D_Motif = load_data(sMotifPath, idf=BD, scale=27000)
 MMAction_Motif = load_data(mMotifPath, idf=BD, scale=27000)
 
-#%%
-VAME_ENS = load_data(VAMEENSPath, idf=BD)
-HBPM_ENS = load_data(HBPMENSPath, idf=BD)
-S3D_ENS = load_data(S3DENSPath, idf=BD)
-MMAction_ENS = load_data(MMActionENSPath, idf=BD)
+#%% Models - ENS
+VAME_ENS = load_data(vENSPath, idf=BD)
+DLC_ENS = load_data(dENSPath, idf=BD)
+HBPM_ENS = load_data(hENSPath, idf=BD)
+S3D_ENS = load_data(sENSPath, idf=BD)
+MMAction_ENS = load_data(mENSPath, idf=BD)
 
-#%% ENS epoch 3 - epoch 1
+#%% Models - ENS
+VAME_ENSM3 = load_data(vENSM3Path, idf=BD)
+
+#%% Models - ENS
+VAME_ENSM = load_data(vENSMPath, idf=BD)
+VAME_ENSM = epoch_sub(VAME_ENSM, 1, 21, 10)
+VAME_ENSM = combine_df(BD, VAME_ENSM)
+
+
+#%% Models - ENS epoch 3 - epoch 1
 VAME_ENS1 = epoch_sub(VAME_ENS, 3, 1)
 VAME_ENS1 = combine_df(BD, VAME_ENS1)
+
+DLC_ENS1 = epoch_sub(DLC_ENS, 3, 1)
+DLC_ENS1 = combine_df(BD, DLC_ENS1)
+
 HBPM_ENS1 = epoch_sub(HBPM_ENS, 3, 1)
 HBPM_ENS1  = combine_df(BD, HBPM_ENS1)
+
 S3D_ENS1 = epoch_sub(S3D_ENS, 3, 1)
 S3D_ENS1 = combine_df(BD, S3D_ENS1)
+
 MMAction_ENS1 = epoch_sub(MMAction_ENS, 3, 1)
 MMAction_ENS1 = combine_df(BD, MMAction_ENS1)
 
 
-#%% VAME Comparisons
-VAME_Motif = load_data(vMotifPath, idf=BD, scale=27000)
-VAME_ENS = load_data(VAMEENSPath, idf=BD)
+#%% VAME
+VAME_Entropy = load_data(vEntropyPath, idf=BD)
 VAME_Volume = load_data(vVolumePath, idf=BD)
+VAME_Count = load_data(vCountPath, idf=BD)
+
+
+#%% Assessment + VAME
 VAME_AM = load_data(vMotifPath, idf=assessment, scale=27000)
-VAME_AE = load_data(VAMEENSPath, idf=assessment)
-VAME_AME = load_data(VAMEENSPath, idf=VAME_AM)
+VAME_AENS = load_data(vENSPath, idf=assessment)
+VAME_AE = load_data(vEntropyPath, idf=assessment)
+VAME_AV = load_data(vVolumePath, idf=assessment)
+VAME_AC = load_data(vCountPath, idf=assessment)
 
-#%% Classify
+#%% Assessment + VAME+
+VAME_AME = load_data(vENSPath, idf=VAME_AM)
+VAME_AMEV = load_data(vVolumePath, idf=VAME_AME)
+VAME_AMEVC = load_data(vCountPath, idf=VAME_AMEV)
+
+
+
+#%% Assessment
 print("Assessment")
-a = classify(assessment)
+c_assessment = classify(assessment)
+print("=======================")
+save_classifier_results(exportPath.format("assessments_scales_50.npy"), c_assessment)
+
+#%% Motif
 print("VAME Motif")
-vm = classify(VAME_Motif)
+c_VAME_Motif = classify(VAME_Motif)
+print("DLC Motif")
+c_DLC_Motif = classify(DLC_Motif)
 print("hBPM Motif")
-hm = classify(HBPM_Motif)
+c_HBPM_Motif = classify(HBPM_Motif)
 print("S3D Motif")
-sm = classify(S3D_Motif)
+c_S3D_Motif = classify(S3D_Motif)
 print("MMAction Motif")
-mm = classify(MMAction_Motif)
+c_MMAction_Motif = classify(MMAction_Motif)
+print("=======================")
+save_classifier_results(exportPath.format("vame_motif_50.npy"), c_VAME_Motif)
+save_classifier_results(exportPath.format("dlc_motif_50.npy"), c_DLC_Motif)
+save_classifier_results(exportPath.format("hbpm_motif_50.npy"), c_HBPM_Motif)
+save_classifier_results(exportPath.format("s3d_motif_50.npy"), c_S3D_Motif)
+save_classifier_results(exportPath.format("mmaction_motif_50.npy"), c_MMAction_Motif)
+
+#%% ENS
+print("VAME ENS")
+c_VAME_ENS = classify(VAME_ENS)
+print("DLC ENS")
+c_DLC_ENS = classify(DLC_ENS)
+print("hBPM ENS")
+c_HBPM_ENS = classify(HBPM_ENS)
+print("S3D ENS")
+c_S3D_ENS = classify(S3D_ENS)
+print("MMAction ENS")
+c_MMAction_ENS = classify(MMAction_ENS)
+print("=======================")
+save_classifier_results(exportPath.format("vame_ens_50.npy"), c_VAME_ENS)
+save_classifier_results(exportPath.format("dlc_ens_50.npy"), c_DLC_ENS)
+save_classifier_results(exportPath.format("hbpm_ens_50.npy"), c_HBPM_ENS)
+save_classifier_results(exportPath.format("s3d_ens_50.npy"), c_S3D_ENS)
+save_classifier_results(exportPath.format("mmaction_ens_50.npy"), c_MMAction_ENS)
+
+#%% ENS
+print("VAME ENSM3")
+c_VAME_ENSM3 = classify(VAME_ENSM3)
+print("=======================")
+
+#%% ENS
+print("VAME ENSM")
+c_VAME_ENSM = classify(VAME_ENSM)
+print("=======================")
+
+
+#%% ENS Diff
+print("VAME ENS1")
+c_VAME_ENS1= classify(VAME_ENS1)
+print("DLC ENS1")
+c_DLC_ENS1 = classify(DLC_ENS1)
+print("hBPM ENS1")
+c_HBPM_ENS1 = classify(HBPM_ENS1)
+print("S3D ENS1")
+c_S3D_ENS1 = classify(S3D_ENS1)
+print("MMAction ENS1")
+c_MMAction_ENS1 = classify(MMAction_ENS1)
+print("=======================")
+save_classifier_results(exportPath.format("vame_ens1_50.npy"), c_VAME_ENS1)
+save_classifier_results(exportPath.format("dlc_ens1_50.npy"), c_DLC_ENS1)
+save_classifier_results(exportPath.format("hbpm_ens1_50.npy"), c_HBPM_ENS1)
+save_classifier_results(exportPath.format("s3d_ens1_50.npy"), c_S3D_ENS1)
+save_classifier_results(exportPath.format("mmaction_ens1_50.npy"), c_MMAction_ENS1)
+
+#%% VAME
+print("VAME Entropy")
+c_VAME_Entropy = classify(VAME_Entropy)
+print("VAME Volume")
+c_VAME_Volume = classify(VAME_Volume)
+print("VAME Count")
+c_VAME_Count = classify(VAME_Count)
+print("=======================")
+save_classifier_results(exportPath.format("vame_entropy_50.npy"), c_VAME_Entropy)
+save_classifier_results(exportPath.format("vame_volume_50.npy"), c_VAME_Volume)
+save_classifier_results(exportPath.format("vame_count_50.npy"), c_VAME_Count)
+
+
+#%% Assessment + VAME
+print("Assessment + VAME Motif")
+c_VAME_AM = classify(VAME_AM)
+print("Assessment + VAME ENS")
+c_VAME_AENS = classify(VAME_AENS)
+print("Assessment + VAME Entropy")
+c_VAME_AE = classify(VAME_AE)
+print("Assessment + VAME Volume")
+c_VAME_AV = classify(VAME_AV)
+print("Assessment + VAME Count")
+c_VAME_AC = classify(VAME_AC)
+print("=======================")
+save_classifier_results(exportPath.format("am_50.npy"), c_VAME_AM)
+save_classifier_results(exportPath.format("aens_50.npy"), c_VAME_AENS)
+save_classifier_results(exportPath.format("ae_50.npy"), c_VAME_AE)
+save_classifier_results(exportPath.format("av_50.npy"), c_VAME_AV)
+save_classifier_results(exportPath.format("ac_50.npy"), c_VAME_AC)
+
+#%% Assessment + VAME+
+print("Assessment + VAME Motif + ENS")
+c_VAME_AME = classify(VAME_AME)
+print("Assessment + VAME Motif + ENS + Volume")
+c_VAME_AMEV = classify(VAME_AMEV)
+print("Assessment + VAME Motif + ENS + Volume + Count")
+c_VAME_AMEVC = classify(VAME_AMEVC)
+print("=======================")
+save_classifier_results(exportPath.format("ame_50.npy"), c_VAME_AM)
+save_classifier_results(exportPath.format("amev_50.npy"), c_VAME_AMEV)
+save_classifier_results(exportPath.format("amevc_50.npy"), c_VAME_AMEVC)
+
+
+#%% Graph classifier results
+data = {'Assessment': a, 'VAME': vc, 'HBMP': hc, 'S3D': sc, 'MMAction': mc}
+path = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\models classification\count_3_splits_50'
+graph_classifier_results(data, path)
+
+data = {'Assessment': a, 'VAME': vc1, 'HBMP': hc1, 'S3D': sc1, 'MMAction': mc1}
+path = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\models classification\count_diff_3_1_50'
+graph_classifier_results(data, path)
 
 #%%
-print("VAME ENS")
-ve = classify(VAME_ENS)
-print("hBPM ENS")
-he = classify(HBPM_ENS)
-print("S3D ENS")
-se = classify(S3D_ENS)
-print("MMAction ENS")
-me = classify(MMAction_ENS)
+data = {'Assessment': a, 'Motif': m, 'ENS': ens, 'Entropy': e, 'Volume': v, 'Count': c}
+path = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\vames classsification\single_metric_50'
+graph_classifier_results(path, data, 'Classication of Different Quantitative Methods')
+save_classifier_results(path + '_results.npy', data)
+
 
 #%%
-print("VAME ENS")
-ve = classify(VAMEENS1)
-print("hBPM ENS")
-he = classify(HBPMENS1)
-print("S3D ENS")
-se = classify(S3DENS1)
-print("MMAction ENS")
-me = classify(MMActionENS1)
+# c_VAME_Motif
+# c_DLC_Motif
+# c_HBPM_Motif
+# c_S3D_Motif
+# c_MMAction_Motif
+
+import scipy
+
+#%% Motif
+print("vame motif: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_Motif[0], axis=0))
+print("dlc motif: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_DLC_Motif[0], axis=0))
+print("hbpm motif: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_HBPM_Motif[0], axis=0))
+print("s3d motif: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_S3D_Motif[0], axis=0))
+print("mmaction motif: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_MMAction_Motif[0], axis=0))
+
+#%% ENS
+print("vame ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_ENS[0], axis=0))
+print("dlc ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_DLC_ENS[0], axis=0))
+print("hbpm ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_HBPM_ENS[0], axis=0))
+print("s3d ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_S3D_ENS[0], axis=0))
+print("mmaction ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_MMAction_ENS[0], axis=0))
+
+#%% ENS1
+print("vame ens1: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_ENS1[0], axis=0))
+print("dlc ens1: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_DLC_ENS1[0], axis=0))
+print("hbpm ens1: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_HBPM_ENS1[0], axis=0))
+print("s3d ens1: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_S3D_ENS1[0], axis=0))
+print("mmaction ens1: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_MMAction_ENS1[0], axis=0))
+
+#%% VAME
+print("vame motif: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_Motif[0], axis=0))
+print("vame ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_ENS[0], axis=0))
+print("vame ens1: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_ENS1[0], axis=0))
+print("vame entropy: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_Entropy[0], axis=0))
+print("vame volume: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_Volume[0], axis=0))
+print("vame count: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_Count[0], axis=0))
+
+#%% Assessment + VAME
+print("assessment + vame motif: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AM[0], axis=0))
+print("assessment + vame ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AENS[0], axis=0))
+print("assessment + vame entropy: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AE[0], axis=0))
+print("assessment + vame volume: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AV[0], axis=0))
+print("assessment + vame count: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AC[0], axis=0))
+
+#%% Assessment + VAME+
+print("assessment + vame motif + ens: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AME[0], axis=0))
+print("assessment + vame motif + ens + volume: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AMEV[0], axis=0))
+print("assessment + vame motif + ens + volume + count: ")
+print(scipy.stats.f_oneway(c_assessment[0], c_VAME_AMEVC[0], axis=0))
+
+
+#%%
+vEntropy = load_data(vEntropyPath, idf=BD)
+hEntropy = load_data(hEntropyPath, idf=BD)
+sEntropy = load_data(sEntropyPath, idf=BD)
+
+vEntropy1 = epoch_sub(vEntropy, 3, 1)
+hEntropy1 = epoch_sub(hEntropy, 3, 1)
+sEntropy1 = epoch_sub(sEntropy, 3, 1)
+
+vEntropy1 = combine_df(BD, vEntropy1)
+hEntropy1 = combine_df(BD, hEntropy1)
+sEntropy1 = combine_df(BD, sEntropy1)
+#mEntropy = load_data(mEntropyPath, idf=BD)
+#%%
+vCount = load_data(vCountPath, idf=BD)
+hCount = load_data(hCountPath, idf=BD)
+sCount = load_data(sCountPath, idf=BD)
+mCount = load_data(mCountPath, idf=BD)
+
+vCount1 = epoch_sub(vCount, 3, 1)
+hCount1 = epoch_sub(hCount, 3, 1)
+sCount1 = epoch_sub(sCount, 3, 1)
+mCount1 = epoch_sub(mCount, 3, 1)
+
+vCount1 = combine_df(BD, vCount1)
+hCount1 = combine_df(BD, hCount1)
+sCount1 = combine_df(BD, sCount1)
+mCount1 = combine_df(BD, mCount1)
+
 
 #%% 
 print("Assessment")
 a = classify(assessment)
-print("VAME Motif")
-m = classify(VAME_Motif)
-print("VAME ENS")
-e = classify(VAME_ENS)
-print("VAME Volume")
-v = classify(VAME_Volume)
-print("VAME Motif + Assessment")
+print("AM")
 am = classify(VAME_AM)
-print("VAME ENS + Assessment")
+print("AENS")
+aens = classify(VAME_AENS)
+print("AE")
 ae = classify(VAME_AE)
-print("VAME Motif + ENS + Assessment")
-ame = classify(VAME_AME)
+print("AV")
+av = classify(VAME_AV)
+print("AC")
+ac = classify(VAME_AC)
 
+#%%
+data = {'Assessment': a, 'A+Motif': am, 'A+ENS': aens, 'A+Entropy': ae, 'A+Volume': av, 'A+Count': ac}
+path = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\vames classsification\assessment_plus_metric_50'
+graph_classifier_results(path, data, 'Classification with Assessment + Behavioral Data')
 
+#%%
+save_classifier_results(path + '_results.npy', data)
 #%% Save results
-save_classifier_results(exportPath.format("assessments_scales_50.npy"), a)
-save_classifier_results(exportPath.format("vame_motif_50.npy"), vm)
-save_classifier_results(exportPath.format("hbpm_motif_50.npy"), hm)
-save_classifier_results(exportPath.format("s3d_motif_50.npy"), sm)
+
 save_classifier_results(exportPath.format("mmaction_motif_50.npy"), mm)
 save_classifier_results(exportPath.format("vame_ens_50.npy"), ve)
 save_classifier_results(exportPath.format("hbpm_ens_50.npy"), he)
@@ -308,3 +551,22 @@ save_classifier_results(exportPath.format("vame_ame_50.npy"), ame)
 #%% Graph classifier results
 data = {'Assessment': a, 'Motif': m, 'ENS': e, 'AM': am, 'AE': ae, 'AME': ame}
 graph_classifier_results(data)
+
+
+ymrsPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\YMRS.csv"
+hamdPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\HAMD.csv"
+
+#%%
+VAME_ENS = load_data(vENSPath)
+VAME_ENS1 = epoch_sub(VAME_ENS, 2, 0)
+
+
+YMRS = load_data(ymrsPath, idf=VAME_ENS1)
+HAMD = load_data(hamdPath, idf=VAME_ENS1)
+
+#%% 
+print("YMRS")
+y = classify(YMRS)
+print("HAMD")
+h = classify(HAMD)
+# %%
