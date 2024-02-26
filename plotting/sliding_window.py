@@ -114,6 +114,7 @@ if not load_precomputed_sliding_window:
         github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
     elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
         github_path = r'D:\OneDrive - UC San Diego\GitHub'
+        onedrive_path = r'D:\OneDrive - UC San Diego'
     else:
         github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
     #%%
@@ -364,7 +365,7 @@ def error_bar(arrs, axis=0):
 
 num_metrics = 5
 metric_names = ["entropy",
-                "effect_num_states"
+                #"effect_num_states"
                 "num_zero_row",
                 "num_one_item",
                 "num_zero_item",
@@ -378,18 +379,23 @@ BD_idx = np.ones(n_subject_in_population)
 sns.set_style('white')
 for i in range(num_metrics):
     fig, axes = plt.subplots(1, figsize=(10, 5))
-
     for group in range(2):
         ds1 = ds[ds["is_BD"] == group]
         metric_mean_over_sub = []
-        metric_std_over_sub = []
+        metric_ste_over_sub = []
         for t in range(t_max):
             ds_t = ds1[ds1["start_frame"] == t]
             y, error = error_bar(ds_t[metric_names[i]], axis=0)
             metric_mean_over_sub.append(ds_t[metric_names[i]].mean())
-            metric_std_over_sub.append(ds_t[metric_names[i]].std())
+            metric_ste_over_sub.append(ds_t[metric_names[i]].std()/np.sqrt(len(ds_t[metric_names[i]])))
         x = np.arange(t_max)
-        line = axes.plot(x, metric_mean_over_sub, color=b_o_colors[group].format(group))
+        metric_mean_over_sub = np.asarray(metric_mean_over_sub)
+        metric_ste_over_sub = np.asarray(metric_ste_over_sub)
+        line = axes.plot(x, metric_mean_over_sub, color=b_o_colors[group].format(group), zorder=1)
+
+
+        axes.fill_between(x, metric_mean_over_sub - metric_ste_over_sub, metric_mean_over_sub + metric_ste_over_sub, norm=plt.Normalize(vmin=0, vmax=9),
+                         alpha=0.2, facecolor=b_o_colors[group].format(group))
 
         axes.set_title('average {}'.format(metric_names[i]))
 
