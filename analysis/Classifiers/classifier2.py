@@ -15,6 +15,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score, precision_score, recall_score, classification_report
 from sklearn.model_selection import cross_validate, cross_val_predict
+from sklearn.feature_selection import SelectKBest, f_classif
 
 from sklearn.linear_model import Lasso
 from sklearn.model_selection import GridSearchCV, KFold
@@ -30,11 +31,11 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
                   "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
 
 
-#%% v - vame, d - DLC, h - hBPM, s - S3D, m - MMAction
 diagnostic_path = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
 
 vame_motif_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
 vame_ens_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
+# ens per motif
 vame_ensm_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_split.csv'
 vame_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
 vame_count_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\count_3_split.csv'
@@ -64,24 +65,22 @@ export_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 export_result_path =  r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 
 # %%
-def classify(df, features):
+# features []
+def classify(df, features, max_iter):
     X = df[features]
     y = df['BD']
+    print(X.columns)
 
-    model = LogisticRegression(max_iter=200)
+    model = LogisticRegression(max_iter=max_iter)
     y_pred_cv = cross_val_predict(model, X, y, cv=4)
     classification_rep_cv = classification_report(y, y_pred_cv, digits=4)
 
-    print(f'Classification Report (Cross-Validation):\n{classification_rep_cv}') 
-
-    return [classification_rep_cv['accuracy'], classification_rep_cv['weighted avg']['precision'], classification_rep_cv['weighted avg']['recall']]
-
+    print(f'Classification Report (Cross-Validation):\n{classification_rep_cv}')
 
 # %%
 """
 PANDA 🐼
 """
-
 #%% 
 assessment_df = pd.read_csv(diagnostic_path)
 assessment_df.drop('gender', axis=1, inplace=True)
@@ -240,14 +239,23 @@ mmaction_df.drop('video', axis=1, inplace=True)
 mmaction_df['ens_diff'] = mmaction_df['ens_s2'] - mmaction_df['ens_s0'] 
 mmaction_df['ent_diff'] = mmaction_df['ent_s2'] - mmaction_df['ent_s0']
 
-
+"""
+Feature Selection
+"""
 #%% OLS
-## use this approach for assessment scores?
-X = vame_df.drop('BD', axis=1)
-y = vame_df['BD']
-X = sm.add_constant(X)
-model = sm.OLS(y, X).fit()
-print(model.summary())
+## use this approach for motif dwell-time vs assessment scores?
+# features = vame_entropy_df.columns[1:]
+# X = vame_df[features]
+# y = vame_df['BD']
+# X = sm.add_constant(X)
+# model = sm.OLS(y, X).fit()
+# print(model.summary())
+
+# %% Correlation coef
+correlation_matrix = vame_df.corr()
+plt.figure(figsize=(20, 20))
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.show()
 
 # %% Lasso Regression
 # https://medium.com/@agrawalsam1997/feature-selection-using-lasso-regression-10f49c973f08
@@ -282,23 +290,44 @@ lasso1.fit(X_train, y_train)
 lasso1_coef = np.abs(lasso1.coef_)
 
 # plotting the Column Names and Importance of Columns. 
+plt.figure(figsize=(30, 10))
 plt.bar(names, lasso1_coef)
-plt.xticks(rotation=90)
+plt.xticks(rotation=45)
 plt.grid()
 plt.title("Feature Selection Based on Lasso")
 plt.xlabel("Features")
 plt.ylabel("Importance")
 plt.show()
 
+#%%
+# Feature Selection using ANOVA F-value
+# https://medium.com/@redwaneaitouammi/7-feature-selection-and-dimensionality-reduction-part-2-python-example-a4be6675193d
+# https://www.kaggle.com/code/yoshifumimiya/feature-selection-using-anova
 
-# %% Correlation coef
-correlation_matrix = vame_df.corr()
-plt.figure(figsize=(20, 20))
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+
+X = vame_df.drop('BD', axis=1).values
+y = vame_df['BD'].values
+selector = SelectKBest(score_func=f_classif, k=4)
+X_new = selector.fit_transform(X, y)
+#%%
+print('feature importance: ', selector.scores_)
+
+plt.figure(figsize=(30, 10))
+sns.barplot(x=names, y=selector.scores_)
+plt.xticks(rotation=45)
 plt.show()
 
+# %%
+top10_index = np.argsort(selector.scores_)[-15:][::-1]
+top10_feature = [names[i] for i in top10_index]
 
 # %%
-motif_columns = vame_motif_df.columns[1:]
-classify(vame_df, motif_columns)
+classify(vame_df, top10_feature, 200)
+# %%
+motifNames = vame_motif_df.columns[1:]
+classify(vame_df, motifNames, 200)
+
+# %%
+assessmentNames = assessment_df.columns[2:]
+classify(assessment_df, assessmentNames, 50)
 # %%
