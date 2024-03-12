@@ -20,7 +20,7 @@ from vame.analysis.pose_segmentation import get_motif_usage
 from sklearn.decomposition import PCA
 from data.load_data import load_pt_data
 #%%
-load_precomputed_sliding_window = False
+load_precomputed_sliding_window = True
 #%%
 #%%
 if not load_precomputed_sliding_window:
@@ -114,6 +114,7 @@ if not load_precomputed_sliding_window:
         github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
     elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
         github_path = r'D:\OneDrive - UC San Diego\GitHub'
+        onedrive_path = r'D:\OneDrive - UC San Diego'
     else:
         github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
     #%%
@@ -351,9 +352,20 @@ if load_precomputed_sliding_window:
 
     t_max = (15 * 60 * 30) - window_size  # ds["start_frame"].max()
 #%% plot average metric per population
+def tolerant_mean(arrs):
+    lens = [len(i) for i in arrs]
+    arr = np.ma.empty((np.max(lens),len(arrs)))
+    arr.mask = True
+    for idx, l in enumerate(arrs):
+        arr[:len(l),idx] = l
+    return arr.mean(axis=-1), arr.std(axis=-1)
+def error_bar(arrs, axis=0):
+    arrs = np.array(arrs)
+    return np.nanmean(arrs, axis=axis), np.nanstd(arrs, axis=axis, ddof=1)/np.sqrt(np.size(arrs, axis=axis))
+
 num_metrics = 5
 metric_names = ["entropy",
-                "effect_num_states"
+                #"effect_num_states"
                 "num_zero_row",
                 "num_one_item",
                 "num_zero_item",
@@ -367,15 +379,23 @@ BD_idx = np.ones(n_subject_in_population)
 sns.set_style('white')
 for i in range(num_metrics):
     fig, axes = plt.subplots(1, figsize=(10, 5))
-
     for group in range(2):
         ds1 = ds[ds["is_BD"] == group]
         metric_mean_over_sub = []
+        metric_ste_over_sub = []
         for t in range(t_max):
             ds_t = ds1[ds1["start_frame"] == t]
+            y, error = error_bar(ds_t[metric_names[i]], axis=0)
             metric_mean_over_sub.append(ds_t[metric_names[i]].mean())
+            metric_ste_over_sub.append(ds_t[metric_names[i]].std()/np.sqrt(len(ds_t[metric_names[i]])))
         x = np.arange(t_max)
-        line = axes.plot(x, metric_mean_over_sub, color=b_o_colors[group].format(group))
+        metric_mean_over_sub = np.asarray(metric_mean_over_sub)
+        metric_ste_over_sub = np.asarray(metric_ste_over_sub)
+        line = axes.plot(x, metric_mean_over_sub, color=b_o_colors[group].format(group), zorder=1)
+
+
+        axes.fill_between(x, metric_mean_over_sub - metric_ste_over_sub, metric_mean_over_sub + metric_ste_over_sub, norm=plt.Normalize(vmin=0, vmax=9),
+                         alpha=0.2, facecolor=b_o_colors[group].format(group))
 
         axes.set_title('average {}'.format(metric_names[i]))
 
@@ -604,16 +624,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
         BD_mean_motifs = [mean_motif_freq, mean_motif_volume]
 plt.close('all')
 #%% Plot per population change of dwell time, and latent volume
-def tolerant_mean(arrs):
-    lens = [len(i) for i in arrs]
-    arr = np.ma.empty((np.max(lens),len(arrs)))
-    arr.mask = True
-    for idx, l in enumerate(arrs):
-        arr[:len(l),idx] = l
-    return arr.mean(axis=-1), arr.std(axis=-1)
-def error_bar(arrs, axis=0):
-    arrs = np.array(arrs)
-    return np.nanmean(arrs, axis=axis), np.nanstd(arrs, axis=axis, ddof=1)/np.sqrt(np.size(arrs, axis=axis))
 
 latent_d = 10
 n_cluster = 10

@@ -14,7 +14,7 @@ import os
 import scipy
 from scipy import stats
 from pathlib import Path
-from vame.analysis.community_analysis import read_config, compute_transition_matrices
+from vame.analysis.community_analysis import read_config, compute_transition_matrices, get_adjacency_matrix
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
@@ -26,6 +26,7 @@ if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
+    onedrive_path = r'D:\OneDrive - UC San Diego'
 else:
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 #%%
@@ -223,11 +224,13 @@ for j, videos in enumerate([control_videos, BD_videos]):
         print("Loading {}-{} data {}/{}...".format(v, titles[j], i+1, len(videos)))
 
         label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v, n_cluster, n_cluster, v))
+        adjacent_m = get_adjacency_matrix(label, n_cluster)
         transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v, n_cluster, v))
         cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
 
         control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+
         control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
 
         score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
@@ -464,7 +467,7 @@ for i in range(len(videos)*2):
         transition_matrix_to_plot = eval("transition_matrices{}".format(transition_group[j]))
         transition_matrix_to_plot = transition_matrix_to_plot[i]
         # plot transition matrix
-        im = axes[j][0].imshow(transition_matrix_to_plot, cmap='viridis', vmin=0, vmax=1)
+        im = axes[j][0].imshow(transition_matrix_to_plot, cmap='gist_gray', vmin=0, vmax=1)
         axes[j][0].set_title("{}-{}-{}".format(titles[k],patient_names[i], transition_group[j]))
         axes[j][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
         axes[j][0].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
@@ -510,7 +513,7 @@ for i in range(len(videos)*2):
         nodes = nx.draw_networkx_nodes(G, pos,
                                nodelist=nodelist,
                                node_size=node_radius,
-                               node_color=colormap_used[k::2],
+                               node_color=colormap_used[1::2],
                                alpha=1,
                                ax=axes[j][1])
         for e in list(G.edges(data=True)):
@@ -518,8 +521,8 @@ for i in range(len(videos)*2):
                                 xy=pos[e[0]], xycoords='data',
                                 xytext=pos[e[1]], textcoords='data',
                                 arrowprops=dict(arrowstyle="<-",
-                                                color=colormap_used[int(e[0] * 2 + k)],
-                                                linewidth=(e[2]['weight'] / max(weight)) * 5,
+                                                color=colormap_used[int(e[0] * 2 + 1)],
+                                                linewidth=(e[2]['weight'] / max(weight)) * 10,
                                                 shrinkA=5, shrinkB=5,
                                                 patchA=None, patchB=None,
                                                 connectionstyle="arc3,rad=rrr".replace('rrr',
@@ -813,7 +816,99 @@ for epoch in range(1,4):
     fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+#%% Effective number box
+for epoch in range(1, 4):
+    effective_num_usage_ = eval("Epoch{}_Effective_num_every_state".format(epoch))
+    effective_num_usage_cat = np.asarray(effective_num_usage_)
+    states = []
+    for i in range(n_cluster):
+        states.append([i]*n_subject_in_population)
+    states = np.asarray(states).flatten()
+    sns.set_style('white')
+
+    CP_idx = np.zeros(n_subject_in_population * n_cluster)
+    BD_idx = np.ones(n_subject_in_population * n_cluster)
+
+    ds = pd.DataFrame(np.concatenate((
+        np.concatenate((effective_num_usage_cat[0, :, :].T.flatten(), effective_num_usage_cat[1, :, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
+        np.concatenate((states, states), 0).reshape(-1, 1)), 1),
+        columns=['effective number', 'is_BD', 'state'])
+
+    fig, ax = plt.subplots(1, 1, figsize=(w, 4))
+    violin = sns.boxplot(y="effective number", x='state',hue='is_BD',
+                   data=ds, orient="v", palette=sns.color_palette("tab10"))
+    handles = violin.legend_.legendHandles
+    dict_name = {0.0:'CP', 1.0:'BD'}
+    labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
+    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    x = np.arange(n_cluster)
+    ax.legend(handles, labels)
+    ax.set_xticks(x)
+    ax.set_ylim([0, 8])
+    ax.set_title('Epoch {} effective number over {} motifs'.format(epoch, n_cluster))
+    ax.set_xlabel('Motifs(States)')
+    sns.despine()
+    fig.show()
+    pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
+    fname = "{}-effective_number.png".format(epoch)
+    fname_pdf = "{}-effective_number.pdf".format(epoch)
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+#%% Plot Box of effective numbers three bars
+w = n_cluster/10 * 6
+for j in range(2):
+    fig, ax = plt.subplots(1, 1, figsize=(w, 4))
+
+
+    effective_num_usage_1 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(1))[j])
+    effective_num_usage_2 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(2))[j])
+    effective_num_usage_3 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(3))[j])
+
+
+    label1 = np.ones(len(effective_num_usage_1[:, :].T.flatten()))
+    label2 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 2
+    label3 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 3
+    states = []
+    for i in range(n_cluster):
+        states.append([i]*n_subject_in_population)
+    states = np.asarray(states).flatten()
+    sns.set_style('white')
+
+
+    ds = pd.DataFrame(np.concatenate((
+        np.concatenate((effective_num_usage_1[:, :].T.flatten(), effective_num_usage_2[:, :].T.flatten(), effective_num_usage_3[:, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((label1, label2, label3), 0).reshape(-1, 1),
+        np.concatenate((states, states,states), 0).reshape(-1, 1)), 1),
+        columns=['motif frequency', 'epoch', 'state'])
+
+
+    violin = sns.boxplot(y="motif frequency", x='state',hue='epoch',
+                   data=ds, orient="v", color=b_o_colors[j])
+    handles = violin.legend_.legendHandles
+    dict_name = {1.0:'Epoch 1', 2.0:'Epoch 2', 3.0:'Epoch 3'}
+    labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
+    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    x = np.arange(n_cluster)
+    ax.legend(handles, labels)
+    ax.set_xticks(x)
+    ax.set_ylim([0, 8])
+    ax.set_title('effective number over {} motifs'.format( n_cluster))
+    ax.set_xlabel('Motifs(States)')
+    sns.despine()
+    fig.show()
+    pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
+    fname = "effective_number-three_epochs.png".format()
+    fname_pdf = "effective_number-three_epochs.pdf".format()
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+#%% Epoch-wise transition plot
+
 #%%
+
 
 
 from scipy.spatial.distance import euclidean, pdist, squareform
@@ -917,7 +1012,7 @@ for i in range(n_subject_in_population * 2):
         for epoch in range(1,4):
             epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
             epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1]).squeeze()
-            im = axes[epoch-1][0].imshow(epoch_tm_[i], cmap='viridis', vmin=0, vmax=1)
+            im = axes[epoch-1][0].imshow(epoch_tm_[i], cmap='gist_gray', vmin=0, vmax=1)
             plt.grid(False)
             axes[epoch-1][0].set_title("{}-{}-{}-epoch {}".format(titles[j],patient_names[i], transition_group[k], epoch))
             axes[epoch-1][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
@@ -958,7 +1053,7 @@ for i in range(n_subject_in_population * 2):
             nodes = nx.draw_networkx_nodes(G, pos,
                                            nodelist=nodelist,
                                            node_size=node_radius,
-                                           node_color=colormap_used[j::2],
+                                           node_color=colormap_used[1::2],
                                            alpha=1,
                                            ax=axes[epoch-1][1])
             font_color = 'black'
@@ -971,8 +1066,8 @@ for i in range(n_subject_in_population * 2):
                                         xy=pos[e[0]], xycoords='data',
                                         xytext=pos[e[1]], textcoords='data',
                                         arrowprops=dict(arrowstyle="<-",
-                                                        color=colormap_used[int(e[0] * 2 + j)],
-                                                        linewidth=(e[2]['weight'] / max(weight)) * 5,
+                                                        color=colormap_used[int(e[0] * 2 + 0)],
+                                                        linewidth=(e[2]['weight'] / max(weight)) * 10,
                                                         shrinkA=5, shrinkB=5,
                                                         patchA=None, patchB=None,
                                                         connectionstyle="arc3,rad=rrr".replace('rrr',
@@ -1006,8 +1101,8 @@ for i in range(n_subject_in_population * 2):
 
         fname = "{}-{}_{}_transition_epoch{}-dwell.png".format(population, patient_names[i], n_cluster, transition_group[k])
         fname_pdf = "{}-{}_{}_transition_epoch{}-dwell.pdf".format(population, patient_names[i], n_cluster, transition_group[k])
-        # fig.savefig(os.path.join(pwd, fname), transparent=True)
-        # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+        fig.savefig(os.path.join(pwd, fname), transparent=True)
+        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
 

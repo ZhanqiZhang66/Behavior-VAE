@@ -65,6 +65,7 @@ def epoch_sub(idf, indexA, indexB, size = 1):
     return df
 
 def classify(dataframe):
+    random.seed(10)
     X = []
     Y = []
     seeds = []
@@ -107,10 +108,12 @@ def classify(dataframe):
         seeds.append(i)
         score.append(classifier.score(xtest, ytest))
 
+
     print('Accuracy: %.05f (%.05f)' % (np.mean(acc), np.std(acc)))
     print('Precision: %.05f (%.05f)' % (np.mean(pre), np.std(pre)))
     print('Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
     data = [acc, pre, rec, score]
+
     return data
 
 def save_classifier_results(path, data):
@@ -147,47 +150,67 @@ def graph_classifier_results(path, data, title):
     
     plt.show()
 
+
+#%% v - vame, h - hBPM, s - S3D, m - MMAction
+if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
+
 #%% v - vame, d - DLC, h - hBPM, s - S3D, m - MMAction
-diagnosticPath = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
+    exportPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\Classification\{}"
+    exportResultPath = r"C:\Users\zhanq\OneDrive - UC San Diego\SURF\Classification\{}"
 
-vMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
-dMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\motif_usage_overall.csv"
-hMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
-sMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
-mMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    github_path = r'D:\OneDrive - UC San Diego\GitHub'
+else:
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+    diagnosticPath = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
 
-vEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
-dEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\entropy_3_split.csv'
-hEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
-sEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
-mEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
+    VAMEMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
+    HBPMMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
+    S3DMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
+    MMActionMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
 
-vENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
-dENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\ens_3_split.csv'
-hENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
-sENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
-mENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
+    VAMEENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
+    HBPMENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_spli.csv'
+    S3DENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_spli.csv'
+    MMActionENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_spli.csv'
 
-vENSM3Path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_3_split.csv'
-vENSMPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_split.csv'
+    exportPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
+    exportResultPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 
-vCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\count_3_split.csv'
-vVolumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
+    diagnosticPath = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
 
-exportPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
-exportResultPath =  r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
+    vMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
+    hMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
+    sMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
+    mMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
+
+    vEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
+    hEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
+    sEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
+    mEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
+
+    vENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
+    hENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
+    sENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
+    mENSPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
+
+    vVolumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
 
 #%%
+
 hCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\count_3_split.csv'
 sCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\count_3_split.csv'
 mCountPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\count_3_split.csv'
+
 
 
 #%% Create DF for each model
 BD = load_data(diagnosticPath, end=2)
 assessment = load_data(diagnosticPath, end=-1)
 
+
 #%% Models - Motif Usage
+
 VAME_Motif = load_data(vMotifPath, idf=BD, scale=27000)
 DLC_Motif = load_data(dMotifPath, idf=BD, scale=27000)
 HBPM_Motif = load_data(hMotifPath, idf=BD, scale=27000)
@@ -225,6 +248,7 @@ S3D_ENS1 = combine_df(BD, S3D_ENS1)
 
 MMAction_ENS1 = epoch_sub(MMAction_ENS, 3, 1)
 MMAction_ENS1 = combine_df(BD, MMAction_ENS1)
+
 
 #%% VAME
 VAME_Entropy = load_data(vEntropyPath, idf=BD)
@@ -523,7 +547,6 @@ save_classifier_results(exportPath.format("vame_ens_50.npy"), e)
 save_classifier_results(exportPath.format("vame_am_50.npy"), am)
 save_classifier_results(exportPath.format("vame_ae_50.npy"), ae)
 save_classifier_results(exportPath.format("vame_ame_50.npy"), ame)
-
 
 #%% Graph classifier results
 data = {'Assessment': a, 'Motif': m, 'ENS': e, 'AM': am, 'AE': ae, 'AME': ame}
