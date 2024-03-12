@@ -85,12 +85,13 @@ def export_data(path, entropy, split):
             row.extend(entropy[v])
             csvwriter.writerow(row)
 
-def export_data1(path, entropy):
+def export_data_per_motif(path, entropy):
     with open(path, 'w') as csvfile:
         csvwriter = csv.writer(csvfile, lineterminator="\n")
         header = ['video']
-        for i in range(10):
-            header.append('motif' + str(i))
+        for i in range(3):
+            for j in range(10):
+                header.append(str(i) + 'motif' + str(j))
         csvwriter.writerow(header)
 
         for v in videos:
@@ -137,9 +138,9 @@ mLabels = load_motif_labels(mLabelPath, videos, 27000, 3)
 
 
 #%%
-#vMatrices = generate_matrices(vLabels, 10, split = 3)
+vMatrices = generate_matrices(vLabels, 10, split = 3)
 dMatrices = generate_matrices(dLabels, 10, split = 3)
-#hMatrices = generate_matrices(hLabels, 11, split = 3)
+hMatrices = generate_matrices(hLabels, 11, split = 3)
 #sMatrices = generate_matrices(sLabels, 400, split = 3)
 #mMatrices = generate_matrices(mLabels, 81, split = 3)
 
@@ -226,11 +227,11 @@ export_data(mENSPath, mENS, 3)
 
 
 # %%
-export_data1(vENSMPath, vENSM)
-export_data1(dENSMPath, dENSM)
-export_data1(hENSMPath, hENSM)
-export_data1(sENSMPath, sENSM)
-export_data1(mENSMPath, mENSM)
+export_data_per_motif(vENSMPath, vENSM)
+export_data_per_motif(dENSMPath, dENSM)
+export_data_per_motif(hENSMPath, hENSM)
+export_data_per_motif(sENSMPath, sENSM)
+export_data_per_motif(mENSMPath, mENSM)
 
 
 
