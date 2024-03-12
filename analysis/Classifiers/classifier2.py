@@ -71,11 +71,49 @@ def classify(df, features, max_iter):
     y = df['BD']
     print(X.columns)
 
+    # PLEASE CHECK THIS
     model = LogisticRegression(max_iter=max_iter)
     y_pred_cv = cross_val_predict(model, X, y, cv=4)
     classification_rep_cv = classification_report(y, y_pred_cv, digits=4)
 
     print(f'Classification Report (Cross-Validation):\n{classification_rep_cv}')
+
+def classify1(df, features, max_iter):
+    X = df[features]
+    y = df['BD']
+
+    acc = []
+    pre = []
+    rec = []
+    rand = random.randrange(max_iter)
+    for i in range(rand, rand + 50):
+        xtrain, xtest, ytrain, ytest = train_test_split(X, y, test_size=0.24, stratify=y, random_state=i)
+        # x
+        sc_x = StandardScaler()
+        xtrain = sc_x.fit_transform(xtrain)
+        xtest = sc_x.transform(xtest)
+        # model
+        classifier = LogisticRegression()
+        classifier.fit(xtrain, ytrain)
+        y_pred = classifier.predict(xtest)
+    
+        acc.append(accuracy_score(ytest, y_pred))
+        pre.append(precision_score(ytest, y_pred))
+        rec.append(recall_score(ytest, y_pred))
+
+        # cross validation
+        scoring = ['accuracy', 'precision', 'recall']
+        scores = cross_validate(classifier, xtrain, ytrain, scoring = scoring, cv = 3)
+        
+        acc.extend(scores['test_accuracy'])
+        pre.extend(scores['test_precision'])
+        rec.extend(scores['test_recall'])
+
+
+    print('Accuracy: %.05f (%.05f)' % (np.mean(acc), np.std(acc)))
+    print('Precision: %.05f (%.05f)' % (np.mean(pre), np.std(pre)))
+    print('Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
+    data = [acc, pre, rec]
 
 # %%
 """
@@ -318,16 +356,22 @@ plt.xticks(rotation=45)
 plt.show()
 
 # %%
-top10_index = np.argsort(selector.scores_)[-15:][::-1]
+top10_index = np.argsort(selector.scores_)[-10:][::-1]
 top10_feature = [names[i] for i in top10_index]
 
 # %%
-classify(vame_df, top10_feature, 200)
+classify(vame_df, top10_feature, 1000)
+classify1(vame_df, top10_feature, 1000)
+
 # %%
 motifNames = vame_motif_df.columns[1:]
 classify(vame_df, motifNames, 200)
+classify1(vame_df, motifNames, 200)
 
 # %%
 assessmentNames = assessment_df.columns[2:]
 classify(assessment_df, assessmentNames, 50)
+classify1(assessment_df, assessmentNames, 200)
+
+#hi
 # %%
