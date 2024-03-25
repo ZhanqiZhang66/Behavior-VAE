@@ -40,6 +40,7 @@ vame_ensm_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_moti
 vame_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
 vame_count_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\count_3_split.csv'
 vame_volume_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
+vame_feature_selection = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\feature_selection.csv"
 
 dlc_motif_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\motif_usage_overall.csv"
 dlc_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\entropy_3_split.csv'
@@ -64,36 +65,28 @@ mmaction_count_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\cou
 export_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 export_result_path =  r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
 
-# %%
-# features []
+
+
+#%%
 def classify(df, features, max_iter):
     X = df[features]
     y = df['BD']
-    print(X.columns)
-
-    # PLEASE CHECK THIS
-    model = LogisticRegression(max_iter=max_iter)
-    y_pred_cv = cross_val_predict(model, X, y, cv=4)
-    classification_rep_cv = classification_report(y, y_pred_cv, digits=4)
-
-    print(f'Classification Report (Cross-Validation):\n{classification_rep_cv}')
-
-def classify1(df, features, max_iter):
-    X = df[features]
-    y = df['BD']
+    # print(X.columns)
 
     acc = []
     pre = []
     rec = []
-    rand = random.randrange(max_iter)
-    for i in range(rand, rand + 50):
+    rand = random.randrange(100)
+    for i in range(rand, rand + max_iter):
         xtrain, xtest, ytrain, ytest = train_test_split(X, y, test_size=0.24, stratify=y, random_state=i)
-        # x
-        sc_x = StandardScaler()
-        xtrain = sc_x.fit_transform(xtrain)
-        xtest = sc_x.transform(xtest)
+
+        # Should we scale?
+        # sc_x = StandardScaler()
+        # xtrain = sc_x.fit_transform(xtrain)
+        # xtest = sc_x.transform(xtest)
+
         # model
-        classifier = LogisticRegression()
+        classifier = LogisticRegression(max_iter=1000)
         classifier.fit(xtrain, ytrain)
         y_pred = classifier.predict(xtest)
     
@@ -104,16 +97,34 @@ def classify1(df, features, max_iter):
         # cross validation
         scoring = ['accuracy', 'precision', 'recall']
         scores = cross_validate(classifier, xtrain, ytrain, scoring = scoring, cv = 3)
-        
+
         acc.extend(scores['test_accuracy'])
         pre.extend(scores['test_precision'])
         rec.extend(scores['test_recall'])
-
 
     print('Accuracy: %.05f (%.05f)' % (np.mean(acc), np.std(acc)))
     print('Precision: %.05f (%.05f)' % (np.mean(pre), np.std(pre)))
     print('Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
     data = [acc, pre, rec]
+
+# Feature Selection using ANOVA F-value
+# https://medium.com/@redwaneaitouammi/7-feature-selection-and-dimensionality-reduction-part-2-python-example-a4be6675193d
+# https://www.kaggle.com/code/yoshifumimiya/feature-selection-using-anova
+def feature_selection(X, y, feature_names, num_feature=0):
+    selector = SelectKBest(score_func=f_classif)
+    selector.fit_transform(X, y)
+    plt.figure(figsize=(30, 10))
+    sns.barplot(x=feature_names, y=selector.scores_)
+    plt.xticks(rotation=45)
+    plt.show()
+    if num_feature > len(selector.scores_) or num_feature == 0:
+        top_index = np.argsort(selector.scores_)[:][::-1]
+    else:
+        top_index = np.argsort(selector.scores_)[-num_feature:][::-1]
+    top = {}
+    for i in top_index:
+        top[feature_names[i]] = selector.scores_[i]
+    return top
 
 # %%
 """
@@ -337,41 +348,29 @@ plt.xlabel("Features")
 plt.ylabel("Importance")
 plt.show()
 
-#%%
-# Feature Selection using ANOVA F-value
-# https://medium.com/@redwaneaitouammi/7-feature-selection-and-dimensionality-reduction-part-2-python-example-a4be6675193d
-# https://www.kaggle.com/code/yoshifumimiya/feature-selection-using-anova
-
-
+#%% 
 X = vame_df.drop('BD', axis=1).values
 y = vame_df['BD'].values
-selector = SelectKBest(score_func=f_classif, k=4)
-X_new = selector.fit_transform(X, y)
+names=vame_df.drop("BD", axis=1).columns
+top_features = feature_selection(X, y, names)
+top10_features = feature_selection(X, y, names, 10)
+
 #%%
-print('feature importance: ', selector.scores_)
-
-plt.figure(figsize=(30, 10))
-sns.barplot(x=names, y=selector.scores_)
-plt.xticks(rotation=45)
-plt.show()
-
-# %%
-top10_index = np.argsort(selector.scores_)[-10:][::-1]
-top10_feature = [names[i] for i in top10_index]
-
-# %%
-classify(vame_df, top10_feature, 1000)
-classify1(vame_df, top10_feature, 1000)
+import csv
+with open(vame_feature_selection,'w', newline='') as f:
+    w = csv.writer(f)
+    w.writerows(top_features.items())
 
 # %%
 motifNames = vame_motif_df.columns[1:]
-classify(vame_df, motifNames, 200)
-classify1(vame_df, motifNames, 200)
+classify(vame_df, motifNames, 50)
+
+# %%
+classify(vame_df, top10_features.keys(), 50)
 
 # %%
 assessmentNames = assessment_df.columns[2:]
 classify(assessment_df, assessmentNames, 50)
-classify1(assessment_df, assessmentNames, 200)
 
 #hi
 # %%
