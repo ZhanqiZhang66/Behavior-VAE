@@ -85,12 +85,12 @@ def export_data(path, entropy, split):
             row.extend(entropy[v])
             csvwriter.writerow(row)
 
-def export_data_per_motif(path, entropy):
+def export_data_per_motif(path, entropy, motif):
     with open(path, 'w') as csvfile:
         csvwriter = csv.writer(csvfile, lineterminator="\n")
         header = ['video']
         for i in range(3):
-            for j in range(10):
+            for j in range(motif):
                 header.append(str(i) + 'motif' + str(j))
         csvwriter.writerow(header)
 
@@ -141,15 +141,15 @@ mLabels = load_motif_labels(mLabelPath, videos, 27000, 3)
 vMatrices = generate_matrices(vLabels, 10, split = 3)
 dMatrices = generate_matrices(dLabels, 10, split = 3)
 hMatrices = generate_matrices(hLabels, 11, split = 3)
-#sMatrices = generate_matrices(sLabels, 400, split = 3)
-#mMatrices = generate_matrices(mLabels, 81, split = 3)
+sMatrices = generate_matrices(sLabels, 400, split = 3)
+mMatrices = generate_matrices(mLabels, 81, split = 3)
 
 #%%
-#save_tmatrices(vMatrixPath, videos, vMatrices, 3)
+save_tmatrices(vMatrixPath, videos, vMatrices, 3)
 save_tmatrices(dMatrixPath, videos, dMatrices, 3)
-#save_tmatrices(hMatrixPath, videos, hMatrices, 3)
-#save_tmatrices(sMatrixPath, videos, sMatrices, 3)
-#save_tmatrices(mMatrixPath, videos, mMatrices, 3)
+save_tmatrices(hMatrixPath, videos, hMatrices, 3)
+save_tmatrices(sMatrixPath, videos, sMatrices, 3)
+save_tmatrices(mMatrixPath, videos, mMatrices, 3)
 
 
 #%%
@@ -165,8 +165,6 @@ dEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\entropy_3_split
 hEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
 sEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
 mEntropyPath = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
-
-
 
 
 #%%
@@ -227,11 +225,11 @@ export_data(mENSPath, mENS, 3)
 
 
 # %%
-export_data_per_motif(vENSMPath, vENSM)
-export_data_per_motif(dENSMPath, dENSM)
-export_data_per_motif(hENSMPath, hENSM)
-export_data_per_motif(sENSMPath, sENSM)
-export_data_per_motif(mENSMPath, mENSM)
+export_data_per_motif(vENSMPath, vENSM, 10)
+export_data_per_motif(dENSMPath, dENSM, 10)
+export_data_per_motif(hENSMPath, hENSM, 11)
+export_data_per_motif(sENSMPath, sENSM, 400)
+export_data_per_motif(mENSMPath, mENSM, 81)
 
 
 

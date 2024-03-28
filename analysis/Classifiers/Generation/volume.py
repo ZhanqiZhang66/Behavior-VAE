@@ -8,25 +8,32 @@ import matplotlib.pyplot as plt
 from utils import load_motif_labels, count_zeros, compute_l0_entropy, effective_num_states, load_tmatrices, save_tmatrices
 
 #%%
+epoch_duration = 9000 # frames
+
+#%%
 #Behavior_VAE_data\BD25-HC25-final-May17-2023\results\BC1AASA\VAME\kmeans-10\latent_vector_BC1AASA.npy
 #np.trace(np.cov(epoch_1_latent_vector.T))
 def generate_volume(path):
     volume = {}
     for v in videos:
+        volume[v]= []
         latent = np.load(path.format(v, v))
-        volume[v] = np.trace(np.cov(latent.T))
+        for i in range(3):
+            epoch = latent[i * epoch_duration: i * epoch_duration + epoch_duration, :]
+            volume[v].append(np.trace(np.cov(epoch.T)))
     return volume
 
 # %%
 def saveVolume(path, volume):
     with open(path, 'w') as csvfile:
         csvwriter = csv.writer(csvfile, lineterminator="\n")
-        header = ['video', 'volume']
+        header = ['video', 'split0', 'split1', 'split2']
         csvwriter.writerow(header)
 
         for v in videos:
             row = [v]
-            row.append(volume[v])
+            for i in range(3):
+                row.append(volume[v][i])
             csvwriter.writerow(row)
 
 #%% config
