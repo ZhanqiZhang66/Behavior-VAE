@@ -23,6 +23,8 @@ from sklearn.model_selection import GridSearchCV, KFold
 import statsmodels.api as sm
 
 from scipy.stats import f_oneway
+from statsmodels.stats.multicomp import pairwise_tukeyhsd
+
 
 #%%
 random.seed(42)
@@ -420,6 +422,55 @@ print(f_oneway(assessment_score[0], mmaction_score[0], axis=0))
 print(f_oneway(assessment_score[1], mmaction_score[1], axis=0))
 print(f_oneway(assessment_score[2], mmaction_score[2], axis=0))
 
+
+#%%
+from sklearn import linear_model
+from sklearn.feature_selection import SequentialFeatureSelector
+
+#%%
+X = vame_df.drop('BD', axis=1)
+y = vame_df['BD']
+
+#%%
+sfs = SequentialFeatureSelector(linear_model.LogisticRegression(),
+                                k_features=67,
+                                forward=True,
+                                scoring='accuracy',
+                                cv=None)
+selected_features = sfs.fit(X, y)
+
+
+#%%
+features = []
+results = []
+for i in range(1, 67):
+    logreg = LogisticRegression()
+    selector = SequentialFeatureSelector(logreg, n_features_to_select=i, scoring='accuracy')
+    selector.fit(X, y)
+    selected_features = selector.get_support()
+    top_features = list(X.columns[selected_features])
+    features.append(top_features)
+    results.append(classify(vame_df, top_features, 100, seed)[0])
+
+#%%
+labels = np.arange(1, 67) 
+avg_res = [np.mean(x) for x in results]
+#%%
+
+plt.figure(figsize=(18, 6))
+plt.bar(labels, avg_res)
+plt.xticks(np.arange(1, 66))  # Add ticks at every 5th label (1, 6, 11, ..., 50)
+plt.show()
+
+#%%
+anova_acc = f_oneway(assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0])
+
+#%%
+samples = np.concatenate([assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0]])
+labels = ['assessment'] * 400 + ['vame'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 + ['s3d'] * 400 + ['mmaction'] * 400
+
+result = pairwise_tukeyhsd(samples, labels)
+result
 # %%
 
 """
