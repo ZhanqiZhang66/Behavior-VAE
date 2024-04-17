@@ -32,7 +32,9 @@ from analysis.Classifiers.Generation.utils import my_colormap
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+
 elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    onedrive_path = r'D:\OneDrive - UC San Diego'
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
 else:
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
@@ -56,14 +58,15 @@ show_DLC_in_room_over_time = 1 # show DLC trajectory in room
 
 #%% Define Project
 project_name = 'BD25-HC25-final-May17-2023'
+project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
-dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
+dlc_path = os.path.join(project_path,"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 model_name = 'VAME'
 path_to_file = cfg['project_path']
 
-data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 
@@ -327,8 +330,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
 print("\n Finished K-means clustering on filtered DLC data")
 # %% ===================PLOT====================
 
-
-
 #%% Umap embedding of the data
 standard_embedding = umap.UMAP(n_components=3,random_state=42).fit_transform(time_seq_hat[:300000,:])
 np.save(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\BD20-Jun5-2022\data\time-seq-umap-embed.npy',standard_embedding)
@@ -379,8 +380,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 d = np.concatenate((labels[fig_i].reshape(-1, 1), data[temp_win // 2:-temp_win // 2]), axis=1)
 
                 df = pd.DataFrame(d, columns=dlc_labels)
-
-
 
                 cmap = plt.get_cmap('tab20')
                 cividis_cmap = plt.get_cmap('cividis')
@@ -479,19 +478,74 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 axs[fig_i].set_ylim([0, 720])
 
 
+#%% plot trajectory
 
-            plt.suptitle('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
-            plt.show()
-            guigi
-            pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
-            Path(pwd).mkdir(parents=True, exist_ok=True)
-            fname = "{}-{}_{}_{}_dwell_time_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-            fname_pdf = "{}-{}_{}_{}_dwell_time_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
 
-            fig.savefig(os.path.join(pwd, fname), transparent=True)
-            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+        print(v)
 
-            # # plot keypoint transparent trajectory over time
+        data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        labels = []
+        vame_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, n_cluster, v))
+
+        dlc_cluster_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\filtered_DLC_{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                                        project_name, v,
+                                                                                                        n_cluster,
+                                                                                                        n_cluster,
+                                                                                                        v))
+
+        score_label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, v))
+        score_label[score_label < 0] = -1
+        # bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+        score_label_merged = score_label.copy()
+        score_label_merged[score_label_merged == 1] = 0
+        score_label_merged[score_label_merged == 3] = 2
+        score_label_merged[score_label_merged == 5] = 4
+        score_label_merged[score_label_merged == 7] = 6
+        # latent vector has time window of temp_win, thus is temp_win shorter than data
+        # we need to crop data to match latent vector
+        labels = [vame_label,
+                  dlc_cluster_label[temp_win // 2:-temp_win // 2],
+                  score_label,
+                  score_label_merged,
+                  ]
+
+        # a colored line plot for every body keypoint
+        for body_i in range(39, 41, 2):
+            d = np.concatenate((labels[0].reshape(-1, 1), data[temp_win // 2:-temp_win // 2]), axis=1)
+            df = pd.DataFrame(d, columns=dlc_labels)
+            x = df.iloc[:, body_i]
+            y = df.iloc[:, body_i + 1]
+            c = np.linspace(0, 1, len(x))
+            t = np.arange(0, len(x))
+            # fig, axs = plt.subplots(4, 1, figsize=(12, 12))
+            # # plot motif segmentation in three approaches [vame, dlc, score]
+            #
+            #
+            #
+
+            #
+            # plt.suptitle('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
+            # plt.show()
+            #
+            # pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
+            # Path(pwd).mkdir(parents=True, exist_ok=True)
+            # fname = "{}-{}_{}_{}_dwell_time_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            # fname_pdf = "{}-{}_{}_{}_dwell_time_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            #
+            # fig.savefig(os.path.join(pwd, fname), transparent=True)
+            # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+            #
+            # #plot keypoint transparent trajectory over time
             # fig, ax = plt.subplots(figsize=(10, 5))
             # cmap = plt.get_cmap('plasma')
             # c = np.linspace(0, 1, len(x))
@@ -512,28 +566,27 @@ for j, videos in enumerate([control_videos, BD_videos]):
             # fig.savefig(os.path.join(pwd, fname), transparent=True)
             # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-            # # plot spatial trajectory
-            # fig, ax = plt.subplots(figsize=(10, 5))
-            # img = matplotlib.image.imread(r'{}\Behavior_VAE_data\DLC raw\background.png'.format(onedrive_path))
-            # img = cv2.flip(img, 0)
-            # room = ax.imshow(img)
-            # cmap = plt.get_cmap('plasma')
-            # c = np.linspace(0, 1, len(x))
-            # scatter_plt = ax.scatter(x, y, c=c, cmap=cmap, s=30)
-            # ax.set_ylim([0, 540])
-            # ax.set_xlim([0, 720])
-            # ax.grid(False)
-            # ax.axis('off')
-            # ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
-            # fig.colorbar(scatter_plt)
-            # fig.show()
-            # pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
-            # fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-            # fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
-            # fig.savefig(os.path.join(pwd, fname), transparent=True)
-            # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+            # plot spatial trajectory
+            fig, ax = plt.subplots(figsize=(10, 5))
+            img = matplotlib.image.imread(r'{}\Behavior_VAE_data\DLC raw\background.png'.format(onedrive_path))
+            img = cv2.flip(img, 0)
+            room = ax.imshow(img)
+            cmap = plt.get_cmap('plasma')
+            c = np.linspace(0, 1, len(x))
+            scatter_plt = ax.scatter(x, y, c=c, cmap=cmap, s=30, alpha=0.4)
+            ax.set_ylim([0, 540])
+            ax.set_xlim([0, 720])
+            ax.grid(False)
+            ax.axis('off')
+            ax.set_title('{}-{}-{}'.format(group[j], v, df.columns[body_i][:-1]))
+            fig.colorbar(scatter_plt)
+            fig.show()
 
-            plt.close('all')
+            pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
+            fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
+            fig.savefig(os.path.join(pwd, fname), transparent=True)
+            fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 # %% Plot latent trajactory overlapping motif segmentations [three approaches]
 from sklearn.decomposition import PCA

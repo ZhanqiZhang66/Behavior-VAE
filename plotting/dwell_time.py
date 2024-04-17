@@ -23,10 +23,11 @@ if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
+    onedrive_path = r'D:\OneDrive - UC San Diego'
 else:
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
 #%%
-b_o_colors = ['#1f77b4', '#ff7f0e']
+b_o_colors = ['#1f77b4', '#DE3163']
 #%%
 project_name = 'BD25-HC25-final-May17-2023'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
@@ -36,7 +37,7 @@ n_cluster = 10
 n_scores = 11
 model_name = 'VAME'
 
-data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub\Behavior-VAE\data\video-information.csv')
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 score_bahavior_names =["sit",  "stand",  "walk",  "lie",  "interact", "wear"]
@@ -382,8 +383,8 @@ for k in range(3):
         columns=['motif frequency','is_BD','state'])
     w = n_cluster/10 * 6
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-    violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
-                   data=ds, orient="v", palette=sns.color_palette("tab10"))
+    violin = sns.violinplot(y="motif frequency", x='state',hue='is_BD',
+                   data=ds, orient="v", palette=sns.color_palette("tab10"),split=True)
     handles = violin.legend_.legendHandles
     dict_name = {0.0:'CP', 1.0:'BD'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]

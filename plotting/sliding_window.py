@@ -119,8 +119,11 @@ if not load_precomputed_sliding_window:
         github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
     #%%
     project_name = 'BD25-HC25-final-May17-2023'
+    project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
     config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
                                                            project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+    cfg = read_config(config)
+    dlc_path = os.path.join(project_path, "videos", "\pose_estimation")
     cfg = read_config(config)
     dlc_path = os.path.join(cfg['project_path'], "videos",
                             "\pose_estimation")  # dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
@@ -134,7 +137,7 @@ if not load_precomputed_sliding_window:
     # %%
     b_o_colors = ['#1f77b4', '#ff7f0e']
 
-    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
     control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
     BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
     score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
@@ -212,7 +215,6 @@ if not load_precomputed_sliding_window:
 
 
     #%%
-
     pca = PCA(n_components=3)
     for j, videos in enumerate([control_videos, BD_videos]):
         for i in range(len(videos)):
@@ -325,14 +327,16 @@ if not load_precomputed_sliding_window:
     ds_new.to_csv(pwd)
 #%%
 if load_precomputed_sliding_window:
+    project_name = 'BD25-HC25-final-May17-2023'
     pwd = r'{}\Behavior_VAE_data\{}\data\slide_window3.csv'.format(onedrive_path, project_name)
     ds = pd.read_csv(pwd)
 
-    project_name = 'BD25-HC25-final-May17-2023'
+
+    project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
     config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
                                                            project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
     cfg = read_config(config)
-    dlc_path = os.path.join(cfg['project_path'], "videos",
+    dlc_path = os.path.join(project_path, "videos",
                             "\pose_estimation")  # dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
     n_cluster = 10
     model_name = 'VAME'
@@ -340,7 +344,7 @@ if load_precomputed_sliding_window:
     n_cluster = 10
     d_latent = 10
 
-    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
     control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
     BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
     score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
@@ -412,7 +416,7 @@ for i in range(num_metrics):
 
 #plt.suptitle("sliding window")
 
-#%% Plot per patient L0 metrics
+/0#%% Plot per patient L0 metrics
 num_metrics = 1
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)

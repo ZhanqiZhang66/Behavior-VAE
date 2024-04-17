@@ -33,6 +33,8 @@ else:
 b_o_colors = ['#1f77b4', '#ff7f0e']
 #%%
 project_name = 'BD25-HC25-final-May17-2023'
+project_name = 'BD25-HC25-final-May17-2023'
+project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
 dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
@@ -40,7 +42,7 @@ n_cluster = 10
 n_scores = 11
 model_name = 'VAME'
 
-data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data()
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 score_bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
@@ -206,7 +208,11 @@ def effective_num_states(transtion_m):
     effective_num_every_state = []
     for row in transtion_m:
         sum_p_ij = np.sum(np.square(row))
-        effective_num_every_state.append(1/sum_p_ij)
+        if sum_p_ij == 0:
+            effective_num_every_state.append(0)
+
+        else:
+            effective_num_every_state.append(1 / sum_p_ij)
     effective_num_avg = np.mean(effective_num_every_state)
     return effective_num_every_state, effective_num_avg
 
@@ -625,6 +631,7 @@ pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path
 Path(pwd).mkdir(parents=True, exist_ok=True)
 fname = "L0-measures.png"
 fname_pdf = "L0-measures.pdf"
+
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
@@ -816,9 +823,37 @@ for epoch in range(1,4):
     fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+#%% Effective number stat test
+def statistic(x, y, axis):
+    return np.mean(x, axis=axis) - np.mean(y, axis=axis)
+
+for epoch in range(1, 4):
+    effective_num_usage_ = np.asarray(eval("Epoch{}_Effective_num_every_state".format(epoch)))
+
+    print("Epoch {}".format(epoch))
+    for i in range(n_cluster):
+        CP = np.vstack(effective_num_usage_[0])[:,i]
+        BD = np.vstack(effective_num_usage_[1])[:,i]
+        s = stats.ttest_ind(CP, BD, nan_policy='omit')
+        print("motif  {}\n 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
+
+        corr_HAM_D_score = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
+        corr_YMRS_score = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
+        print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
+        print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
+
+        # only correlate with BD list
+        corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
+        corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
+        print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
+        print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
+
+
 
 #%% Effective number box
 for epoch in range(1, 4):
+
+
     effective_num_usage_ = eval("Epoch{}_Effective_num_every_state".format(epoch))
     effective_num_usage_cat = np.asarray(effective_num_usage_)
     states = []
@@ -859,6 +894,7 @@ for epoch in range(1, 4):
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Plot Box of effective numbers three bars
 w = n_cluster/10 * 6
+titles = ['HC', 'BD']
 for j in range(2):
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
 
@@ -885,9 +921,9 @@ for j in range(2):
         columns=['motif frequency', 'epoch', 'state'])
 
 
-    violin = sns.boxplot(y="motif frequency", x='state',hue='epoch',
+    boxplot = sns.boxplot(y="motif frequency", x='state',hue='epoch',
                    data=ds, orient="v", color=b_o_colors[j])
-    handles = violin.legend_.legendHandles
+    handles = boxplot.legend_.legendHandles
     dict_name = {1.0:'Epoch 1', 2.0:'Epoch 2', 3.0:'Epoch 3'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
     #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
@@ -899,10 +935,11 @@ for j in range(2):
     ax.set_xlabel('Motifs(States)')
     sns.despine()
     fig.show()
+
     pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
-    fname = "effective_number-three_epochs.png".format()
-    fname_pdf = "effective_number-three_epochs.pdf".format()
+    fname = "effective_number-three_epochs_{}.png".format(titles[j])
+    fname_pdf = "effective_number-three_epochs_{}.pdf".format(titles[j])
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Epoch-wise transition plot
@@ -1104,15 +1141,128 @@ for i in range(n_subject_in_population * 2):
         fig.savefig(os.path.join(pwd, fname), transparent=True)
         fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
+#%% Plot ENAS of two population on same box plot
+w = n_cluster/10 * 6
+titles = ['HC', 'BD']
+box_count = 1
+fig, ax = plt.subplots(1, 1, figsize=(w, 4))
+for epoch in range(3):
+    epoch_num = epoch + 1
+    for j in range(2):
+
+        effective_num_usage_1 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(epoch_num))[j])
+        effective_num_usage_2 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(2))[j])
+        effective_num_usage_3 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(3))[j])
 
 
+    label1 = np.ones(len(effective_num_usage_1[:, :].T.flatten()))
+    label2 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 2
+    label3 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 3
+    states = []
+    for i in range(n_cluster):
+        states.append([i]*n_subject_in_population)
+    states = np.asarray(states).flatten()
+    sns.set_style('white')
 
 
+    ds = pd.DataFrame(np.concatenate((
+        np.concatenate((effective_num_usage_1[:, :].T.flatten(), effective_num_usage_2[:, :].T.flatten(), effective_num_usage_3[:, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((label1, label2, label3), 0).reshape(-1, 1),
+        np.concatenate((states, states,states), 0).reshape(-1, 1)), 1),
+        columns=['motif frequency', 'epoch', 'state'])
 
 
+    violin = sns.boxplot(y="motif frequency", x='state',hue='epoch',
+                   data=ds, orient="v", color=b_o_colors[j])
+    handles = violin.legend_.legendHandles
+    dict_name = {1.0:'Epoch 1', 2.0:'Epoch 2', 3.0:'Epoch 3'}
+    labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
+    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    x = np.arange(n_cluster)
+    ax.legend(handles, labels)
+    ax.set_xticks(x)
+    ax.set_ylim([0, 8])
+    ax.set_title('effective number over {} motifs'.format( n_cluster))
+    ax.set_xlabel('Motifs(States)')
+    sns.despine()
+    fig.show()
+    pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
+    Path(pwd).mkdir(parents=True, exist_ok=True)
+    fname = "effective_number-three_epochs_{}.png".format(titles[j])
+    fname_pdf = "effective_number-three_epochs_{}.pdf".format(titles[j])
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+#%%
 
 
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import matplotlib as mpl
+import os
+from pathlib import Path
 
+# Sample data (replace with your actual data)
+n_cluster = 10  # Example value, replace with actual number of clusters
+n_subject_in_population = 25  # Example value, replace with actual number of subjects
+w = 12  # Example width for the figure
 
+# Concatenate data for all epochs
+concatenated_data = []
+for epoch in range(1, 4):
+    effective_num_usage_ = eval("Epoch{}_Effective_num_every_state".format(epoch))
+    effective_num_usage_cat = np.asarray(effective_num_usage_)
+    states = np.repeat(np.arange(n_cluster), n_subject_in_population)
+    CP_idx = np.zeros(n_subject_in_population * n_cluster)
+    BD_idx = np.ones(n_subject_in_population * n_cluster)
+    epoch_idx_CP = np.ones(n_subject_in_population * n_cluster) * (epoch * 2 - 1)
+    epoch_idx_BD = np.ones(n_subject_in_population * n_cluster) * (epoch * 2)
 
+    ds = pd.DataFrame(np.concatenate((
+        np.concatenate((effective_num_usage_cat[0, :, :].T.flatten(), effective_num_usage_cat[1, :, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
+        np.concatenate((states, states), 0).reshape(-1, 1),
+        np.concatenate((epoch_idx_CP, epoch_idx_BD), 0).reshape(-1, 1),
+    ), 1),
+        columns=['effective number', 'is_BD', 'state', 'epoch'])
 
+    concatenated_data.append(ds)
+
+# Concatenate all DataFrames
+ds_concat = pd.concat(concatenated_data)
+
+# Plot the boxplot
+fig = plt.figure(figsize=(w, 4))
+blue_color = sns.color_palette("tab10")[0]
+orange_color = sns.color_palette("tab10")[1]
+light_blue_color = mpl.colors.to_rgba(blue_color, 0.5)
+light_orange_color = mpl.colors.to_rgba(orange_color, 0.5)
+lighter_blue_color = mpl.colors.to_rgba(blue_color, 0.3)
+lighter_orange_color = mpl.colors.to_rgba(orange_color, 0.3)
+new_color_map = [blue_color, orange_color,
+                 light_blue_color, light_orange_color,
+                 lighter_blue_color, lighter_orange_color]
+
+ax = sns.boxplot(y="effective number", x='state', hue='epoch', data=ds_concat, orient="v", palette=new_color_map)
+
+# Set legend labels
+plt.legend(['CP', 'BD'])
+
+# Set plot properties
+plt.title('Effective number over motifs')
+plt.xlabel('Motifs (States)')
+plt.ylabel('Effective number')
+plt.ylim([0, 8])
+
+# Remove top and right spines
+sns.despine()
+
+# Show the plot
+plt.show()
+pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
+fname = "effective_number-three_epochs_together.png"
+fname_pdf = "effective_number-three_epochs_together.pdf"
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)

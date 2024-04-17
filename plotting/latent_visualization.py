@@ -22,6 +22,7 @@ from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
+from scipy.spatial import distance
 #%%
 
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
@@ -38,19 +39,22 @@ else:
 b_o_colors = ['#1f77b4', '#ff7f0e']
 #%%
 project_name = 'BD25-HC25-final-May17-2023'
-project_path = f'D:\OneDrive - UC San Diego\Behavior_VAE_data\{project_name}'
+project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
 dlc_path = os.path.join(project_path,"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 model_name = 'VAME'
-
+five_min_frame_no = int(5 * 60 * 30)
 data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=
-                                                                       r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\data\video-information.csv')
+                                                                       r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 score_bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
 n_subject_in_population = len(control_videos)
+cmap = plt.get_cmap('tab20')
+titles = ["CP", "BD"]
+pca = PCA(n_components=3)
 #%%
 titles = ["CP", "BD"]
 N = [0, 0]
@@ -60,6 +64,7 @@ Motif_usages = [[], []]
 Motif_usage_pct = [[], []]
 motif_usage_cat = [[], []]
 Latent_vectors = [[], []]
+Latent_centroids = [[], []]  # this is the mean of the latent, on d-dimension
 Latent_len = [[],[]]
 Latent_len_epoch = [[[],[]], [[],[]], [[],[]]]
 Labels = [[], []]
@@ -86,8 +91,9 @@ Epoch2_volume_per_person = [[],[]] # trace of cov(latent vector of this person)
 Epoch3_labels = [[], []]
 Epoch3_latent_vector = [[], []]
 Epoch3_volume_per_person = [[],[]] # trace of cov(latent vector of this person)
+#%% Step 1: Mean-centered the population-latent vectors for computing
 
-#%%
+# Get the latent vector of each video
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
@@ -96,13 +102,38 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
 
+        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # T x d = {10, 30}
+        latent_vector = latent_vector[: five_min_frame_no*3]
+        label = label[: five_min_frame_no*3]
+        if i == 0:
+            l = label
+            latent = latent_vector
+        else:
+            latent = np.concatenate([latent, latent_vector])
+            l = np.concatenate([l,label])
+    Latent_len[j].append(len(latent_vector))
+    Latent_vectors[j] = latent
+    Labels[j] = l
+
+# compute the mean of latent population
+for j, videos in enumerate([control_videos, BD_videos]):
+    population_latent_vector = Latent_vectors[j]
+    population_latent_vector_centroid = np.mean(population_latent_vector, axis=0)
+    Latent_centroids[j] = population_latent_vector_centroid
+
+#%% Step 2: compute overall latent motif-volume, and epoch latent motif-volume
+
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+        print("Mean-Centering {} data...".format(v))
+        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
         cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
         motif_usage = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
-
-
-
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # T x d = {10, 30}
         Latent_len[j].append(len(latent_vector))
 
         # variance of each person
@@ -112,7 +143,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         door_close_time = start_frame[v]
         start_time = door_close_time
-        five_min_frame_no = int(5 * 60 * 30)
+
         offset = 0 #int(start_time - door_close_time)
 
         epoch_1_label = label[:five_min_frame_no + offset]
@@ -126,9 +157,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
         epoch_2_motif_usage = get_motif_usage(epoch_2_label, n_cluster)
         epoch_3_motif_usage = get_motif_usage(epoch_3_label, n_cluster)
 
-        epoch_1_latent_vector = latent_vector[:five_min_frame_no + offset]
-        epoch_2_latent_vector = latent_vector[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
-        epoch_3_latent_vector = latent_vector[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+        # mean-centered epoch latent vector
+        epoch_1_latent_vector = latent_vector[:five_min_frame_no + offset] - Latent_centroids[j]
+        epoch_2_latent_vector = latent_vector[five_min_frame_no + offset: five_min_frame_no * 2 + offset] - Latent_centroids[j]
+        epoch_3_latent_vector = latent_vector[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]- Latent_centroids[j]
 
 
         Epoch1_volume_per_person[j].append(np.trace(np.cov(epoch_1_latent_vector.T)))
@@ -177,6 +209,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     N[j] = n
     Latent_vectors[j] = latent
     Labels[j] = l
+
 #%% see if we can decode position latent
 #%% Population-wise plot
 #%% plot PCA embedding for each video, all states
@@ -725,8 +758,6 @@ fig.savefig(os.path.join(pwd, fname_pdf),transparent=True)
 
 
 #%% Helper function
-import numpy as np
-
 # https://stackoverflow.com/questions/22867620/putting-arrowheads-on-vectors-in-a-3d-plot
 class Arrow3D(FancyArrowPatch):
     def __init__(self, xs, ys, zs, *args, **kwargs):
@@ -740,9 +771,16 @@ class Arrow3D(FancyArrowPatch):
 
         return np.min(zs)
 #%%   PCs of each epoch, showing distance between epochs
-
+cmap = plt.get_cmap('tab20')
 # First, Get the centroids of each epoch of each population
-centroids = [] #epoch 1 control epoch 1 hp state 0, #epoch 1 control epoch 1 hp state 1, ....epoch 2 control epoch 2 bd, ...
+centroids = []
+# epoch 1 hc state 0,    idx = 0
+# epoch 1 hc state 1,    idx = 1
+# epoch 1 hc state 2,    idx = 2
+# ....
+# epoch 1 bd state 0, ...idx = 10
+# epoch 1 bd state 1, ...idx = 11
+# epoch x pop j state g, ...idx = n_cluster * (j + (epoch-1)*2) + g
 centroids_se = []
 latent_all = [] # epoch 1 control, epoch 1 hp, epoch 2 control, epoch 2 bd, ...
 label_all = []
@@ -750,9 +788,10 @@ counter = 0
 for epoch in range(1, 4):
     # for each population, get the centroid of each epoch
     for j, videos in enumerate([control_videos, BD_videos]):
-
+        # (9000x25) x d = 225000 x d
         latent_vec_epoch_pop = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
         len_latent_each_epoch_each_population = len(latent_vec_epoch_pop)
+        # 225000 x 1
         label_epoch_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
 
         latent_all.append(latent_vec_epoch_pop) # (6, 225000, 10)
@@ -769,7 +808,7 @@ subject_latent_len = [[],[]]
 
 latent_all_ = np.vstack(latent_all) # (1350000, 10)
 label_all_ = np.hstack(label_all) # (1350000, 1)
-centroids = np.squeeze(np.array(centroids)) # (60 x 10)
+centroids = np.squeeze(np.array(centroids)) # (60 x 10)  (3 epoch x 2 pop x 10 motif) x d
 
 # Next, I need to get the embedding of all latent in all three epochs
 components_pop = pca.fit_transform(np.vstack((latent_all_, centroids))) # (1350060, 10)
@@ -777,13 +816,16 @@ labels_pop = list(label_all_)
 centroids_labels = [-1] * 60
 labels_pop += centroids_labels
 
-colors = ['k', 'r']
-# for 10 states, plot the distance between epochs, within and between groups
+colors = b_o_colors
+#%% Now, for each of the 10 motifs/states,
+# plot the mahalanobis distance between epochs, within and between populations
+
 state_epoch_centroids = []
 state_epoch_volume = []
 len_latent_epoch = [0, 5*30*60, 10*30*60, 15*30*60]
 len_latent = [0, len(Latent_vectors[0])]
 
+# for each motif
 for g in range(10):
     fig_pca_per_state = plt.figure(figsize=(15, 10))
     ax = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
@@ -797,29 +839,31 @@ for g in range(10):
         for j, videos in enumerate([control_videos, BD_videos]):
             latent_vec = latent_all[count]  # (1, 225000, 10)
             label_vec = label_all[count] # (1, 225000)
-
-
-
             latent_vec_this_population = latent_vec
+
             # Then, I need to get the index of state g in label_vec
+            # this is the latent vector of this population, in this motif, of this epoch
             idx = np.where(label_vec == g)[0]
             latent_vec_g = latent_vec[idx, :]
             print('latent_vec_g shape: {}'.format(latent_vec_g.shape))
 
             # Now need to find these idx  in the (1350000, 10) array of latent_vec,
-            # which is how many len_latent_epoch[225000] is away from the start
+            # which is how many len_latent_epoch of size [225000] is away from the start
             idx_g = len_latent_each_epoch_each_population * count + idx
             count += 1
 
             centroid_idx = n_cluster * (j + (epoch-1)*2) + g
             transformed_centroid = components_pop[centroid_idx-60, :]
-            epoch_centroids[j].append(transformed_centroid) # centroid of HP epoch 1, centroid of BD epoch 1, ...
+            epoch_centroids[j].append(transformed_centroid)
+            # centroid of motif 1 epoch 1 HC,
+            # centroid of motif 1 epoch 1 BD , ...
 
             principalDf_pop = pd.DataFrame(data=components_pop)
             principalDf_pop_labels = pd.DataFrame(data=labels_pop)
             finalDf = pd.concat([principalDf_pop, principalDf_pop_labels], axis=1)
             finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
             if len(latent_vec_g):
+                # motif-volume of this population, this epoch
                 KK = np.cov(latent_vec_g.T)
                 volume_of_group = np.trace(KK)
                 epoch_volume[j].append(volume_of_group)
@@ -837,7 +881,7 @@ for g in range(10):
                        marker='.',
                        s=200,
                        label='{} epoch{} centroid'.format(titles[j], epoch),zorder=1)
-        # plot distance between centroids between groups in same epoch
+        # plot distance between centroids between groups in same epoch in PC space
         xs = [epoch_centroids[0][epoch - 1][0], epoch_centroids[1][epoch - 1][0]]
         ys = [epoch_centroids[0][epoch - 1][1], epoch_centroids[1][epoch - 1][1]]
         zs = [epoch_centroids[0][epoch - 1][2], epoch_centroids[1][epoch - 1][2]]
@@ -853,7 +897,7 @@ for g in range(10):
     zs = [epoch_centroids[0][0][2], epoch_centroids[0][1][2]]
     a = Arrow3D(xs, ys,
                 zs, mutation_scale=20,
-                lw=3, arrowstyle="-|>", color="k")
+                lw=3, arrowstyle="-|>", color='k')
     ax.add_artist(a)
     # ax.plot3D(xs, ys, zs, linestyle='-', linewidth=5, color='k',
     #         label='HP centroid between epoch 1 and 2',zorder=1)
@@ -862,7 +906,7 @@ for g in range(10):
     zs = [epoch_centroids[0][1][2], epoch_centroids[0][2][2]]
     a = Arrow3D(xs, ys,
                 zs, mutation_scale=20,
-                lw=3, arrowstyle="-|>", color="k")
+                lw=3, arrowstyle="-|>", color='k')
     ax.add_artist(a)
 
     xs = [epoch_centroids[1][0][0], epoch_centroids[1][1][0]]
@@ -870,14 +914,14 @@ for g in range(10):
     zs = [epoch_centroids[1][0][2], epoch_centroids[1][1][2]]
     a = Arrow3D(xs, ys,
                 zs, mutation_scale=20,
-                lw=3, arrowstyle="-|>", color="r")
+                lw=3, arrowstyle="-|>", color='r')
     ax.add_artist(a)
     xs = [epoch_centroids[1][1][0], epoch_centroids[1][2][0]]
     ys = [epoch_centroids[1][1][1], epoch_centroids[1][2][1]]
     zs = [epoch_centroids[1][1][2], epoch_centroids[1][2][2]]
     a = Arrow3D(xs, ys,
                 zs, mutation_scale=20,
-                lw=3, arrowstyle="-|>", color="r")
+                lw=3, arrowstyle="-|>", color='r')
     ax.add_artist(a)
 
     ax.set_title("PCs of {}-State-{} \n".format(titles[j], g))
@@ -912,12 +956,16 @@ for g in range(10):
 #%% for 10 states, plot the distance between groups in each epoch
 
 # First, Get the centroids of each epoch of each population in latent space.
-centroids = []  # epoch 1 control, epoch 1 hp state 0, epoch 1 control epoch 1 hp state 1, ....epoch 2 control epoch 2 bd, ...
-# [list of len 60 x 10] (3 epoch x 2 population x 10 cluster) x (10 mean on zdim)
+centroids = []
+
+# epoch 1 control, epoch 1 bd state 0,
+# epoch 1 control, epoch 1 bd state 1, ....
+# epoch 2 control, epoch 2 bd, ...
+# [list of len 60 x 10] (3 epoch x 2 population x 10 motifs) x (10 mean on zdim)
 
 centroids_subjects = []
-# [list of len 1500 x 10] (2 pop x 25 sub/pop x 3 epoch x 10 cluster) x 10 zdim
-latent_all = []  # epoch 1 control, epoch 1 hp, epoch 2 control, epoch 2 bd, ...
+# [list of len 1500 x 10] (2 pop x 25 sub/pop x 3 epoch x 10 motifs) x 10 zdim
+latent_all = []  # epoch 1 control, epoch 1 bd, epoch 2 control, epoch 2 bd, ...
 label_all = []
 counter = 0
 for epoch in range(1, 4):
@@ -961,7 +1009,7 @@ for epoch in range(1, 4):
                     centroid_sub = np.zeros((10,1))
                 centroids_subjects.append(centroid_sub)
 
-
+#%% Here, we are getting the centroid of each subject's latent vector, per motif, per epoch
 subject_end = [[0], [0]]
 subject_latent_len = [[], []]
 
@@ -978,25 +1026,28 @@ centroids_subjects = np.squeeze(np.array(centroids_subjects))  # (60 x 10) #
 components_sub = pca.fit_transform(np.vstack((latent_all_, centroids_subjects)))  # (1351500, 3)
 components_sub = components_sub[-1500:]
 
-state_epoch_sub_centroids = np.zeros((3, 2, 25, 10, 3)) # 3 epoch x 2 pop x 25 sub/pop x 10 stat x 3pc
+state_epoch_sub_centroids_PC = np.zeros((3, 2, 25, 10, 3)) # 3 epoch x 2 pop x 25 sub/pop x 10 stat x 3pc
+state_epoch_sub_centroids = np.zeros((3, 2, 25, 10, 10)) # 3 epoch x 2 pop x 25 sub/pop x 10 stat x d
 count1 = 0
 for epoch in range(1, 4):
     for j, videos in enumerate([control_videos, BD_videos]):
         for sub in range(n_subject_in_population):
             for g in range(n_cluster):
                 if  not np.any(centroids_subjects[count1]):
-                    state_epoch_sub_centroids[epoch - 1, j, sub, g, :] = [nan, nan, nan]
+                    state_epoch_sub_centroids_PC[epoch - 1, j, sub, g, :] = [nan, nan, nan]
+                    state_epoch_sub_centroids[epoch - 1, j, sub, g, :] = [np.nan] * 10
                 else:
-                    state_epoch_sub_centroids[epoch-1, j, sub, g, :] = components_sub[count1]
+                    state_epoch_sub_centroids_PC[epoch-1, j, sub, g, :] = components_sub[count1]
+                    state_epoch_sub_centroids[epoch-1, j, sub, g, :] = centroids_subjects[count1]
                 count1 += 1
 
-
+#%% for 10 states, plot the distance between epochs, within and between groups
 labels_pop = list(label_all_)
 centroids_labels = [-1] * 60 #placeholder
 labels_pop += centroids_labels
 
 colors = ['k', 'r']
-# for 10 states, plot the distance between epochs, within and between groups
+
 state_epoch_centroids = []
 state_epoch_volume = []
 state_volume_ = []
@@ -1005,15 +1056,18 @@ len_latent = [0, len(Latent_vectors[0])]
 
 for g in range(10):
     epoch_centroids_per_subject = np.zeros((2, n_subject_in_population, 3)) # 2 pop x 25 subject each pop x 3 epoch
-    epoch_centroids = [[], []]  # 2 x 3
+    epoch_centroids = [[], []]  # 2 x 10
+    epoch_centroids_in_PC = [[], []]  # 2 x 3
     epoch_volume = [[], []]
     markers = ['o', '^', 'D']
     alphas = [0.4, 0.7, 1]
     count = 0
     idx_g = np.where(label_all_ == g)[0]
     latent_vec_all_epoch = latent_all_[idx_g, :]
-    nK_g = latent_vec_all_epoch.T @ latent_vec_all_epoch
-    volume_of_group = np.trace(nK_g)
+    # old normalization method (not used)
+    # nK_g = latent_vec_all_epoch.T @ latent_vec_all_epoch
+    # volume_of_group = np.trace(nK_g)
+    volume_of_group = np.trace(np.cov(latent_vec_all_epoch.T))
     state_volume_.append(volume_of_group)
 
     for epoch in range(1, 4):
@@ -1039,8 +1093,14 @@ for g in range(10):
             centroid_idx = n_cluster * (j + (epoch - 1) * 2) + g
             # the last 60 elements of this list embedding of the centroids (60 x 3)
             # = (3 epoch x 2 population x 10 cluster) x pc3
+
             transformed_centroid = components_pop[centroid_idx - 60, :]
-            epoch_centroids[j].append(transformed_centroid)
+
+            # the centroids coordinate in PC space
+            epoch_centroids_in_PC[j].append(transformed_centroid)
+            # the centroid coordinate in latent space
+            epoch_centroids[j].append(centroids[centroid_idx])
+            # in the order of
             # [centroid of HP epoch 1, ...]
             # [centroid of BD epoch 1, ...]
 
@@ -1049,8 +1109,8 @@ for g in range(10):
             finalDf = pd.concat([principalDf_pop, principalDf_pop_labels], axis=1)
             finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
             if len(latent_vec_g):
-                ng_K1 = latent_vec_g.T @ latent_vec_g
-                volume_of_group_epoch = np.trace(ng_K1)
+                #ng_K1 = latent_vec_g.T @ latent_vec_g volume_of_group_epoch = np.trace(ng_K1)
+                volume_of_group_epoch = np.trace(np.cov(latent_vec_g.T))
                 epoch_volume[j].append(volume_of_group_epoch)
                 # Plot latent swarms
                 ax.plot3D(components_pop[idx_g, 0], components_pop[idx_g, 1], components_pop[idx_g, 2],
@@ -1062,24 +1122,22 @@ for g in range(10):
             # plot centroid
             ax.scatter3D(transformed_centroid[0], transformed_centroid[1], transformed_centroid[2],
                          norm=plt.Normalize(vmin=0, vmax=9),
-                         color=colors[j],
+                         color=b_o_colors[j],
                          marker='.',
                          s=200,
                          label='{} epoch{} centroid'.format(titles[j], epoch), zorder=1)
         # plot distance between centroids between groups in same epoch
-        xs = [epoch_centroids[0][epoch - 1][0], epoch_centroids[1][epoch - 1][0]]
-        ys = [epoch_centroids[0][epoch - 1][1], epoch_centroids[1][epoch - 1][1]]
-        zs = [epoch_centroids[0][epoch - 1][2], epoch_centroids[1][epoch - 1][2]]
+        xs = [epoch_centroids_in_PC[0][epoch - 1][0], epoch_centroids_in_PC[1][epoch - 1][0]]
+        ys = [epoch_centroids_in_PC[0][epoch - 1][1], epoch_centroids_in_PC[1][epoch - 1][1]]
+        zs = [epoch_centroids_in_PC[0][epoch - 1][2], epoch_centroids_in_PC[1][epoch - 1][2]]
         ax.plot3D(xs, ys, zs, linewidth=3, linestyle='--',
-                  color='m', label='epoch{}centroid between BD-HP'.format(epoch), zorder=1)
-
-
-
+                  color='k', label='epoch{}centroid between BD-HP'.format(epoch), zorder=1)
 
         ax.set_title("PCs of {}-State-{}-Epoch-{} \n".format(titles[j], g, epoch))
         ax.set_xlabel('PC 1')
         ax.set_ylabel('PC 2')
         ax.set_zlabel('PC 3')
+
         # make simple, bare axis lines through space:
         # xAxisLine = ((np.min(components_pop[:, 0]), np.max(components_pop[:, 0])), (0, 0), (0, 0))
         # ax.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
@@ -1100,9 +1158,9 @@ for g in range(10):
         pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "PCs of State {}-epoch{}-centroid.png".format(g, epoch)
-        #fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
+        fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
         fname_pdf = "PCs of State {}-epoch{}-centroid.pdf".format(g, epoch)
-        #fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+        fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
     state_epoch_centroids.append(epoch_centroids)
     state_epoch_volume.append(epoch_volume)
 # state_epoch_centroids = []
@@ -1195,7 +1253,7 @@ for state in range(n_cluster):
     epoch_volume = state_epoch_volume[state] # 30 x 2 x 3
     epoch_volume_list = [[],[]]
     epoch_volume_normalize_list = [[], []]
-    d_zit_t_minus_BD = []
+    d_zit_t_minus_BD = [] # distance of motif i between time t (epoch 2), and time t-1 (epoch 1) in BD
     d_zit_t_minus_HP = []
     d_zit_t_minus_BD_new = []
     d_zit_t_minus_HP_new = []
@@ -1204,17 +1262,29 @@ for state in range(n_cluster):
     d_zit_BD_HP_list = []
     for epoch in range(1,4):
         x = [0, 1, 2]
-        d_zit_BD_HP = np.linalg.norm(this_state_centroids[0][epoch -1] - this_state_centroids[1][epoch -1])/ (state_volume[state])
-        d_zit_BD_mean = np.nanmean(state_epoch_sub_centroids[epoch - 1, 1, :, state], axis=0)  # 3 epoch x 2 pop x 25 sub/pop x 10 stat x 3pc
-        d_zit_HP_mean = np.nanmean(state_epoch_sub_centroids[epoch - 1, 0, :, state], axis=0)  # 3 epoch x 2 pop x 25 sub/pop x 10 stat x 3pc
+        d_zit_BD_HP = distance.mahalanobis(this_state_centroids[0][epoch -1].reshape(1, -1),
+                                           this_state_centroids[1][epoch -1].reshape(1, -1), latent_all_)
+        #np.linalg.norm(this_state_centroids[0][epoch -1] - this_state_centroids[1][epoch -1])/ (state_volume[state])
+        d_zit_BD_mean = np.nanmean(state_epoch_sub_centroids[epoch - 1, 1, :, state], axis=0)  # 3 epoch x 2 pop x 25 sub/pop x 10 stat x d
+        d_zit_HP_mean = np.nanmean(state_epoch_sub_centroids[epoch - 1, 0, :, state], axis=0)  # 3 epoch x 2 pop x 25 sub/pop x 10 stat x d
 
-        d_zit_BD_HP_test = np.linalg.norm(d_zit_BD_mean - d_zit_HP_mean)/ (state_volume[state])
+        d_zit_BD_HP_test = distance.mahalanobis(d_zit_BD_mean.reshape(1, -1),
+                                                d_zit_HP_mean.reshape(1, -1), latent_all_)
+        #np.linalg.norm(d_zit_BD_mean - d_zit_HP_mean)/ (state_volume[state])
+        # TODO: how to get standard deviation of the mean
         d_zit_BD_HP_se_test  = np.std((d_zit_BD_mean - d_zit_HP_mean)/state_volume[state])/np.sqrt(3)
 
         d_zit_BD_HP_list.append(d_zit_BD_HP)
         if epoch <= 2:
-            d_zit_t_minus_HP.append( np.linalg.norm(this_state_centroids[0][epoch] - this_state_centroids[0][epoch - 1]) / state_volume[state])
-            d_zit_t_minus_BD.append( np.linalg.norm(this_state_centroids[1][epoch] - this_state_centroids[1][epoch - 1]) / state_volume[state])
+            d_zit_t_minus_HP.append( distance.mahalanobis(this_state_centroids[0][epoch].reshape(1, -1),
+                                                          this_state_centroids[0][epoch - 1].reshape(1, -1),
+                                                          latent_all_))
+            d_zit_t_minus_BD.append( distance.mahalanobis(this_state_centroids[1][epoch].reshape(1, -1),
+                                                          this_state_centroids[1][epoch - 1].reshape(1, -1),
+                                                          latent_all_))
+
+            # d_zit_t_minus_HP.append( np.linalg.norm(this_state_centroids[0][epoch] - this_state_centroids[0][epoch - 1]) / state_volume[state])
+            # d_zit_t_minus_BD.append( np.linalg.norm(this_state_centroids[1][epoch] - this_state_centroids[1][epoch - 1]) / state_volume[state])
 
             d_BD = []
             d_HP = []
@@ -1222,12 +1292,19 @@ for state in range(n_cluster):
                 if np.isnan(state_epoch_sub_centroids[epoch, 1, sub, state]).all() or np.isnan(state_epoch_sub_centroids[epoch-1, 1, sub, state]).all():
                     d_BD.append(nan)
                 else:
-                    d_BD.append(np.linalg.norm((state_epoch_sub_centroids[epoch, 1, sub, state] - state_epoch_sub_centroids[epoch - 1, 1, sub, state])/(state_volume[state])))
+                    # d_BD.append(np.linalg.norm((state_epoch_sub_centroids[epoch, 1, sub, state] - state_epoch_sub_centroids[epoch - 1, 1, sub, state])/(state_volume[state])))
+                    d_BD.append(distance.mahalanobis((state_epoch_sub_centroids[epoch, 1, sub, state].reshape(1,-1),
+                                                state_epoch_sub_centroids[epoch - 1, 1, sub, state].reshape(1,-1),
+                                                     latent_all_)))
             for sub in range(25):
                 if np.isnan(state_epoch_sub_centroids[epoch, 0, sub, state]).all() or np.isnan(state_epoch_sub_centroids[epoch-1, 0, sub, state]).all():
                     d_HP.append(nan)
                 else:
-                    d_HP.append(np.linalg.norm((state_epoch_sub_centroids[epoch, 0, sub,state] - state_epoch_sub_centroids[epoch - 1, 0, sub, state])/(state_volume[state])))
+                    d_HP.append(distance.mahalanobis((state_epoch_sub_centroids[epoch, 0, sub, state].reshape(1,-1),
+                                                state_epoch_sub_centroids[epoch - 1, 0, sub, state].reshape(1,-1),
+                                              latent_all_)))
+
+                    #d_HP.append(np.linalg.norm((state_epoch_sub_centroids[epoch, 0, sub,state] - state_epoch_sub_centroids[epoch - 1, 0, sub, state])/(state_volume[state])))
 
             #TODO:is this right??? does not equal line 1216
             d_zit_t_minus_BD_mean = np.nanmean(d_BD)# 3 epoch x 2 pop x 25 sub/pop x 10 stat x 3pc
@@ -1250,7 +1327,7 @@ for state in range(n_cluster):
         epoch_volume_normalize_list[0].append(epoch_volume[0][epoch-1]/state_volume_[state])
         epoch_volume_normalize_list[1].append(epoch_volume[1][epoch - 1]/state_volume_[state])
 
-    axes[0].plot(x, d_zit_BD_HP_list, '-o', color='m', markersize=10)
+    axes[0].plot(x, d_zit_BD_HP_list, '-o', color='k', markersize=10)
     axes[0].set_xticks(x)
     axes[0].set_title("State {} distance between BD and HP centroids".format(state))
     axes[0].grid(False)

@@ -21,12 +21,24 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import GridSearchCV, KFold
 
 import statsmodels.api as sm
-
 from scipy.stats import f_oneway
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
+from sklearn import linear_model
+from sklearn.feature_selection import SequentialFeatureSelector
 
-
-#%%
+#%% Path
+if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
+    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
+    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+    data_path = rf"C:\Users\zhanq\OneDrive - UC San Diego\SURF"
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+    github_path = r'D:\OneDrive - UC San Diego\GitHub'
+    onedrive_path = r'D:\OneDrive - UC San Diego'
+    data_path = rf"D:\OneDrive - UC San Diego\SURF"
+else:
+    github_path = r'C:\Users\kiet\OneDrive - UC San Diego\GitHub'
+    data_path = rf"C:\Users\kiet\OneDrive - UC San Diego\SURF"
+#%% Data Path
 random.seed(42)
 videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", 
                   "BC1ANWI", "BC1ASKA", "BC1ATKU", "BC1BRBU", "BC1BRPO", "BC1BRSC", "BC1CERO", "BC1CISI", 
@@ -35,64 +47,63 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
                   "BC1LESA", "BC1LOKE", "BC1LOMI", "BC1LUOR", "BC1LUSE", "BC1MAMA", "BC1MEMA", "BC1MISE", 
                   "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
 
+random_seed = 14
+diagnostic_path = rf"{data_path}\scaled_diagnostic_data.csv"
+assessment_score_path = rf"{data_path}\assessment_scores_seed_{random_seed}"
 
-diagnostic_path = r"C:\Users\kietc\SURF\jack-data\scaled_diagnostic_data.csv"
-assessment_score_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\assessment_scores_seed_{}"
-
-vame_motif_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
-vame_ens_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_3_split.csv'
+vame_motif_path = rf"{data_path}\VAME\motif_usage_overall.csv"
+vame_ens_path = rf'{data_path}\VAME\ens_3_split.csv'
 # ens per motif
-vame_ensm_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\ens_per_motif_3_split.csv'
-vame_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\entropy_3_split.csv'
-vame_count_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\count_3_split.csv'
-vame_volume_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
-vame_feature_selection_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\feature_selection.csv"
-vame_score_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\scores_seed_{}"
+vame_ensm_path = rf'{data_path}\VAME\ens_per_motif_3_split.csv'
+vame_entropy_path = rf'{data_path}\VAME\entropy_3_split.csv'
+vame_count_path = rf'{data_path}\VAME\count_3_split.csv'
+vame_volume_path = rf"{data_path}\VAME\volume.csv"
+vame_feature_selection_path = rf"{data_path}\VAME\feature_selection.csv"
+vame_score_path = rf"{data_path}\VAME\scores_seed_{random_seed}"
 
-dlc_motif_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\motif_usage_overall.csv"
-dlc_ens_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\ens_3_split.csv'
+dlc_motif_path = rf"{data_path}\DLC\motif_usage_overall.csv"
+dlc_ens_path = rf'{data_path}\DLC\ens_3_split.csv'
 # ens per motif
-dlc_ensm_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\ens_per_motif_3_split.csv'
-dlc_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\entropy_3_split.csv'
-dlc_score_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\scores_seed_{}"
+dlc_ensm_path = rf'{data_path}\DLC\ens_per_motif_3_split.csv'
+dlc_entropy_path = rf'{data_path}\DLC\entropy_3_split.csv'
+dlc_score_path = rf"{data_path}\DLC\scores_seed_{random_seed}"
 
-hbpm_motif_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
-hbpm_ens_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_3_split.csv'
+hbpm_motif_path = rf"{data_path}\hBPM\motif_usage_overall.csv"
+hbpm_ens_path = rf'{data_path}\hBPM\ens_3_split.csv'
 # ens per motif
-hbpm_ensm_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\ens_per_motif_3_split.csv'
-hbpm_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\entropy_3_split.csv'
-hbpm_count_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\count_3_split.csv'
-hbpm_score_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\scores_seed_{}"
+hbpm_ensm_path = rf'{data_path}\hBPM\ens_per_motif_3_split.csv'
+hbpm_entropy_path = rf'{data_path}\hBPM\entropy_3_split.csv'
+hbpm_count_path = rf'{data_path}\hBPM\count_3_split.csv'
+hbpm_score_path = rf"{data_path}\hBPM\scores_seed_{random_seed}"
 
-s3d_motif_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
-s3d_ens_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_3_split.csv'
+s3d_motif_path = rf"{data_path}\S3D\motif_usage_overall.csv"
+s3d_ens_path = rf'{data_path}\S3D\ens_3_split.csv'
 # ens per motif
-s3d_ensm_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\ens_per_motif_3_split.csv'
-s3d_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\entropy_3_split.csv'
-s3d_count_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\count_3_split.csv'
-s3d_score_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\scores_seed_{}"
+s3d_ensm_path = rf'{data_path}\S3D\ens_per_motif_3_split.csv'
+s3d_entropy_path = rf'{data_path}\S3D\entropy_3_split.csv'
+s3d_count_path = rf'{data_path}\S3D\count_3_split.csv'
+s3d_score_path = rf"{data_path}\S3D\scores_seed_{random_seed}"
 
-mmaction_motif_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
-mmaction_ens_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_3_split.csv'
+mmaction_motif_path = rf"{data_path}\MMAction\motif_usage_overall.csv"
+mmaction_ens_path = rf'{data_path}\MMAction\ens_3_split.csv'
 # ens per motif
-mmaction_ensm_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\ens_per_motif_3_split.csv'
-mmaction_entropy_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\entropy_3_split.csv'
-mmaction_count_path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\count_3_split.csv'
-mmaction_score_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\scores_seed_{}"
+mmaction_ensm_path = rf'{data_path}\MMAction\ens_per_motif_3_split.csv'
+mmaction_entropy_path = rf'{data_path}\MMAction\entropy_3_split.csv'
+mmaction_count_path = rf'{data_path}\MMAction\count_3_split.csv'
+mmaction_score_path = rf"{data_path}\MMAction\scores_seed_{random_seed}"
 
+export_path = rf"{data_path}\Classification\{random_seed}"
+export_result_path =  rf"{data_path}\Classification\{random_seed}"
 
-export_path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
-export_result_path =  r"C:\Users\kietc\OneDrive - UC San Diego\SURF\Classification\{}"
-
-ensm_s2 = ['ens_s2_m0', 'ens_s2_m1', 'ens_s2_m2', 'ens_s2_m3', 'ens_s2_m4',
-        'ens_s2_m5', 'ens_s2_m6', 'ens_s2_m7', 'ens_s2_m8', 'ens_s2_m9']
-ensm_s0 = ['ens_s0_m0', 'ens_s0_m1', 'ens_s0_m2', 'ens_s0_m3', 'ens_s0_m4',
-        'ens_s0_m5', 'ens_s0_m6', 'ens_s0_m7', 'ens_s0_m8', 'ens_s0_m9']
+ensm_epoch3 = ['ens_epoch3_m0', 'ens_epoch3_m1', 'ens_epoch3_m2', 'ens_epoch3_m3', 'ens_epoch3_m4',
+        'ens_epoch3_m5', 'ens_epoch3_m6', 'ens_epoch3_m7', 'ens_epoch3_m8', 'ens_epoch3_m9']
+ensm_epoch1 = ['ens_epoch1_m0', 'ens_epoch1_m1', 'ens_epoch1_m2', 'ens_epoch1_m3', 'ens_epoch1_m4',
+        'ens_epoch1_m5', 'ens_epoch1_m6', 'ens_epoch1_m7', 'ens_epoch1_m8', 'ens_epoch1_m9']
 ensm_diff = ['ens_diff_m0', 'ens_diff_m1', 'ens_diff_m2', 'ens_diff_m3', 'ens_diff_m4',
         'ens_diff_m5', 'ens_diff_m6', 'ens_diff_m7', 'ens_diff_m8', 'ens_diff_m9']
 
 
-#%%
+#%% Classifier
 def classify(df, features, max_iter, seed):
     X = df[features]
     y = df['BD']
@@ -127,60 +138,67 @@ def classify(df, features, max_iter, seed):
     print('Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
     return [acc, pre, rec]
 
-# Feature Selection using ANOVA F-value
-# https://medium.com/@redwaneaitouammi/7-feature-selection-and-dimensionality-reduction-part-2-python-example-a4be6675193d
-# https://www.kaggle.com/code/yoshifumimiya/feature-selection-using-anova
-# num_feature = n - 0 gives all features, otherwise n number of features
-def feature_selection(X, y, feature_names, num_feature=0):
-    selector = SelectKBest(score_func=f_classif)
-    selector.fit_transform(X, y)
-    plt.figure(figsize=(30, 10))
-    sns.barplot(x=feature_names, y=selector.scores_)
-    plt.xticks(rotation=45)
-    plt.show()
-    if num_feature > len(selector.scores_) or num_feature == 0:
-        top_index = np.argsort(selector.scores_)[:][::-1]
-    else:
-        top_index = np.argsort(selector.scores_)[-num_feature:][::-1]
-    top = {}
-    for i in top_index:
-        top[feature_names[i]] = selector.scores_[i]
-    return top
+# Feature Selection
+#     X = vame_df.drop('BD', axis=1)
+#     y = vame_df['BD']
+#
+#     lgr = linear_model.LogisticRegression()
+#     sfs = SequentialFeatureSelector(lgr,
+#                                     n_features_to_select="auto",
+#                                     tol=-0.02,
+#                                     direction="backward",
+#                                     scoring='accuracy',
+#                                     cv=4,
+#                                     n_jobs=5)
+#     selected_features = sfs.fit(X, y)
+#     selected_features_list = selected_features.get_support()
+#     top_features = list(X.columns[selected_features_list])
+#     print(top_features)
+#     print(f"selected {len(top_features)}  out of {np.shape(X)[1]} features")
+def feature_selection(X, y, tol=-0.02):
+    lgr = linear_model.LogisticRegression()
+    sfs = SequentialFeatureSelector(lgr,
+                                    n_features_to_select="auto",
+                                    tol=tol, # a hyperparameter that gives < half of all features
+                                    direction="backward",
+                                    scoring='accuracy',
+                                    cv=4,
+                                    n_jobs=5)
+    selector = sfs.fit(X, y)
+    selected_features_list = selector.get_support()
+    selected_features = list(X.columns[selected_features_list])
+    print(f"selected: {selected_features}")
+    print(f"selected {len(selected_features)} out of {np.shape(X)[1]} features")
+    return selected_features
 
-# %%
-"""
-PANDA 🐼
-"""
-#%% 
+#%% Reading assessment data
+
 assessment_df = pd.read_csv(diagnostic_path)
 assessment_df.drop('gender', axis=1, inplace=True)
 bd_df = assessment_df[['video', 'BD']]
+#%% Reading VAME data
 
-"""
-VAME
-"""
-#%%
-# Motif
+# Motif dwell time
 vame_motif_df = pd.read_csv(vame_motif_path)
 vame_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else x, inplace=True)
 
-# ENS average between motif
+# ENS(transition matrix)
 vame_ens_df = pd.read_csv(vame_ens_path)
 vame_ens_df.rename(columns=lambda x: f'ens_s{x[5]}' if 'split' in x else x, inplace=True)
 
-# ENS per motif
+# ENS(each row of motif in transition matrix)
 vame_ensm_df = pd.read_csv(vame_ensm_path)
 vame_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
-# Entropy
+# Entropy of transition matrix
 vame_entropy_df = pd.read_csv(vame_entropy_path)
-vame_entropy_df.rename(columns=lambda x: f'ent_s{x[5]}' if 'split' in x else x, inplace=True)
+vame_entropy_df.rename(columns=lambda x: f'entropy_s{x[5]}' if 'split' in x else x, inplace=True)
 
-# Count
+# Count of zeros in transition matrix
 vame_count_df = pd.read_csv(vame_count_path)
 vame_count_df.rename(columns=lambda x: f'cnt_s{x[5]}' if 'split' in x else x, inplace=True)
 
-#Volume
+# Volume of each latent vector
 vame_volume_df = pd.read_csv(vame_volume_path)
 vame_volume_df.rename(columns=lambda x: f'vol_s{x[5]}' if 'split' in x else x, inplace=True)
 
@@ -192,17 +210,14 @@ vame_df = pd.merge(vame_df, vame_count_df, on='video')
 vame_df = pd.merge(vame_df, vame_volume_df, on='video')
 vame_df.drop('video', axis=1, inplace=True)
 
-#%%
-vame_df['ens_diff'] = vame_df['ens_s2'] - vame_df['ens_s0'] 
-vame_df['ent_diff'] = vame_df['ent_s2'] - vame_df['ent_s0']
-vame_df['vol_diff_2_1'] = vame_df['vol_s2'] - vame_df['vol_s1']
-vame_df['vol_diff_1_0'] = vame_df['vol_s1'] - vame_df['vol_s0']
-vame_df['vol_diff_2_0'] = vame_df['vol_s2'] - vame_df['vol_s0']
+vame_df['ens_diff'] = vame_df['ens_epoch3'] - vame_df['ens_epoch1']
+vame_df['entropy_diff'] = vame_df['entropy_epoch3'] - vame_df['entropy_epoch1']
+vame_df['vol_diff_2_1'] = vame_df['vol_epoch3'] - vame_df['vol_epoch2']
+vame_df['vol_diff_1_0'] = vame_df['vol_epoch2'] - vame_df['vol_epoch1']
+vame_df['vol_diff_2_0'] = vame_df['vol_epoch3'] - vame_df['vol_epoch1']
 
-#%%
 for i,v in enumerate(ensm_diff):
-    vame_df[v] = vame_df[ensm_s2[i]] - vame_df[ensm_s0[i]]
-
+    vame_df[v] = vame_df[ensm_epoch3[i]] - vame_df[ensm_epoch1[i]]
 
 #%%
 """
@@ -222,7 +237,7 @@ dlc_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x els
 
 # Entropy
 dlc_entropy_df = pd.read_csv(dlc_entropy_path)
-dlc_entropy_df.rename(columns=lambda x: f'ent_s{x[5]}' if 'split' in x else x, inplace=True)
+dlc_entropy_df.rename(columns=lambda x: f'entropy_s{x[5]}' if 'split' in x else x, inplace=True)
 
 dlc_df = pd.merge(bd_df, dlc_motif_df, on='video')
 dlc_df = pd.merge(dlc_df, dlc_ens_df, on='video')
@@ -230,11 +245,11 @@ dlc_df = pd.merge(dlc_df, dlc_ensm_df, on='video')
 dlc_df = pd.merge(dlc_df, dlc_entropy_df, on='video')
 dlc_df.drop('video', axis=1, inplace=True)
 
-dlc_df['ens_diff'] = dlc_df['ens_s2'] - dlc_df['ens_s0'] 
-dlc_df['ent_diff'] = dlc_df['ent_s2'] - dlc_df['ent_s0']
+dlc_df['ens_diff'] = dlc_df['ens_epoch3'] - dlc_df['ens_epoch1']
+dlc_df['entropy_diff'] = dlc_df['entropy_epoch3'] - dlc_df['entropy_epoch1']
 
 for i,v in enumerate(ensm_diff):
-    dlc_df[v] = dlc_df[ensm_s2[i]] - dlc_df[ensm_s0[i]]
+    dlc_df[v] = dlc_df[ensm_epoch3[i]] - dlc_df[ensm_epoch1[i]]
 
 
 #%%
@@ -247,7 +262,7 @@ hbpm_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') els
 
 # ENS average between motif
 hbpm_ens_df = pd.read_csv(hbpm_ens_path)
-hbpm_ens_df.rename(columns=lambda x: f'ens_s{x[5]}' if 'split' in x else x, inplace=True)
+hbpm_ens_df.rename(columns=lambda x: f'ens_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
 
 # ENS per motif
 hbpm_ensm_df = pd.read_csv(hbpm_ensm_path)
@@ -255,7 +270,7 @@ hbpm_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x el
 
 # Entropy
 hbpm_entropy_df = pd.read_csv(hbpm_entropy_path)
-hbpm_entropy_df.rename(columns=lambda x: f'ent_s{x[5]}' if 'split' in x else x, inplace=True)
+hbpm_entropy_df.rename(columns=lambda x: f'entropy_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
 
 hbpm_df = pd.merge(bd_df, hbpm_motif_df, on='video')
 hbpm_df = pd.merge(hbpm_df, hbpm_ens_df, on='video')
@@ -263,20 +278,19 @@ hbpm_df = pd.merge(hbpm_df, hbpm_ensm_df, on='video')
 hbpm_df = pd.merge(hbpm_df, hbpm_entropy_df, on='video')
 hbpm_df.drop('video', axis=1, inplace=True)
 
-hbpm_df['ens_diff'] = hbpm_df['ens_s2'] - hbpm_df['ens_s0'] 
-hbpm_df['ent_diff'] = hbpm_df['ent_s2'] - hbpm_df['ent_s0']
+hbpm_df['ens_diff'] = hbpm_df['ens_epoch3'] - hbpm_df['ens_epoch1']
+hbpm_df['entropy_diff'] = hbpm_df['entropy_epoch3'] - hbpm_df['entropy_epoch1']
 
-#%%
-hbpm_ensm_s2 = []
-hbpm_ensm_s0 = []
+hbpm_ensm_epoch3 = []
+hbpm_ensm_epoch1 = []
 hbpm_ensm_diff = []
 for i in range(11):
-    hbpm_ensm_s2.append('ens_s2_m' + str(i))
-    hbpm_ensm_s0.append('ens_s2_m' + str(i))
-    hbpm_ensm_diff.append('ens_s2_m' + str(i))
+    hbpm_ensm_epoch3.append('ens_epoch3_m' + str(i))
+    hbpm_ensm_epoch1.append('ens_epoch3_m' + str(i))
+    hbpm_ensm_diff.append('ens_epoch3_m' + str(i))
 
 for i,v in enumerate(ensm_diff):
-    hbpm_df[v] = hbpm_df[ensm_s2[i]] - hbpm_df[ensm_s0[i]]
+    hbpm_df[v] = hbpm_df[ensm_epoch3[i]] - hbpm_df[ensm_epoch1[i]]
 
 #%%
 """
@@ -289,15 +303,15 @@ s3d_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else
 
 # ENS average between motif
 s3d_ens_df = pd.read_csv(s3d_ens_path)
-s3d_ens_df.rename(columns=lambda x: f'ens_s{x[5]}' if 'split' in x else x, inplace=True)
+s3d_ens_df.rename(columns=lambda x: f'ens_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
 
 # ENS per motif
 s3d_ensm_df = pd.read_csv(s3d_ensm_path)
-s3d_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+s3d_ensm_df.rename(columns=lambda x: f'ens_epoch{x[0]+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
 # Entropy
 s3d_entropy_df = pd.read_csv(s3d_entropy_path)
-s3d_entropy_df.rename(columns=lambda x: f'ent_s{x[5]}' if 'split' in x else x, inplace=True)
+s3d_entropy_df.rename(columns=lambda x: f'entropy_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
 
 s3d_df = pd.merge(bd_df, s3d_motif_df, on='video')
 s3d_df = pd.merge(s3d_df, s3d_ens_df, on='video')
@@ -305,20 +319,19 @@ s3d_df = pd.merge(s3d_df, s3d_ensm_df, on='video')
 s3d_df = pd.merge(s3d_df, s3d_entropy_df, on='video')
 s3d_df.drop('video', axis=1, inplace=True)
 
-s3d_df['ens_diff'] = s3d_df['ens_s2'] - s3d_df['ens_s0'] 
-s3d_df['ent_diff'] = s3d_df['ent_s2'] - s3d_df['ent_s0']
+s3d_df['ens_diff'] = s3d_df['ens_epoch3'] - s3d_df['ens_epoch1']
+s3d_df['entropy_diff'] = s3d_df['entropy_epoch3'] - s3d_df['entropy_epoch1']
 
-#%%
-s3d_ensm_s2 = []
-s3d_ensm_s0 = []
+s3d_ensm_epoch3 = []
+s3d_ensm_epoch1 = []
 s3d_ensm_diff = []
 for i in range(80):
-    s3d_ensm_s2.append('ens_s2_m' + str(i))
-    s3d_ensm_s0.append('ens_s2_m' + str(i))
-    s3d_ensm_diff.append('ens_s2_m' + str(i))
+    s3d_ensm_epoch3.append('ens_epoch3_m' + str(i))
+    s3d_ensm_epoch1.append('ens_epoch3_m' + str(i))
+    s3d_ensm_diff.append('ens_epoch3_m' + str(i))
 
 for i,v in enumerate(ensm_diff):
-    s3d_df[v] = s3d_df[ensm_s2[i]] - s3d_df[ensm_s0[i]]
+    s3d_df[v] = s3d_df[ensm_epoch3[i]] - s3d_df[ensm_epoch1[i]]
 
 #%%
 """
@@ -330,14 +343,14 @@ mmaction_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m')
 
 # ENS average between motif
 mmaction_ens_df = pd.read_csv(mmaction_ens_path)
-mmaction_ens_df.rename(columns=lambda x: f'ens_s{x[5]}' if 'split' in x else x, inplace=True)
+mmaction_ens_df.rename(columns=lambda x: f'ens_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
 
 # ENS per motif
 mmaction_ensm_df = pd.read_csv(mmaction_ensm_path)
-mmaction_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+mmaction_ensm_df.rename(columns=lambda x: f'ens_epoch{x[0]+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
 mmaction_entropy_df = pd.read_csv(mmaction_entropy_path)
-mmaction_entropy_df.rename(columns=lambda x: f'ent_s{x[5]}' if 'split' in x else x, inplace=True)
+mmaction_entropy_df.rename(columns=lambda x: f'entropy_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
 
 mmaction_df = pd.merge(bd_df, mmaction_motif_df, on='video')
 mmaction_df = pd.merge(mmaction_df, mmaction_ens_df, on='video')
@@ -345,20 +358,19 @@ mmaction_df = pd.merge(mmaction_df, mmaction_ensm_df, on='video')
 mmaction_df = pd.merge(mmaction_df, mmaction_entropy_df, on='video')
 mmaction_df.drop('video', axis=1, inplace=True)
 
-mmaction_df['ens_diff'] = mmaction_df['ens_s2'] - mmaction_df['ens_s0'] 
-mmaction_df['ent_diff'] = mmaction_df['ent_s2'] - mmaction_df['ent_s0']
+mmaction_df['ens_diff'] = mmaction_df['ens_epoch3'] - mmaction_df['ens_epoch1']
+mmaction_df['entropy_diff'] = mmaction_df['entropy_epoch3'] - mmaction_df['entropy_epoch1']
 
-#%%
-mmaction_ensm_s2 = []
-mmaction_ensm_s0 = []
+mmaction_ensm_epoch3 = []
+mmaction_ensm_epoch1 = []
 mmaction_ensm_diff = []
 for i in range(81):
-    mmaction_ensm_s2.append('ens_s2_m' + str(i))
-    mmaction_ensm_s0.append('ens_s2_m' + str(i))
-    mmaction_ensm_diff.append('ens_s2_m' + str(i))
+    mmaction_ensm_epoch3.append('ens_epoch3_m' + str(i))
+    mmaction_ensm_epoch1.append('ens_epoch3_m' + str(i))
+    mmaction_ensm_diff.append('ens_epoch3_m' + str(i))
 
 for i,v in enumerate(ensm_diff):
-    mmaction_df[v] = mmaction_df[ensm_s2[i]] - mmaction_df[ensm_s0[i]]
+    mmaction_df[v] = mmaction_df[ensm_epoch3[i]] - mmaction_df[ensm_epoch1[i]]
 
 #%% 
 X = vame_df.drop('BD', axis=1).values
@@ -423,23 +435,24 @@ print(f_oneway(assessment_score[1], mmaction_score[1], axis=0))
 print(f_oneway(assessment_score[2], mmaction_score[2], axis=0))
 
 
-#%%
-from sklearn import linear_model
-from sklearn.feature_selection import SequentialFeatureSelector
+#%% Feature Selection
 
-#%%
 X = vame_df.drop('BD', axis=1)
 y = vame_df['BD']
 
-#%%
-sfs = SequentialFeatureSelector(linear_model.LogisticRegression(),
-                                k_features=67,
-                                forward=True,
+lgr = linear_model.LogisticRegression()
+sfs = SequentialFeatureSelector(lgr,
+                                n_features_to_select="auto",
+                                tol=-0.02,
+                                direction="backward",
                                 scoring='accuracy',
-                                cv=None)
+                                cv=4,
+                                n_jobs=5)
 selected_features = sfs.fit(X, y)
-
-
+selected_features_list = selected_features.get_support()
+top_features = list(X.columns[selected_features_list])
+print(top_features)
+print(f"selected {len(top_features)}  out of {np.shape(X)[1]} features")
 #%%
 features = []
 results = []
@@ -480,14 +493,6 @@ Future Developement
 """
 Feature Selection
 """
-#%% OLS
-## use this approach for motif dwell-time vs assessment scores?
-# features = vame_entropy_df.columns[1:]
-# X = vame_df[features]
-# y = vame_df['BD']
-# X = sm.add_constant(X)
-# model = sm.OLS(y, X).fit()
-# print(model.summary())
 
 # %% Correlation coef
 correlation_matrix = vame_df.corr()

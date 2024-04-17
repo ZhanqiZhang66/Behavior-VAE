@@ -13,7 +13,24 @@ epoch_duration = 9000 # frames
 #%%
 #Behavior_VAE_data\BD25-HC25-final-May17-2023\results\BC1AASA\VAME\kmeans-10\latent_vector_BC1AASA.npy
 #np.trace(np.cov(epoch_1_latent_vector.T))
-def generate_volume(path):
+def zero_center(vector):
+  """Zero centers a vector.
+  Args:
+    vector: A NumPy array.
+  Returns:
+    A NumPy array with the same shape as `vector`, but with the mean subtracted
+    from each element.
+  """
+  mean = np.mean(vector)
+  return vector - mean
+def epoch_motif_volume(epoch_idx, epoch_duration, overall_latent_vector):
+    zero_centered_overall_latent_vector = zero_center(overall_latent_vector)
+
+    epoch_motif_latent_vector = zero_centered_overall_latent_vector[epoch_idx * epoch_duration: epoch_idx * epoch_duration + epoch_duration, :]
+    partial_latent_volume = np.trace(np.cov(epoch_motif_latent_vector.T))
+    overall_latent_volume = np.trace(np.cov(overall_latent_vector.T))
+    return partial_latent_volume/overall_latent_volume
+def compute_latent_motif_volume(path):
     volume = {}
     for v in videos:
         volume[v]= []
@@ -24,7 +41,7 @@ def generate_volume(path):
     return volume
 
 # %%
-def saveVolume(path, volume):
+def save_motif_volume(path, volume):
     with open(path, 'w') as csvfile:
         csvwriter = csv.writer(csvfile, lineterminator="\n")
         header = ['video', 'split0', 'split1', 'split2']
@@ -50,8 +67,8 @@ hc = ["BC1AASA", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE
 path = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\latent_vector_{}.npy"
 
 #%%
-volume = generate_volume(path)
+volume = compute_latent_motif_volume(path)
 # %%
 volumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
-saveVolume(volumePath, volume)
+save_motif_volume(volumePath, volume)
 # %%
