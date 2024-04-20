@@ -522,12 +522,12 @@ for i, df in enumerate(dfs):
 # #%%
 # anova_acc = f_oneway(assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0])
 #
-# #%%
-# samples = np.concatenate([assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0]])
-# labels = ['assessment'] * 400 + ['vame'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 + ['s3d'] * 400 + ['mmaction'] * 400
-#
-# result = pairwise_tukeyhsd(samples, labels)
-# result
+#%%
+samples = np.concatenate([assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0]])
+labels = ['assessment'] * 400 + ['vame'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 + ['s3d'] * 400 + ['mmaction'] * 400
+
+result = pairwise_tukeyhsd(samples, labels)
+result
 # # %%
 #
 # """
