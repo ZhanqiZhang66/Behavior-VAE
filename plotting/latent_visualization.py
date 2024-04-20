@@ -1237,9 +1237,8 @@ print(population_centroids[1, 0, 0, :])
 # inverse of the covariance matrix of the entire latent vector Z
 iv = np.linalg.inv(np.cov(latent_all_.T))
 
-#%%
-for i in range(1, n_cluster):
-    fig, axes = plt.subplots(4, 1, figsize=(5, 15))
+for i in range(n_cluster):
+    fig, axes = plt.subplots(3, 1, figsize=(5, 15))
     epoch_volume = state_epoch_volume[i]
 
     epoch_volume_list = [[],[]]
@@ -1271,21 +1270,9 @@ for i in range(1, n_cluster):
                 if np.isnan(person_centroids[epoch - 1, 1, sub_i, i, :]).all() or  np.isnan(person_centroids[epoch - 1, 0, sub_j, i, :]).all():
                     d_zit_BD_HP_between_two_person = nan
                 else:
-                    d_zit_BD_HP_between_two_person = distance.mahalanobis(BD_person_centroid.reshape(1, -1),
-                                                HP_person_centroid.reshape(1, -1), iv)
+                    d_zit_BD_HP_between_two_person = np.linalg.norm(HP_person_centroid - BD_person_centroid)
                 d_zit_BD_HP_list.append(d_zit_BD_HP_between_two_person)
         d_zit_BD_HP_[i, epoch-1, : ] = d_zit_BD_HP_list
-
-        #
-        #
-        # d_zit_BD_mean = np.nanmean(person_centroids[epoch - 1, 1, :, i, :], axis=0)   # epoch x pop x subject x 10 motifs x zdim
-        # d_zit_HP_mean = np.nanmean(person_centroids[epoch - 1, 0, :, i, :], axis=0)   # epoch x pop x subject x 10 motifs x zdim
-        #
-        # d_zit_BD_HP_test = distance.mahalanobis(d_zit_BD_mean.reshape(1, -1),
-        #                                         d_zit_HP_mean.reshape(1, -1), iv)
-        #np.linalg.norm(d_zit_BD_mean - d_zit_HP_mean)/ (state_volume[state])
-
-        # d_zit_BD_HP_se_test  = np.std((d_zit_BD_mean - d_zit_HP_mean)/state_volume[i])/np.sqrt(3)
 
         # then, compute the distance between every BD subject to same BD subject between t and t+ in each epoch, in each motif
         if epoch <= 2:
@@ -1356,23 +1343,23 @@ for i in range(1, n_cluster):
     axes[2].set_title("volume of BD and HP")
     axes[2].grid(False)
 
-    axes[3].plot(x, epoch_volume_normalize_list[0], '--o', label='BD', color=b_o_colors[1], markersize=10)
-    axes[3].plot(x, epoch_volume_normalize_list[1], '-o', label='HP', color=b_o_colors[0], markersize=10)
-    axes[3].set_xticks(x)
-    axes[3].set_title("relative volume portion/volume(state)")
-    axes[3].grid(False)
+    # axes[3].plot(x, epoch_volume_normalize_list[0], '--o', label='BD', color=b_o_colors[1], markersize=10)
+    # axes[3].plot(x, epoch_volume_normalize_list[1], '-o', label='HP', color=b_o_colors[0], markersize=10)
+    # axes[3].set_xticks(x)
+    # axes[3].set_title("relative volume portion/volume(state)")
+    # axes[3].grid(False)
 
     fig.show()
-    adfasdf
+
 
 
 
 
     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
-    fname = "State {}-centroid-distance.png".format(i)
+    fname = "State {}-centroid-distance-v2.png".format(i)
     fig.savefig(os.path.join(pwd, fname), transparent=True)
-    fname_pdf = "State {}-centroid-distance.pdf".format(i)
+    fname_pdf = "State {}-centroid-distance-v2.pdf".format(i)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 

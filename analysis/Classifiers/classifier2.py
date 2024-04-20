@@ -127,7 +127,7 @@ def classify(df, features, max_iter, seed):
 
         # cross validation
         scoring = ['accuracy', 'precision', 'recall']
-        scores = cross_validate(classifier, xtrain, ytrain, scoring = scoring, cv = 3)
+        scores = cross_validate(classifier, xtrain, ytrain, scoring=scoring, cv = 3)
 
         acc.extend(scores['test_accuracy'])
         pre.extend(scores['test_precision'])
@@ -175,7 +175,9 @@ def feature_selection(X, y, tol=-0.02):
 
 assessment_df = pd.read_csv(diagnostic_path)
 assessment_df.drop('gender', axis=1, inplace=True)
+
 bd_df = assessment_df[['video', 'BD']]
+assessment_df.drop('video', axis=1, inplace=True)
 #%% Reading VAME data
 
 # Motif dwell time
@@ -184,23 +186,23 @@ vame_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') els
 
 # ENS(transition matrix)
 vame_ens_df = pd.read_csv(vame_ens_path)
-vame_ens_df.rename(columns=lambda x: f'ens_s{x[5]}' if 'split' in x else x, inplace=True)
+vame_ens_df.rename(columns=lambda x: f'ens_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 # ENS(each row of motif in transition matrix)
 vame_ensm_df = pd.read_csv(vame_ensm_path)
-vame_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+vame_ensm_df.rename(columns=lambda x: f'ens_epoch{int(x[0])+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
 # Entropy of transition matrix
 vame_entropy_df = pd.read_csv(vame_entropy_path)
-vame_entropy_df.rename(columns=lambda x: f'entropy_s{x[5]}' if 'split' in x else x, inplace=True)
+vame_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 # Count of zeros in transition matrix
 vame_count_df = pd.read_csv(vame_count_path)
-vame_count_df.rename(columns=lambda x: f'cnt_s{x[5]}' if 'split' in x else x, inplace=True)
+vame_count_df.rename(columns=lambda x: f'cnt_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 # Volume of each latent vector
 vame_volume_df = pd.read_csv(vame_volume_path)
-vame_volume_df.rename(columns=lambda x: f'vol_s{x[5]}' if 'split' in x else x, inplace=True)
+vame_volume_df.rename(columns=lambda x: f'vol_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 vame_df = pd.merge(bd_df, vame_motif_df, on='video')
 vame_df = pd.merge(vame_df, vame_ens_df, on='video')
@@ -229,15 +231,15 @@ dlc_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else
 
 # ENS average between motif
 dlc_ens_df = pd.read_csv(dlc_ens_path)
-dlc_ens_df.rename(columns=lambda x: f'ens_s{x[5]}' if 'split' in x else x, inplace=True)
+dlc_ens_df.rename(columns=lambda x: f'ens_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 # ENS per motif
 dlc_ensm_df = pd.read_csv(dlc_ensm_path)
-dlc_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+dlc_ensm_df.rename(columns=lambda x: f'ens_epoch{int(x[0])+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
 # Entropy
 dlc_entropy_df = pd.read_csv(dlc_entropy_path)
-dlc_entropy_df.rename(columns=lambda x: f'entropy_s{x[5]}' if 'split' in x else x, inplace=True)
+dlc_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 dlc_df = pd.merge(bd_df, dlc_motif_df, on='video')
 dlc_df = pd.merge(dlc_df, dlc_ens_df, on='video')
@@ -262,15 +264,15 @@ hbpm_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') els
 
 # ENS average between motif
 hbpm_ens_df = pd.read_csv(hbpm_ens_path)
-hbpm_ens_df.rename(columns=lambda x: f'ens_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
+hbpm_ens_df.rename(columns=lambda x: f'ens_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 # ENS per motif
 hbpm_ensm_df = pd.read_csv(hbpm_ensm_path)
-hbpm_ensm_df.rename(columns=lambda x: f'ens_s{x[0]}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+hbpm_ensm_df.rename(columns=lambda x: f'ens_epoch{int(x[0])+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
 # Entropy
 hbpm_entropy_df = pd.read_csv(hbpm_entropy_path)
-hbpm_entropy_df.rename(columns=lambda x: f'entropy_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
+hbpm_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 hbpm_df = pd.merge(bd_df, hbpm_motif_df, on='video')
 hbpm_df = pd.merge(hbpm_df, hbpm_ens_df, on='video')
@@ -295,23 +297,34 @@ for i,v in enumerate(ensm_diff):
 #%%
 """
 S3D
-""" 
-
+"""
 #%%
 s3d_motif_df = pd.read_csv(s3d_motif_path)
 s3d_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else x, inplace=True)
+top_10_motifs = [23, 60, 131, 132, 133, 200, 224, 239, 327, 371]
+for column in s3d_motif_df:
+    if column.startswith('m'):
+        column_motif = int(column[5:])
+        if column_motif not in top_10_motifs:
+            s3d_motif_df.drop(column, axis=1, inplace=True)
+
 
 # ENS average between motif
 s3d_ens_df = pd.read_csv(s3d_ens_path)
-s3d_ens_df.rename(columns=lambda x: f'ens_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
+s3d_ens_df.rename(columns=lambda x: f'ens_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
+
 
 # ENS per motif
 s3d_ensm_df = pd.read_csv(s3d_ensm_path)
-s3d_ensm_df.rename(columns=lambda x: f'ens_epoch{x[0]+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
-
+s3d_ensm_df.rename(columns=lambda x: f'ens_epoch{int(x[0])+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+for column in s3d_ensm_df:
+    if column.startswith('e'):
+        column_motif = int(column[12:])
+        if column_motif not in top_10_motifs:
+            s3d_ensm_df.drop(column, axis=1, inplace=True)
 # Entropy
 s3d_entropy_df = pd.read_csv(s3d_entropy_path)
-s3d_entropy_df.rename(columns=lambda x: f'entropy_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
+s3d_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 s3d_df = pd.merge(bd_df, s3d_motif_df, on='video')
 s3d_df = pd.merge(s3d_df, s3d_ens_df, on='video')
@@ -325,14 +338,16 @@ s3d_df['entropy_diff'] = s3d_df['entropy_epoch3'] - s3d_df['entropy_epoch1']
 s3d_ensm_epoch3 = []
 s3d_ensm_epoch1 = []
 s3d_ensm_diff = []
-for i in range(80):
+for i in top_10_motifs:
     s3d_ensm_epoch3.append('ens_epoch3_m' + str(i))
     s3d_ensm_epoch1.append('ens_epoch3_m' + str(i))
     s3d_ensm_diff.append('ens_epoch3_m' + str(i))
 
-for i,v in enumerate(ensm_diff):
-    s3d_df[v] = s3d_df[ensm_epoch3[i]] - s3d_df[ensm_epoch1[i]]
-
+# for i,v in enumerate(ensm_diff):
+#     s3d_df[v] = s3d_df[ensm_epoch3[i]] - s3d_df[ensm_epoch1[i]]
+for i in top_10_motifs:
+    v = f'ens_epoch3_m{i}'
+    s3d_df[v] = s3d_df[v] - s3d_df[v]
 #%%
 """
 MMACTION
@@ -340,17 +355,28 @@ MMACTION
 #%%
 mmaction_motif_df = pd.read_csv(mmaction_motif_path)
 mmaction_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else x, inplace=True)
+top_10_motifs = [1, 6, 8, 11, 12, 14, 17, 48, 59, 80]
+for column in mmaction_motif_df:
+    if column.startswith('m'):
+        column_motif = int(column[5:])
+        if column_motif not in top_10_motifs:
+            mmaction_motif_df.drop(column, axis=1, inplace=True)
 
 # ENS average between motif
 mmaction_ens_df = pd.read_csv(mmaction_ens_path)
-mmaction_ens_df.rename(columns=lambda x: f'ens_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
+mmaction_ens_df.rename(columns=lambda x: f'ens_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 # ENS per motif
 mmaction_ensm_df = pd.read_csv(mmaction_ensm_path)
-mmaction_ensm_df.rename(columns=lambda x: f'ens_epoch{x[0]+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+mmaction_ensm_df.rename(columns=lambda x: f'ens_epoch{int(x[0])+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
+for column in mmaction_ensm_df:
+    if column.startswith('e'):
+        column_motif = int(column[12:])
+        if column_motif not in top_10_motifs:
+            mmaction_ensm_df.drop(column, axis=1, inplace=True)
 
 mmaction_entropy_df = pd.read_csv(mmaction_entropy_path)
-mmaction_entropy_df.rename(columns=lambda x: f'entropy_epoch{x[5]+1}' if 'split' in x else x, inplace=True)
+mmaction_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 mmaction_df = pd.merge(bd_df, mmaction_motif_df, on='video')
 mmaction_df = pd.merge(mmaction_df, mmaction_ens_df, on='video')
@@ -364,180 +390,198 @@ mmaction_df['entropy_diff'] = mmaction_df['entropy_epoch3'] - mmaction_df['entro
 mmaction_ensm_epoch3 = []
 mmaction_ensm_epoch1 = []
 mmaction_ensm_diff = []
-for i in range(81):
+for i in top_10_motifs:
     mmaction_ensm_epoch3.append('ens_epoch3_m' + str(i))
     mmaction_ensm_epoch1.append('ens_epoch3_m' + str(i))
     mmaction_ensm_diff.append('ens_epoch3_m' + str(i))
 
-for i,v in enumerate(ensm_diff):
-    mmaction_df[v] = mmaction_df[ensm_epoch3[i]] - mmaction_df[ensm_epoch1[i]]
+# for i,v in enumerate(ensm_diff):
+#     mmaction_df[v] = mmaction_df[ensm_epoch3[i]] - mmaction_df[ensm_epoch1[i]]
+for i in top_10_motifs:
+    v = f'ens_epoch3_m{i}'
+    mmaction_df[v] = mmaction_df[v] - mmaction_df[v]
+#%%  OLD feature selection
+# X = vame_df.drop('BD', axis=1).values
+# y = vame_df['BD'].values
+# names=vame_df.drop("BD", axis=1).columns
+# top_features = feature_selection(X, y, names)
+# top10_features = feature_selection(X, y, names, 10)
 
-#%% 
-X = vame_df.drop('BD', axis=1).values
-y = vame_df['BD'].values
-names=vame_df.drop("BD", axis=1).columns
-top_features = feature_selection(X, y, names)
-top10_features = feature_selection(X, y, names, 10)
 
-#%%
-import csv
-with open(vame_feature_selection_path,'w', newline='') as f:
-    w = csv.writer(f)
-    w.writerows(top_features.items())
+# import csv
+# with open(vame_feature_selection_path,'w', newline='') as f:
+#     w = csv.writer(f)
+#     w.writerows(top_features.items())
 
 
 #%%
 assessmentNames = assessment_df.columns[2:]
 
 # %%
-seed = random.randrange(100)  # random starting split
-
-assessment_score = classify(assessment_df, assessmentNames, 100, seed)
-np.save(assessment_score_path.format(str(seed)), np.array(assessment_score))
-
-print('VAME')
-vame_score = classify(vame_df, top10_features.keys(), 100, seed)
-np.save(vame_score_path.format(str(seed)), np.array(vame_score))
-print(f_oneway(assessment_score[0], vame_score[0], axis=0))
-print(f_oneway(assessment_score[1], vame_score[1], axis=0))
-print(f_oneway(assessment_score[2], vame_score[2], axis=0))
-
-
-print('DLC')
-dlc_score = classify(dlc_df, top10_features.keys(), 100, seed)
-np.save(dlc_score_path.format(str(seed)), np.array(dlc_score))
-print(f_oneway(assessment_score[0], dlc_score[0], axis=0))
-print(f_oneway(assessment_score[1], dlc_score[1], axis=0))
-print(f_oneway(assessment_score[2], dlc_score[2], axis=0))
-
-
-print('HBPM')
-hbpm_score = classify(hbpm_df, top10_features.keys(), 100, seed)
-np.save(hbpm_score_path.format(str(seed)), np.array(hbpm_score))
-print(f_oneway(assessment_score[0], hbpm_score[0], axis=0))
-print(f_oneway(assessment_score[1], hbpm_score[1], axis=0))
-print(f_oneway(assessment_score[2], hbpm_score[2], axis=0))
-
-
-print('S3D')
-s3d_score = classify(s3d_df, top10_features.keys(), 100, seed)
-np.save(s3d_score_path.format(str(seed)), np.array(s3d_score))
-print(f_oneway(assessment_score[0], s3d_score[0], axis=0))
-print(f_oneway(assessment_score[1], s3d_score[1], axis=0))
-print(f_oneway(assessment_score[2], s3d_score[2], axis=0))
-
-
-print('MMACTION')
-mmaction_score = classify(mmaction_df, top10_features.keys(), 100, seed)
-np.save(mmaction_score_path.format(str(seed)), np.array(mmaction_score))
-print(f_oneway(assessment_score[0], mmaction_score[0], axis=0))
-print(f_oneway(assessment_score[1], mmaction_score[1], axis=0))
-print(f_oneway(assessment_score[2], mmaction_score[2], axis=0))
+#
+#
+# assessment_score = classify(assessment_df, assessmentNames, 100, seed)
+# np.save(assessment_score_path.format(str(seed)), np.array(assessment_score))
+#
+# print('VAME')
+# vame_score = classify(vame_df, top10_features.keys(), 100, seed)
+# np.save(vame_score_path.format(str(seed)), np.array(vame_score))
+# print(f_oneway(assessment_score[0], vame_score[0], axis=0))
+# print(f_oneway(assessment_score[1], vame_score[1], axis=0))
+# print(f_oneway(assessment_score[2], vame_score[2], axis=0))
+#
+#
+# print('DLC')
+# dlc_score = classify(dlc_df, top10_features.keys(), 100, seed)
+# np.save(dlc_score_path.format(str(seed)), np.array(dlc_score))
+# print(f_oneway(assessment_score[0], dlc_score[0], axis=0))
+# print(f_oneway(assessment_score[1], dlc_score[1], axis=0))
+# print(f_oneway(assessment_score[2], dlc_score[2], axis=0))
+#
+#
+# print('HBPM')
+# hbpm_score = classify(hbpm_df, top10_features.keys(), 100, seed)
+# np.save(hbpm_score_path.format(str(seed)), np.array(hbpm_score))
+# print(f_oneway(assessment_score[0], hbpm_score[0], axis=0))
+# print(f_oneway(assessment_score[1], hbpm_score[1], axis=0))
+# print(f_oneway(assessment_score[2], hbpm_score[2], axis=0))
+#
+#
+# print('S3D')
+# s3d_score = classify(s3d_df, top10_features.keys(), 100, seed)
+# np.save(s3d_score_path.format(str(seed)), np.array(s3d_score))
+# print(f_oneway(assessment_score[0], s3d_score[0], axis=0))
+# print(f_oneway(assessment_score[1], s3d_score[1], axis=0))
+# print(f_oneway(assessment_score[2], s3d_score[2], axis=0))
+#
+#
+# print('MMACTION')
+# mmaction_score = classify(mmaction_df, top10_features.keys(), 100, seed)
+# np.save(mmaction_score_path.format(str(seed)), np.array(mmaction_score))
+# print(f_oneway(assessment_score[0], mmaction_score[0], axis=0))
+# print(f_oneway(assessment_score[1], mmaction_score[1], axis=0))
+# print(f_oneway(assessment_score[2], mmaction_score[2], axis=0))
 
 
 #%% Feature Selection
 
-X = vame_df.drop('BD', axis=1)
-y = vame_df['BD']
 
-lgr = linear_model.LogisticRegression()
-sfs = SequentialFeatureSelector(lgr,
-                                n_features_to_select="auto",
-                                tol=-0.02,
-                                direction="backward",
-                                scoring='accuracy',
-                                cv=4,
-                                n_jobs=5)
-selected_features = sfs.fit(X, y)
-selected_features_list = selected_features.get_support()
-top_features = list(X.columns[selected_features_list])
-print(top_features)
-print(f"selected {len(top_features)}  out of {np.shape(X)[1]} features")
+# X = mmaction_df.drop('BD', axis=1)
+# y = mmaction_df['BD']
+# lgr = linear_model.LogisticRegression()
+# sfs = SequentialFeatureSelector(lgr,
+#                                 n_features_to_select=15,
+#                                 direction="backward",
+#                                 scoring='accuracy',
+#                                 cv=4,
+#                                 n_jobs=5)
+# selected_features = sfs.fit(X, y)
+# selected_features_list = selected_features.get_support()
+# top_features = list(X.columns[selected_features_list])
+# print(top_features)
+# print(f"selected {len(top_features)}  out of {np.shape(X)[1]} features")
 #%%
+
+from sklearn.preprocessing import MinMaxScaler
+seed = 14  # random starting split
 features = []
 results = []
-for i in range(1, 67):
+scaler = MinMaxScaler()
+dfs = [vame_df, mmaction_df, s3d_df, dlc_df, hbpm_df]
+dfs_name =  ['vame', 'mmaction','s3d', 'dlc', 'hbpm']
+for i, df in enumerate(dfs):
+    df[df.columns] = scaler.fit_transform(df)
+    X = df.drop('BD', axis=1)
+    y = df['BD']
+    print(f"scaled data for {dfs_name[i]}")
     logreg = LogisticRegression()
-    selector = SequentialFeatureSelector(logreg, n_features_to_select=i, scoring='accuracy')
+    selector = SequentialFeatureSelector(logreg,
+                                         n_features_to_select=15,
+                                         direction="backward",
+                                         scoring='accuracy',
+                                         cv=4)
+    print(f"selecting features for {dfs_name[i]}")
     selector.fit(X, y)
     selected_features = selector.get_support()
     top_features = list(X.columns[selected_features])
+    print(f"{dfs_name[i]} selected {top_features}")
     features.append(top_features)
-    results.append(classify(vame_df, top_features, 100, seed)[0])
+    print(f"Classify selected features in {dfs_name[i]}")
+    results.append(classify(df, top_features, 100, seed)[0])
 
 #%%
-labels = np.arange(1, 67) 
-avg_res = [np.mean(x) for x in results]
-#%%
-
-plt.figure(figsize=(18, 6))
-plt.bar(labels, avg_res)
-plt.xticks(np.arange(1, 66))  # Add ticks at every 5th label (1, 6, 11, ..., 50)
-plt.show()
-
-#%%
-anova_acc = f_oneway(assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0])
-
-#%%
-samples = np.concatenate([assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0]])
-labels = ['assessment'] * 400 + ['vame'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 + ['s3d'] * 400 + ['mmaction'] * 400
-
-result = pairwise_tukeyhsd(samples, labels)
-result
-# %%
-
-"""
-Future Developement
-"""
-# %%
-"""
-Feature Selection
-"""
-
-# %% Correlation coef
-correlation_matrix = vame_df.corr()
-plt.figure(figsize=(20, 20))
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
-plt.show()
-
-# %% Lasso Regression
-# https://medium.com/@agrawalsam1997/feature-selection-using-lasso-regression-10f49c973f08
-X = vame_df.drop('BD', axis=1).values
-y = vame_df['BD'].values
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.24, random_state=42, stratify=y)
-
-# %%
-# parameters to be tested on GridSearchCV
-params = {"alpha":np.arange(0.00001, 10, 500)}
-
-# Number of Folds and adding the random state for replication
-kf=KFold(n_splits=5,shuffle=True, random_state=42)
-
-# Initializing the Model
-lasso = Lasso()
-
-# GridSearchCV with model, params and folds.
-lasso_cv=GridSearchCV(lasso, param_grid=params, cv=kf)
-lasso_cv.fit(X, y)
-print("Best Params {}".format(lasso_cv.best_params_))
-
-names=vame_df.drop("BD", axis=1).columns
-print("Column Names: {}".format(names.values))
-
-#%%
-# calling the model with the best parameter
-lasso1 = Lasso(alpha=0.00001)
-lasso1.fit(X_train, y_train)
-
-# Using np.abs() to make coefficients positive.  
-lasso1_coef = np.abs(lasso1.coef_)
-
-# plotting the Column Names and Importance of Columns. 
-plt.figure(figsize=(30, 10))
-plt.bar(names, lasso1_coef)
-plt.xticks(rotation=45)
-plt.grid()
-plt.title("Feature Selection Based on Lasso")
-plt.xlabel("Features")
-plt.ylabel("Importance")
-plt.show()
+# labels = np.arange(1, 67)
+# avg_res = [np.mean(x) for x in results]
+# #%%
+#
+# plt.figure(figsize=(18, 6))
+# plt.bar(labels, avg_res)
+# plt.xticks(np.arange(1, 66))  # Add ticks at every 5th label (1, 6, 11, ..., 50)
+# plt.show()
+#
+# #%%
+# anova_acc = f_oneway(assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0])
+#
+# #%%
+# samples = np.concatenate([assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0]])
+# labels = ['assessment'] * 400 + ['vame'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 + ['s3d'] * 400 + ['mmaction'] * 400
+#
+# result = pairwise_tukeyhsd(samples, labels)
+# result
+# # %%
+#
+# """
+# Future Developement
+# """
+# # %%
+# """
+# Feature Selection
+# """
+#
+# # %% Correlation coef
+# correlation_matrix = vame_df.corr()
+# plt.figure(figsize=(20, 20))
+# sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+# plt.show()
+#
+# # %% Lasso Regression
+# # https://medium.com/@agrawalsam1997/feature-selection-using-lasso-regression-10f49c973f08
+# X = vame_df.drop('BD', axis=1).values
+# y = vame_df['BD'].values
+# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.24, random_state=42, stratify=y)
+#
+# # %%
+# # parameters to be tested on GridSearchCV
+# params = {"alpha":np.arange(0.00001, 10, 500)}
+#
+# # Number of Folds and adding the random state for replication
+# kf=KFold(n_splits=5,shuffle=True, random_state=42)
+#
+# # Initializing the Model
+# lasso = Lasso()
+#
+# # GridSearchCV with model, params and folds.
+# lasso_cv=GridSearchCV(lasso, param_grid=params, cv=kf)
+# lasso_cv.fit(X, y)
+# print("Best Params {}".format(lasso_cv.best_params_))
+#
+# names=vame_df.drop("BD", axis=1).columns
+# print("Column Names: {}".format(names.values))
+#
+# #%%
+# # calling the model with the best parameter
+# lasso1 = Lasso(alpha=0.00001)
+# lasso1.fit(X_train, y_train)
+#
+# # Using np.abs() to make coefficients positive.
+# lasso1_coef = np.abs(lasso1.coef_)
+#
+# # plotting the Column Names and Importance of Columns.
+# plt.figure(figsize=(30, 10))
+# plt.bar(names, lasso1_coef)
+# plt.xticks(rotation=45)
+# plt.grid()
+# plt.title("Feature Selection Based on Lasso")
+# plt.xlabel("Features")
+# plt.ylabel("Importance")
+# plt.show()
