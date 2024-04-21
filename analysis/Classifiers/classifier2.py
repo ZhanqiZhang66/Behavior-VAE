@@ -400,88 +400,13 @@ for i in top_10_motifs:
 for i in top_10_motifs:
     v = f'ens_epoch3_m{i}'
     mmaction_df[v] = mmaction_df[v] - mmaction_df[v]
-#%%  OLD feature selection
-# X = vame_df.drop('BD', axis=1).values
-# y = vame_df['BD'].values
-# names=vame_df.drop("BD", axis=1).columns
-# top_features = feature_selection(X, y, names)
-# top10_features = feature_selection(X, y, names, 10)
-
-
-# import csv
-# with open(vame_feature_selection_path,'w', newline='') as f:
-#     w = csv.writer(f)
-#     w.writerows(top_features.items())
-
 
 #%%
 assessmentNames = assessment_df.columns[2:]
-
-# %%
-#
-#
-# assessment_score = classify(assessment_df, assessmentNames, 100, seed)
-# np.save(assessment_score_path.format(str(seed)), np.array(assessment_score))
-#
-# print('VAME')
-# vame_score = classify(vame_df, top10_features.keys(), 100, seed)
-# np.save(vame_score_path.format(str(seed)), np.array(vame_score))
-# print(f_oneway(assessment_score[0], vame_score[0], axis=0))
-# print(f_oneway(assessment_score[1], vame_score[1], axis=0))
-# print(f_oneway(assessment_score[2], vame_score[2], axis=0))
-#
-#
-# print('DLC')
-# dlc_score = classify(dlc_df, top10_features.keys(), 100, seed)
-# np.save(dlc_score_path.format(str(seed)), np.array(dlc_score))
-# print(f_oneway(assessment_score[0], dlc_score[0], axis=0))
-# print(f_oneway(assessment_score[1], dlc_score[1], axis=0))
-# print(f_oneway(assessment_score[2], dlc_score[2], axis=0))
-#
-#
-# print('HBPM')
-# hbpm_score = classify(hbpm_df, top10_features.keys(), 100, seed)
-# np.save(hbpm_score_path.format(str(seed)), np.array(hbpm_score))
-# print(f_oneway(assessment_score[0], hbpm_score[0], axis=0))
-# print(f_oneway(assessment_score[1], hbpm_score[1], axis=0))
-# print(f_oneway(assessment_score[2], hbpm_score[2], axis=0))
-#
-#
-# print('S3D')
-# s3d_score = classify(s3d_df, top10_features.keys(), 100, seed)
-# np.save(s3d_score_path.format(str(seed)), np.array(s3d_score))
-# print(f_oneway(assessment_score[0], s3d_score[0], axis=0))
-# print(f_oneway(assessment_score[1], s3d_score[1], axis=0))
-# print(f_oneway(assessment_score[2], s3d_score[2], axis=0))
-#
-#
-# print('MMACTION')
-# mmaction_score = classify(mmaction_df, top10_features.keys(), 100, seed)
-# np.save(mmaction_score_path.format(str(seed)), np.array(mmaction_score))
-# print(f_oneway(assessment_score[0], mmaction_score[0], axis=0))
-# print(f_oneway(assessment_score[1], mmaction_score[1], axis=0))
-# print(f_oneway(assessment_score[2], mmaction_score[2], axis=0))
-
-
-#%% Feature Selection
-
-
-# X = mmaction_df.drop('BD', axis=1)
-# y = mmaction_df['BD']
-# lgr = linear_model.LogisticRegression()
-# sfs = SequentialFeatureSelector(lgr,
-#                                 n_features_to_select=15,
-#                                 direction="backward",
-#                                 scoring='accuracy',
-#                                 cv=4,
-#                                 n_jobs=5)
-# selected_features = sfs.fit(X, y)
-# selected_features_list = selected_features.get_support()
-# top_features = list(X.columns[selected_features_list])
-# print(top_features)
-# print(f"selected {len(top_features)}  out of {np.shape(X)[1]} features")
 #%%
-
+'''
+Feature Selection
+'''
 from sklearn.preprocessing import MinMaxScaler
 seed = 14  # random starting split
 features = []
@@ -509,22 +434,25 @@ for i, df in enumerate(dfs):
     print(f"Classify selected features in {dfs_name[i]}")
     results.append(classify(df, top_features, 100, seed)[0])
 
-#%%
-# labels = np.arange(1, 67)
-# avg_res = [np.mean(x) for x in results]
-# #%%
-#
-# plt.figure(figsize=(18, 6))
-# plt.bar(labels, avg_res)
-# plt.xticks(np.arange(1, 66))  # Add ticks at every 5th label (1, 6, 11, ..., 50)
-# plt.show()
-#
-# #%%
-# anova_acc = f_oneway(assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0])
-#
-#%%
-samples = np.concatenate([assessment_score[0], vame_score[0], dlc_score[0], hbpm_score[0], s3d_score[0], mmaction_score[0]])
-labels = ['assessment'] * 400 + ['vame'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 + ['s3d'] * 400 + ['mmaction'] * 400
+df = assessment_df
+X = df.drop('BD', axis=1)
+y = df['BD']
+assessment_top_features = list(X.columns)
+features.append(assessment_top_features)
+print(f"Classify selected features in assessment ")
+results.append(classify(df, assessment_top_features, 100, seed)[0])
+
+score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{seed}"
+features_path = rf"{data_path}\all_approaches_15features_seed_{seed}"
+np.save(score_path, np.array(results))
+np.save(features_path, np.array(features))
+
+'''
+Significant Tests
+'''
+import itertools
+samples = list(itertools.chain.from_iterable(results))
+labels = ['vame'] * 400 + ['mmaction'] * 400 +  ['s3d'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 +  ['assessment'] * 400
 
 result = pairwise_tukeyhsd(samples, labels)
 result
