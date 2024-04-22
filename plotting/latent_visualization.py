@@ -24,7 +24,9 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 from scipy.spatial import distance
 #%%
-
+'''
+Paths
+'''
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
@@ -35,9 +37,15 @@ elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
 else:
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
 
-#%%
+
+'''
+Colors
+'''
 b_o_colors = ['#1f77b4', '#ff7f0e']
-#%%
+
+'''
+Load
+'''
 project_name = 'BD25-HC25-final-May17-2023'
 project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
@@ -57,6 +65,9 @@ cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
 pca = PCA(n_components=3)
 #%%
+'''
+Define Variables of interests
+'''
 titles = ["CP", "BD"]
 N = [0, 0]
 
@@ -92,7 +103,10 @@ Epoch2_volume_per_person = [[],[]] # trace of cov(latent vector of this person)
 Epoch3_labels = [[], []]
 Epoch3_latent_vector = [[], []]
 Epoch3_volume_per_person = [[],[]] # trace of cov(latent vector of this person)
-#%% Step 1: Mean-centered the population-latent vectors for computing
+#%%
+'''
+Step 1: Mean-centered the population-latent vectors for computing
+'''
 
 # Get the latent vector of each video
 for j, videos in enumerate([control_videos, BD_videos]):
@@ -123,8 +137,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
     population_latent_vector_centroid = np.mean(population_latent_vector, axis=0)
     Latent_centroids[j] = population_latent_vector_centroid
 
-#%% Step 2: compute overall latent motif-volume, and epoch latent motif-volume
-
+#%%
+'''
+Step 2: compute overall latent motif-volume, and epoch latent motif-volume
+'''
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
@@ -211,8 +227,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Latent_vectors[j] = latent
     Labels[j] = l
 
-#%% see if we can decode position latent
-#%% Population-wise plot
+#%% #TODO: see if we can decode position latent
+#%%
+'''
+Population-wise plot
+'''
 #%% plot PCA embedding for each video, all states
 
 import numpy as np
@@ -667,7 +686,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     #fig_pca.savefig(os.path.join(pwd, fname))
     #plt.close('all')
 #
-#%%
+#%% Plot volume of latent variable each epoch
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 x = np.arange(10)
@@ -755,8 +774,10 @@ fname = "{}_volume-mean.png".format(n_cluster)
 fname_pdf = "{}_volume-mean.pdf".format(n_cluster)
 fig.savefig(os.path.join(pwd, fname),transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf),transparent=True)
-#%% Epoch-wise plot
-
+#%%
+'''
+Epoch-wise plot
+'''
 
 #%% Helper function
 # https://stackoverflow.com/questions/22867620/putting-arrowheads-on-vectors-in-a-3d-plot
@@ -1239,7 +1260,7 @@ iv = np.linalg.inv(np.cov(latent_all_.T))
 
 for i in range(n_cluster):
     fig, axes = plt.subplots(3, 1, figsize=(5, 15))
-    epoch_volume = state_epoch_volume[i]
+    #epoch_volume = state_epoch_volume[i]
 
     epoch_volume_list = [[],[]]
     epoch_volume_se_list = [[],[]]
@@ -1252,28 +1273,64 @@ for i in range(n_cluster):
     se_d_zit_t_minus_BD = []
     se_d_zit_t_minus_HP = []
 
-    d_zit_BD_HP_ = np.empty((n_cluster, 3, 25*25))
-
+    d_zit_BD_HP_ = np.empty((n_cluster, 3, n_subject_in_population*n_subject_in_population))
+    d_zit_HP_HP_ = np.empty((n_cluster, 3, n_subject_in_population * n_subject_in_population))
+    d_zit_BD_BD_ = np.empty((n_cluster, 3, n_subject_in_population * n_subject_in_population))
     # first, compute the distance between every BD subject to every HP subject in each epoch, in each motif
     for epoch in range(1,4):
         epoch_volume_BD = np.nanmean(person_volumes[epoch - 1, 1, :, i])  # state_epoch_volume[i] # 10 x 2 x 3
         epoch_volume_HP = np.nanmean(person_volumes[epoch - 1, 0, :, i])
+        s_score = stats.ttest_ind(person_volumes[epoch - 1, 1, :, i], person_volumes[epoch - 1, 0, :, i], nan_policy='omit')
+
+        # print("Motif{} Epoch{} latent volume, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i, epoch, s_score.statistic, s_score.pvalue))
+
         epoch_volume_BD_se = np.nanstd(person_volumes[epoch - 1, 1, :, i]) / np.sqrt(
             n_subject_in_population)  # state_epoch_volume[i] # 10 x 2 x 3
         epoch_volume_HP_se = np.nanstd(person_volumes[epoch - 1, 0, :, i]) / np.sqrt(n_subject_in_population)
 
         d_zit_BD_HP_list = []
+        d_zit_HP_HP_list = []
+        d_zit_BD_BD_list = []
         for sub_i in range(n_subject_in_population):
-            BD_person_centroid = person_centroids[epoch - 1, 1, sub_i, i, :]
+            HP_person_centroid = person_centroids[epoch - 1, 0, sub_i, i, :]
             for sub_j in range(n_subject_in_population):
-                HP_person_centroid = person_centroids[epoch - 1, 1, sub_j, i, :]
-                if np.isnan(person_centroids[epoch - 1, 1, sub_i, i, :]).all() or  np.isnan(person_centroids[epoch - 1, 0, sub_j, i, :]).all():
+                BD_person_centroid = person_centroids[epoch - 1, 1, sub_j, i, :]
+                if np.isnan(HP_person_centroid).all() or  np.isnan(BD_person_centroid).all():
                     d_zit_BD_HP_between_two_person = nan
                 else:
                     d_zit_BD_HP_between_two_person = np.linalg.norm(HP_person_centroid - BD_person_centroid)
                 d_zit_BD_HP_list.append(d_zit_BD_HP_between_two_person)
-        d_zit_BD_HP_[i, epoch-1, : ] = d_zit_BD_HP_list
+            for sub_k in range(n_subject_in_population):
+                HP_person_2_centroid = person_centroids[epoch - 1, 0, sub_k, i, :]
+                if np.isnan(HP_person_centroid).all() or np.isnan(HP_person_2_centroid).all():
+                    d_zit_HP_HP_between_two_person = nan
+                else:
+                    d_zit_HP_HP_between_two_person = np.linalg.norm(HP_person_centroid - HP_person_2_centroid)
+                d_zit_HP_HP_list.append(d_zit_HP_HP_between_two_person)
 
+        # compute the distance between every BD subject to every BD subject in each epoch, in each motif
+        for sub_j in range(n_subject_in_population):
+            BD_person_centroid = person_centroids[epoch - 1, 1, sub_j, i, :]
+            for sub_l in range(n_subject_in_population):
+                BD_person_2_centroid = person_centroids[epoch - 1, 1, sub_l, i, :]
+                if np.isnan(BD_person_2_centroid).all() or np.isnan(BD_person_centroid).all():
+                    d_zit_BD_BD_between_two_person = nan
+                else:
+                    d_zit_BD_BD_between_two_person = np.linalg.norm(BD_person_2_centroid - BD_person_centroid)
+                d_zit_BD_BD_list.append(d_zit_BD_BD_between_two_person)
+
+        d_zit_BD_HP_[i, epoch-1, : ] = d_zit_BD_HP_list
+        d_zit_HP_HP_[i, epoch-1, : ] = d_zit_HP_HP_list
+        d_zit_BD_BD_[i, epoch-1, : ] = d_zit_BD_BD_list
+        print("Motif{} epoch {} distance between BD and HP centroids: {}".format(i, epoch, np.nanmean(d_zit_BD_HP_list)))
+        # print("Motif{} epoch {} distance between HP and HP centroids: {}".format(i, epoch, np.nanmean(d_zit_HP_HP_list)))
+        print("Motif{} epoch {} distance between BD and BD centroids: {}".format(i, epoch, np.nanmean(d_zit_BD_BD_list)))
+        s_score = stats.ttest_ind(d_zit_BD_HP_list, d_zit_HP_HP_list, nan_policy='omit')
+        # print("Motif{} Epoch{} d_zit_BD_HP -  HP-HP, 2 sample t-stat: {:.2f}, p-val: {}\n".format(i, epoch, s_score.statistic,
+        #                                                                                    s_score.pvalue))
+        s_score = stats.ttest_ind(d_zit_BD_HP_list, d_zit_BD_BD_list, nan_policy='omit')
+        print("Motif{} Epoch{} d_zit_BD_BD - HP-BD, 2 sample t-stat: {:.2f}, p-val: {}\n".format(i, epoch, s_score.statistic,
+                                                                                           s_score.pvalue))
         # then, compute the distance between every BD subject to same BD subject between t and t+ in each epoch, in each motif
         if epoch <= 2:
             d_BD = []
@@ -1313,32 +1370,41 @@ for i in range(n_cluster):
         epoch_volume_se_list[0].append(epoch_volume_HP_se)
         epoch_volume_se_list[1].append(epoch_volume_BD_se)
 
-        epoch_volume_normalize_list[0].append(epoch_volume[0][epoch-1]/state_volume_[i])
-        epoch_volume_normalize_list[1].append(epoch_volume[1][epoch - 1]/state_volume_[i])
+        # epoch_volume_normalize_list[0].append(epoch_volume[0][epoch-1]/state_volume_[i])
+        # epoch_volume_normalize_list[1].append(epoch_volume[1][epoch - 1]/state_volume_[i])
+
 
 
     d_this_epoch_zit_BD_HP = np.nanmean(d_zit_BD_HP_[i, :, : ], axis=1)
+    d_this_epoch_zit_HP_HP = np.nanmean(d_zit_HP_HP_[i, :, :], axis=1)
+
+
     se_d_this_epoch_zit_BD_HP = np.nanstd(d_zit_BD_HP_[i, :, : ], axis=1)/np.sqrt(25*25)
 
     x = [0, 1, 2]
+    x1 = [0.2, 1.2, 2.2]
     axes[0].errorbar(x, d_this_epoch_zit_BD_HP, yerr=se_d_this_epoch_zit_BD_HP, color='k', fmt='-o')
+    axes[0].set_ylim(30, 60)
     axes[0].set_xticks(x)
     axes[0].set_title("State {} distance between BD and HP centroids".format(i))
     axes[0].grid(False)
     x2 = [0, 1]
+    x3 = [0.2, 1.2]
 
     d_zit_t_minus_BD_new = np.asarray(d_zit_t_minus_BD_new)
     se_d_zit_t_minus_BD = np.asarray(se_d_zit_t_minus_BD)
     d_zit_t_minus_HP_new  = np.asarray(d_zit_t_minus_HP_new)
     se_d_zit_t_minus_HP = np.asarray(se_d_zit_t_minus_HP)
-    axes[1].errorbar(x2, d_zit_t_minus_BD_new, yerr=se_d_zit_t_minus_BD, color=b_o_colors[1], fmt='-o')
+    axes[1].errorbar(x3, d_zit_t_minus_BD_new, yerr=se_d_zit_t_minus_BD, color=b_o_colors[1], fmt='--o')
     axes[1].errorbar(x2, d_zit_t_minus_HP_new, yerr=se_d_zit_t_minus_HP, color=b_o_colors[0], fmt='-o')
+    axes[1].set_ylim(1, 4.5)
     axes[1].set_xticks(x2)
     axes[1].grid(False)
     axes[1].set_title("distance between centroids within population")
 
-    axes[2].errorbar(x, epoch_volume_list[0], yerr=epoch_volume_se_list[0], fmt='--o', label='HP', color=b_o_colors[0], markersize=10)
+    axes[2].errorbar(x1, epoch_volume_list[0], yerr=epoch_volume_se_list[0], fmt='--o', label='HP', color=b_o_colors[0], markersize=10)
     axes[2].errorbar(x, epoch_volume_list[1], yerr=epoch_volume_se_list[1], fmt='-o', label='BD', color=b_o_colors[1], markersize=10)
+    axes[2].set_ylim(0, 800)
     axes[2].set_xticks(x)
     axes[2].set_title("volume of BD and HP")
     axes[2].grid(False)
@@ -1362,6 +1428,7 @@ for i in range(n_cluster):
     fname_pdf = "State {}-centroid-distance-v2.pdf".format(i)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
+#%% Statistical tests
 
 #%%  PCs of {}-State-{}-Epoch-{}
 cmap = plt.get_cmap('tab20')

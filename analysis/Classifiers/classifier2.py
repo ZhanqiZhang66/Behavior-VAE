@@ -25,7 +25,8 @@ from scipy.stats import f_oneway
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from sklearn import linear_model
 from sklearn.feature_selection import SequentialFeatureSelector
-
+from sklearn.preprocessing import MinMaxScaler
+import itertools
 #%% Path
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -46,6 +47,7 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
                   "BC1HETR", "BC1JACL", "BC1JECO", "BC1JUPA", "BC1JUST", "BC1KEMA", "BC1LABO", "BC1LACA", 
                   "BC1LESA", "BC1LOKE", "BC1LOMI", "BC1LUOR", "BC1LUSE", "BC1MAMA", "BC1MEMA", "BC1MISE", 
                   "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
+
 
 random_seed = 14
 diagnostic_path = rf"{data_path}\scaled_diagnostic_data.csv"
@@ -407,8 +409,7 @@ assessmentNames = assessment_df.columns[2:]
 '''
 Feature Selection
 '''
-from sklearn.preprocessing import MinMaxScaler
-seed = 14  # random starting split
+
 features = []
 results = []
 scaler = MinMaxScaler()
@@ -432,7 +433,7 @@ for i, df in enumerate(dfs):
     print(f"{dfs_name[i]} selected {top_features}")
     features.append(top_features)
     print(f"Classify selected features in {dfs_name[i]}")
-    results.append(classify(df, top_features, 100, seed)[0])
+    results.append(classify(df, top_features, 100, random_seed)[0])
 
 df = assessment_df
 X = df.drop('BD', axis=1)
@@ -440,22 +441,29 @@ y = df['BD']
 assessment_top_features = list(X.columns)
 features.append(assessment_top_features)
 print(f"Classify selected features in assessment ")
-results.append(classify(df, assessment_top_features, 100, seed)[0])
+results.append(classify(df, assessment_top_features, 100, random_seed)[0])
 
-score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{seed}"
-features_path = rf"{data_path}\all_approaches_15features_seed_{seed}"
+score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}"
+features_path = rf"{data_path}\all_approaches_15features_seed_{random_seed}"
 np.save(score_path, np.array(results))
 np.save(features_path, np.array(features))
 
 '''
 Significant Tests
 '''
-import itertools
+
+score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}.npy"
+results = np.load(score_path)
 samples = list(itertools.chain.from_iterable(results))
 labels = ['vame'] * 400 + ['mmaction'] * 400 +  ['s3d'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 +  ['assessment'] * 400
 
 result = pairwise_tukeyhsd(samples, labels)
-result
+print(result)
+print(result.pvalues[4])
+print(result.pvalues[8])
+print(result.pvalues[11])
+print(result.pvalues[13])
+print(result.pvalues[14])
 # # %%
 #
 # """
