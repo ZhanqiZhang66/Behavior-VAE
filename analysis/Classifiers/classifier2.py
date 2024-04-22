@@ -181,7 +181,37 @@ assessment_df.drop('gender', axis=1, inplace=True)
 bd_df = assessment_df[['video', 'BD']]
 assessment_df.drop('video', axis=1, inplace=True)
 #%% Reading VAME data
+# %% Compute centroids of motif-volume per person, and per population
+person_centroids = np.empty(
+    (3, 2, n_subject_in_population, n_cluster, zdim))  # epoch x pop x subject x 10 motifs x zdim
+person_volumes = np.empty((3, 2, n_subject_in_population, n_cluster))
+population_centroids = np.empty((3, 2, n_cluster, zdim))
+population_volumes = np.empty((3, 2, n_cluster))
+for epoch in range(1, 4):
+    for j, videos in enumerate([control_videos, BD_videos]):
+        latent_vec_this_epoch_this_pop = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
+        label_this_epoch_this_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
+        for sub in range(n_subject_in_population):
+            latent_vec_this_epoch_this_pop_this_person = latent_vec_this_epoch_this_pop[9000 * sub: 9000 * (sub + 1)]
+            label_this_epoch_this_pop_this_person = label_this_epoch_this_pop[9000 * sub: 9000 * (sub + 1)]
+            for g in range(n_cluster):
+                idx_g = np.where(label_this_epoch_this_pop_this_person == g)[0]
+                latent_vec_this_epoch_this_pop_this_person_this_motif = latent_vec_this_epoch_this_pop_this_person[
+                    idx_g]
+                if len(latent_vec_this_epoch_this_pop_this_person_this_motif):
+                    person_centroid = np.nanmean(latent_vec_this_epoch_this_pop_this_person_this_motif, axis=0)
+                    person_volume = np.trace(np.cov(latent_vec_this_epoch_this_pop_this_person_this_motif.T))
+                else:
+                    person_centroid = np.full([zdim, ], np.nan)
+                    person_volume = 0
+                person_centroids[epoch - 1, j, sub, g, :] = person_centroid
+                person_volumes[epoch - 1, j, sub, g] = person_volume
 
+
+# Note: there is a small offset
+print(np.nanmean(person_centroids[1, 0, :, 0, :], axis=0))
+print(population_centroids[1, 0, 0, :])
+#%%
 # Motif dwell time
 vame_motif_df = pd.read_csv(vame_motif_path)
 vame_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else x, inplace=True)
