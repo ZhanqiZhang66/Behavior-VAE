@@ -38,7 +38,7 @@ elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
     data_path = rf"D:\OneDrive - UC San Diego\SURF"
 else:
     github_path = r'C:\Users\kiet\OneDrive - UC San Diego\GitHub'
-    data_path = rf"C:\Users\kiet\OneDrive - UC San Diego\SURF"
+    data_path = rf"C:\Users\kietc\OneDrive - UC San Diego\SURF"
 #%% Data Path
 random.seed(42)
 videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", 
@@ -60,6 +60,7 @@ vame_ensm_path = rf'{data_path}\VAME\ens_per_motif_3_split.csv'
 vame_entropy_path = rf'{data_path}\VAME\entropy_3_split.csv'
 vame_count_path = rf'{data_path}\VAME\count_3_split.csv'
 vame_volume_path = rf"{data_path}\VAME\volume.csv"
+vame_volume_per_motif_path = rf'{data_path}\VAME\volume_per_motif.csv'
 vame_feature_selection_path = rf"{data_path}\VAME\feature_selection.csv"
 vame_score_path = rf"{data_path}\VAME\scores_seed_{random_seed}"
 
@@ -103,6 +104,17 @@ ensm_epoch1 = ['ens_epoch1_m0', 'ens_epoch1_m1', 'ens_epoch1_m2', 'ens_epoch1_m3
         'ens_epoch1_m5', 'ens_epoch1_m6', 'ens_epoch1_m7', 'ens_epoch1_m8', 'ens_epoch1_m9']
 ensm_diff = ['ens_diff_m0', 'ens_diff_m1', 'ens_diff_m2', 'ens_diff_m3', 'ens_diff_m4',
         'ens_diff_m5', 'ens_diff_m6', 'ens_diff_m7', 'ens_diff_m8', 'ens_diff_m9']
+
+volume_per_motif_epoch3 = ['vol_epoch3_motif0', 'vol_epoch3_motif1', 'vol_epoch3_motif2', 'vol_epoch3_motif3', 
+                         'vol_epoch3_motif4', 'vol_epoch3_motif5', 'vol_epoch3_motif6', 
+                         'vol_epoch3_motif7', 'vol_epoch3_motif8', 'vol_epoch3_motif9']
+volume_per_motif_epoch1 = ['vol_epoch2_motif0', 'vol_epoch2_motif1', 
+                         'vol_epoch2_motif2', 'vol_epoch2_motif3', 'vol_epoch2_motif4', 
+                         'vol_epoch2_motif5', 'vol_epoch2_motif6', 'vol_epoch2_motif7', 
+                         'vol_epoch2_motif8', 'vol_epoch2_motif9', ]
+volume_per_motif_diff = ['vol_diff_motif0', 'vol_diff_motif1', 'vol_diff_motif2', 'vol_diff_motif3', 
+                         'vol_diff_motif4', 'vol_diff_motif5', 'vol_diff_motif6', 'vol_diff_motif7', 
+                         'vol_diff_motif8', 'vol_diff_motif9']
 
 
 #%% Classifier
@@ -180,37 +192,7 @@ assessment_df.drop('gender', axis=1, inplace=True)
 
 bd_df = assessment_df[['video', 'BD']]
 assessment_df.drop('video', axis=1, inplace=True)
-#%% Reading VAME data
-# %% Compute centroids of motif-volume per person, and per population
-person_centroids = np.empty(
-    (3, 2, n_subject_in_population, n_cluster, zdim))  # epoch x pop x subject x 10 motifs x zdim
-person_volumes = np.empty((3, 2, n_subject_in_population, n_cluster))
-population_centroids = np.empty((3, 2, n_cluster, zdim))
-population_volumes = np.empty((3, 2, n_cluster))
-for epoch in range(1, 4):
-    for j, videos in enumerate([control_videos, BD_videos]):
-        latent_vec_this_epoch_this_pop = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0)
-        label_this_epoch_this_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
-        for sub in range(n_subject_in_population):
-            latent_vec_this_epoch_this_pop_this_person = latent_vec_this_epoch_this_pop[9000 * sub: 9000 * (sub + 1)]
-            label_this_epoch_this_pop_this_person = label_this_epoch_this_pop[9000 * sub: 9000 * (sub + 1)]
-            for g in range(n_cluster):
-                idx_g = np.where(label_this_epoch_this_pop_this_person == g)[0]
-                latent_vec_this_epoch_this_pop_this_person_this_motif = latent_vec_this_epoch_this_pop_this_person[
-                    idx_g]
-                if len(latent_vec_this_epoch_this_pop_this_person_this_motif):
-                    person_centroid = np.nanmean(latent_vec_this_epoch_this_pop_this_person_this_motif, axis=0)
-                    person_volume = np.trace(np.cov(latent_vec_this_epoch_this_pop_this_person_this_motif.T))
-                else:
-                    person_centroid = np.full([zdim, ], np.nan)
-                    person_volume = 0
-                person_centroids[epoch - 1, j, sub, g, :] = person_centroid
-                person_volumes[epoch - 1, j, sub, g] = person_volume
 
-
-# Note: there is a small offset
-print(np.nanmean(person_centroids[1, 0, :, 0, :], axis=0))
-print(population_centroids[1, 0, 0, :])
 #%%
 # Motif dwell time
 vame_motif_df = pd.read_csv(vame_motif_path)
@@ -236,12 +218,16 @@ vame_count_df.rename(columns=lambda x: f'cnt_epoch{int(x[5])+1}' if 'split' in x
 vame_volume_df = pd.read_csv(vame_volume_path)
 vame_volume_df.rename(columns=lambda x: f'vol_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
+vame_volume_per_motif_df = pd.read_csv(vame_volume_per_motif_path)
+vame_volume_per_motif_df.rename(columns=lambda x: f'vol_epoch{int(x[0])+1}_motif{(x[6:])}' if 'motif' in x else x, inplace=True)
+
 vame_df = pd.merge(bd_df, vame_motif_df, on='video')
 vame_df = pd.merge(vame_df, vame_ens_df, on='video')
 vame_df = pd.merge(vame_df, vame_ensm_df, on='video')
 vame_df = pd.merge(vame_df, vame_entropy_df, on='video')
 vame_df = pd.merge(vame_df, vame_count_df, on='video')
 vame_df = pd.merge(vame_df, vame_volume_df, on='video')
+vame_df = pd.merge(vame_df, vame_volume_per_motif_df, on='video')
 vame_df.drop('video', axis=1, inplace=True)
 
 vame_df['ens_diff'] = vame_df['ens_epoch3'] - vame_df['ens_epoch1']
@@ -252,6 +238,9 @@ vame_df['vol_diff_2_0'] = vame_df['vol_epoch3'] - vame_df['vol_epoch1']
 
 for i,v in enumerate(ensm_diff):
     vame_df[v] = vame_df[ensm_epoch3[i]] - vame_df[ensm_epoch1[i]]
+
+for i,v in enumerate(volume_per_motif_diff):
+    vame_df[v] = vame_df[volume_per_motif_epoch3[i]] - vame_df[volume_per_motif_epoch1[i]]
 
 #%%
 """
