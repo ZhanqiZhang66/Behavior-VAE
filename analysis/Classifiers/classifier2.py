@@ -21,7 +21,7 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import GridSearchCV, KFold
 
 import statsmodels.api as sm
-from scipy.stats import f_oneway
+from scipy.stats import f_oneway, tukey_hsd
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from sklearn import linear_model
 from sklearn.feature_selection import SequentialFeatureSelector
@@ -218,16 +218,24 @@ vame_count_df.rename(columns=lambda x: f'cnt_epoch{int(x[5])+1}' if 'split' in x
 vame_volume_df = pd.read_csv(vame_volume_path)
 vame_volume_df.rename(columns=lambda x: f'vol_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
+#%%
 vame_volume_per_motif_df = pd.read_csv(vame_volume_per_motif_path)
+
+#%%
 vame_volume_per_motif_df.rename(columns=lambda x: f'vol_epoch{int(x[0])+1}_motif{(x[6:])}' if 'motif' in x else x, inplace=True)
 
+#%%
 vame_df = pd.merge(bd_df, vame_motif_df, on='video')
 vame_df = pd.merge(vame_df, vame_ens_df, on='video')
 vame_df = pd.merge(vame_df, vame_ensm_df, on='video')
 vame_df = pd.merge(vame_df, vame_entropy_df, on='video')
+
+#%%
 vame_df = pd.merge(vame_df, vame_count_df, on='video')
 vame_df = pd.merge(vame_df, vame_volume_df, on='video')
+#%%
 vame_df = pd.merge(vame_df, vame_volume_per_motif_df, on='video')
+#%%
 vame_df.drop('video', axis=1, inplace=True)
 
 vame_df['ens_diff'] = vame_df['ens_epoch3'] - vame_df['ens_epoch1']
@@ -239,8 +247,8 @@ vame_df['vol_diff_2_0'] = vame_df['vol_epoch3'] - vame_df['vol_epoch1']
 for i,v in enumerate(ensm_diff):
     vame_df[v] = vame_df[ensm_epoch3[i]] - vame_df[ensm_epoch1[i]]
 
-for i,v in enumerate(volume_per_motif_diff):
-    vame_df[v] = vame_df[volume_per_motif_epoch3[i]] - vame_df[volume_per_motif_epoch1[i]]
+# for i,v in enumerate(volume_per_motif_diff):
+#     vame_df[v] = vame_df[volume_per_motif_epoch3[i]] - vame_df[volume_per_motif_epoch1[i]]
 
 #%%
 """
@@ -462,10 +470,13 @@ features.append(assessment_top_features)
 print(f"Classify selected features in assessment ")
 results.append(classify(df, assessment_top_features, 100, random_seed)[0])
 
+#%%
 score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}"
 features_path = rf"{data_path}\all_approaches_15features_seed_{random_seed}"
 np.save(score_path, np.array(results))
-np.save(features_path, np.array(features))
+np.save(features_path, np.array(features, dtype=object))
+
+#%%
 
 '''
 Significant Tests
@@ -477,12 +488,31 @@ samples = list(itertools.chain.from_iterable(results))
 labels = ['vame'] * 400 + ['mmaction'] * 400 +  ['s3d'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 +  ['assessment'] * 400
 
 result = pairwise_tukeyhsd(samples, labels)
+
 print(result)
 print(result.pvalues[4])
 print(result.pvalues[8])
 print(result.pvalues[11])
 print(result.pvalues[13])
 print(result.pvalues[14])
+
+#%%
+res = tukey_hsd(results[0], results[1], results[2], results[3], results[4], results[5])
+
+#%%
+print(res)
+#%%
+print(res.pvalue)
+
+#%%
+pvalue_indices = [4, 8, 11, 13, 14]
+
+for idx in pvalue_indices:
+    # Get the p-value at the specified index and format it
+    pvalue = result.pvalues[idx]
+    formatted_pvalue = f"{pvalue:.500f}"  # Adjust the number of decimal places as needed
+    print(f"Formatted p-value at index {idx}: {formatted_pvalue}")
+
 # # %%
 #
 # """
@@ -540,3 +570,5 @@ print(result.pvalues[14])
 # plt.xlabel("Features")
 # plt.ylabel("Importance")
 # plt.show()
+
+# %%

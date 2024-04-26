@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.optimize import curve_fit
 
+
+
+
 def spatialD(x, y, n, K):
     """
     Calculate spatial d parameters for a series of locations (x, y).
