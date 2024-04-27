@@ -17,15 +17,12 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 #, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
 from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
+from plotting.get_paths import get_my_path
 #%%
-if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
-    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
-elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
-    github_path = r'D:\OneDrive - UC San Diego\GitHub'
-    onedrive_path = r'D:\OneDrive - UC San Diego'
-else:
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
 #%%
 b_o_colors = ['#1f77b4', '#DE3163']
 #%%
@@ -36,16 +33,19 @@ dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_pa
 n_cluster = 10
 n_scores = 11
 model_name = 'VAME'
+five_min_frame_no = int(5 * 60 * 30)
 
 data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
-score_bahavior_names =["sit",  "stand",  "walk",  "lie",  "interact", "wear"]
+score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
 n_subject_in_population = len(control_videos)
 #%%
 YMRS_score = []
 HAM_D_score = []
-titles = ["CP", "BD"]
+titles = ["HC", "BD"]
+matching_labels = 0
+total_label_chunks = 0
 
 Motif_usages = [[], []]
 Motif_usage_pct = [[], []]
@@ -102,6 +102,49 @@ Epoch3_motif_usage_cat_score = [[],[]]
 def get_motif_usage(label, n_cluster):
     motif_usage = np.asarray([label.tolist().count(i) for i in range(n_cluster)])
     return motif_usage
+def divide_with_delimiter(lst):
+    # Example usage:
+    #X = [1, 1, 1, 2, 2, 3, 3, 3]
+    # result =  [1, 1, 1, 0, 1, 1, 0, 1, 1, 1]
+    #
+    chunks = []
+    for i, num in enumerate(lst):
+        if i == 0 or num != lst[i - 1]:
+            chunks.append([num])
+        else:
+            chunks[-1].append(num)
+
+    result_length = sum(len(chunk) + 1 for chunk in chunks) - 1
+    result = [0] * result_length
+    index = 0
+    for chunk in chunks:
+        result[index:index + len(chunk)] = [1] * len(chunk)
+        index += len(chunk) + 1
+
+    return result
+
+def count_closest_ones(list1, list2, offset=0):
+    # Example usage:
+    # list1 = [0, 1, 1, 1, 1, 1, 1, 0, 1, 1]
+    # list2 = [1, 0, 1, 1, 1, 0, 1, 1, 1, 0]
+    # x = 2
+    # return 2
+    count = 0
+    for i, val1 in enumerate(list1):
+        if val1 == 0:
+            closest_distance = float('inf')
+            for j, val2 in enumerate(list2):
+                if val2 == 0:
+                    distance = abs(j - i)
+                    if distance <= offset:
+                        closest_distance = min(closest_distance, distance)
+            if closest_distance <= offset:
+                count += 1
+    return count
+
+
+
+
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
@@ -122,34 +165,37 @@ for j, videos in enumerate([control_videos, BD_videos]):
         score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
         # score_label = score_label[:15*60*30]
         score_label_merged = score_label.copy()
+
+        label_delimiter = divide_with_delimiter(label[:five_min_frame_no*3])
+        score_label_delimiter = divide_with_delimiter(score_label[:five_min_frame_no*3])
+        total_label_chunks += score_label_delimiter.count(0)
+        matching_chunks = count_closest_ones(divide_with_delimiter(score_label[:five_min_frame_no*3]),
+                                                 divide_with_delimiter(label[:five_min_frame_no*3]),
+                                                 offset=30)
+        print(f"{v} has {matching_chunks} matching labels between score and VAME labels")
+        matching_labels += matching_chunks
         # bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
-        score_label_merged[score_label_merged == 1] = 0 #sit
-
-        score_label_merged[score_label_merged == 2] = 1 #stand
-        score_label_merged[score_label_merged == 3] = 1 #stand
-
-        score_label_merged[score_label_merged == 4] = 2 #walk
-        score_label_merged[score_label_merged == 5] = 2 #walk
-
-        score_label_merged[score_label_merged == 6] = 3 #lie
-        score_label_merged[score_label_merged == 7] = 3 #lie
-        score_label_merged[score_label_merged == 8] = 4  # interact
-        score_label_merged[score_label_merged == 9] = 5  # wear
-
-        # motif_usage_to_plot_[:,:,0] = motif_usage_to_plot[:,:,0] + motif_usage_to_plot[:,:,1]
-        # motif_usage_to_plot_[:,:,1] = motif_usage_to_plot[:,:,2] + motif_usage_to_plot[:,:,3]
-        # motif_usage_to_plot_[:,:,2] = motif_usage_to_plot[:,:,3] + motif_usage_to_plot[:,:,4]
-        # motif_usage_to_plot_[:,:,3] = motif_usage_to_plot[:,:,5] + motif_usage_to_plot[:,:,6]
-        # motif_usage_to_plot_[:,:,4] = motif_usage_to_plot[:,:,8]
-        # motif_usage_to_plot_[:,:,5] = motif_usage_to_plot[:,:,9]
+        # score_label_merged[score_label_merged == 1] = 0 #sit
+        #
+        # score_label_merged[score_label_merged == 2] = 1 #stand
+        # score_label_merged[score_label_merged == 3] = 1 #stand
+        #
+        # score_label_merged[score_label_merged == 4] = 2 #walk
+        # score_label_merged[score_label_merged == 5] = 2 #walk
+        #
+        # score_label_merged[score_label_merged == 6] = 3 #lie
+        # score_label_merged[score_label_merged == 7] = 3 #lie
+        # score_label_merged[score_label_merged == 8] = 4  # interact
+        # score_label_merged[score_label_merged == 9] = 5  # wear
 
 
-        n_scores = 11
+
+
         score_motif_usage = get_motif_usage(score_label, n_scores)
 
         door_close_time = start_frame[v]
         start_time = start_frame[v] #start_frame.loc[v_index, 'n']
-        five_min_frame_no = int(5 * 60 * 30)
+
         offset = 0 #int(start_time - door_close_time)
 
         #---------OURS--------- concat labels, motif usage for 3 epochs
@@ -280,11 +326,20 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Motif_usage_pct_score[j] = m_score / n
     Labels_score[j] = l_control
 
+
+print(f"{matching_labels/total_label_chunks} labels are matched between score and VAME labels")
 #%% Population-wise analysis
 transition_group = ['','_ctl', '_score']
 motif_usage_cat = np.asarray(motif_usage_cat)
 motif_usage_cat_ctl = np.asarray(motif_usage_cat_ctl)
 motif_usage_cat_score = np.asarray(motif_usage_cat_score)
+diagnostic_path = rf"{data_path}\scaled_diagnostic_data.csv"
+assessment_df = pd.read_csv(diagnostic_path)
+assessment_df.drop('gender', axis=1, inplace=True)
+
+bd_df = assessment_df[['video', 'BD']]
+motif_usage_cat_s3d = pd.read_csv(rf'{data_path}\S3D\motif_usage_overall.csv')
+motif_usage_cat_s3d = pd.merge(bd_df, motif_usage_cat_s3d, on='video')
 #%% between motif paired t test and score correlation
 import permutation_test as p
 def statistic(x, y, axis):
@@ -293,20 +348,20 @@ def statistic(x, y, axis):
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 for i in range(n_cluster):
-    CP = motif_usage_cat[0,:,i].reshape(-1,1)
+    HC = motif_usage_cat[0,:,i].reshape(-1,1)
     BD = motif_usage_cat[1,:,i].reshape(-1,1)
-    s = stats.ttest_ind(CP, BD)
+    s = stats.ttest_ind(HC, BD)
     # because our statistic is vectorized, we pass `vectorized=True`
     # `n_resamples=np.inf` indicates that an exact test is to be performed
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
-    # res = p.permutation_test(BD, CP)
+    # res = p.permutation_test(BD, HC)
     print("Motif {}".format(i))
     print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s.statistic[0], s.pvalue[0]))
     # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score = scipy.stats.pearsonr(motif_usage_cat[0,:,i], HAM_D_score[:n_subject_in_population])
     corr_YMRS_score = scipy.stats.pearsonr(motif_usage_cat[0,:,i], YMRS_score[:n_subject_in_population])
-    print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0][0], corr_YMRS_score[1]))
-    print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0][0], corr_HAM_D_score[1]))
+    print("          Pearson corr YMARS-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0][0], corr_YMRS_score[1]))
+    print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0][0], corr_HAM_D_score[1]))
 
     # only correlate with BD list
     corr_HAM_D_score_BD = scipy.stats.pearsonr(motif_usage_cat[1,:,i], HAM_D_score[n_subject_in_population:])
@@ -314,20 +369,20 @@ for i in range(n_cluster):
     print("          Pearson corr YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0][0], corr_YMRS_score_BD[1]))
     print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD[0][0], corr_HAM_D_score_BD[1]))
 
-    CP_ctl = motif_usage_cat_ctl[0,:,i].reshape(-1,1)
+    HC_ctl = motif_usage_cat_ctl[0,:,i].reshape(-1,1)
     BD_ctl = motif_usage_cat_ctl[1,:,i].reshape(-1,1)
-    s_ctl = stats.ttest_ind(CP_ctl, BD_ctl)
+    s_ctl = stats.ttest_ind(HC_ctl, BD_ctl)
     # because our statistic is vectorized, we pass `vectorized=True`
     # `n_resamples=np.inf` indicates that an exact test is to be performed
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
-    # res = p.permutation_test(BD, CP)
+    # res = p.permutation_test(BD, HC)
     print(" Control \n")
     print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_ctl.statistic[0], s_ctl.pvalue[0]))
     # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[0,:,i], HAM_D_score[:n_subject_in_population])
     corr_YMRS_score_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[0,:,i], YMRS_score[:n_subject_in_population])
-    print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_ctl[0][0], corr_YMRS_score_ctl[1]))
-    print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_ctl[0][0], corr_HAM_D_score_ctl[1]))
+    print("          Pearson corr YMARS-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_ctl[0][0], corr_YMRS_score_ctl[1]))
+    print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_ctl[0][0], corr_HAM_D_score_ctl[1]))
     # only correlate with BD list
     corr_HAM_D_score_BD_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[1,:,i], HAM_D_score[n_subject_in_population:])
     corr_YMRS_score_BD_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[1,:,i], YMRS_score[n_subject_in_population:])
@@ -337,22 +392,22 @@ for i in range(n_cluster):
 #%% Scored motif between motif paired t test and score correlation
 motif_usage_cat_score = np.asarray(motif_usage_cat_score)
 for i, motif_behavior in enumerate(score_bahavior_names):
-    CP_score = motif_usage_cat_score[0, :, i].reshape(-1, 1)
+    HC_score = motif_usage_cat_score[0, :, i].reshape(-1, 1)
     BD_score = motif_usage_cat_score[1, :, i].reshape(-1, 1)
     print("Score motif  {}\n".format(motif_behavior))
-    if np.sum(CP_score) == 0 or np.sum(BD_score) == 0:
-        print("CP score of this class does not exist ", np.sum(CP_score) == 0)
+    if np.sum(HC_score) == 0 or np.sum(BD_score) == 0:
+        print("HC score of this class does not exist ", np.sum(HC_score) == 0)
         print("BD score of this class does not exist ", np.sum(BD_score) == 0)
         continue
-    s_score = stats.ttest_ind(CP_score, BD_score)
+    s_score = stats.ttest_ind(HC_score, BD_score, nan_policy='omit')
 
     print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_score.statistic[0], s_score.pvalue[0]))
     # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score_score = scipy.stats.pearsonr(motif_usage_cat_score[0, :, i], HAM_D_score[:n_subject_in_population])
     corr_YMRS_score_score = scipy.stats.pearsonr(motif_usage_cat_score[0, :, i], YMRS_score[:n_subject_in_population])
-    print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_score[0][0],
+    print("          Pearson corr YMARS-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_score[0][0],
                                                                                corr_YMRS_score_score[1]))
-    print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_score[0][0],
+    print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_score[0][0],
                                                                                corr_HAM_D_score_score[1]))
     # only correlate with BD list
     corr_HAM_D_score_BD_score = scipy.stats.pearsonr(motif_usage_cat_score[1, :, i], HAM_D_score[n_subject_in_population:])
@@ -371,14 +426,14 @@ for i in range(n_cluster):
 states = np.asarray(states).flatten()
 sns.set_style("white")
 for k in range(3):
-    CP_idx = np.zeros(n_subject_in_population * n_cluster)
+    HC_idx = np.zeros(n_subject_in_population * n_cluster)
     BD_idx = np.ones(n_subject_in_population * n_cluster)
     motif_usage_to_plot = np.array(eval("motif_usage_cat{}".format(transition_group[k])))
     motif_usage_to_plot_ = np.zeros((2, n_subject_in_population, n_cluster))
     motif_usage_to_plot_ = motif_usage_to_plot[:,:,:n_cluster]
     ds = pd.DataFrame(np.concatenate((
         np.concatenate((motif_usage_to_plot_[0,:,:].T.flatten(), motif_usage_to_plot_[1,:,:].T.flatten()), 0).reshape(-1, 1),
-        np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
+        np.concatenate((HC_idx, BD_idx), 0).reshape(-1, 1),
         np.concatenate((states, states), 0).reshape(-1, 1)), 1),
         columns=['motif frequency','is_BD','state'])
     w = n_cluster/10 * 6
@@ -386,7 +441,7 @@ for k in range(3):
     violin = sns.violinplot(y="motif frequency", x='state',hue='is_BD',
                    data=ds, orient="v", palette=sns.color_palette("tab10"),split=True)
     handles = violin.legend_.legendHandles
-    dict_name = {0.0:'CP', 1.0:'BD'}
+    dict_name = {0.0:'HC', 1.0:'BD'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
     # sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
     x = np.arange(n_cluster)
@@ -412,7 +467,7 @@ merged_states = []
 for i in range(6):
     merged_states.append([i]*n_subject_in_population)
 merged_states = np.asarray(merged_states).flatten()
-CP_idx = np.zeros(n_subject_in_population * 6)
+HC_idx = np.zeros(n_subject_in_population * 6)
 BD_idx = np.ones(n_subject_in_population * 6)
 motif_usage_to_plot = np.array(eval("motif_usage_cat{}".format(transition_group[2])))
 motif_usage_to_plot_ = np.zeros((2, n_subject_in_population, 6))
@@ -424,7 +479,7 @@ motif_usage_to_plot_[:,:,4] = motif_usage_to_plot[:,:,8]
 motif_usage_to_plot_[:,:,5] = motif_usage_to_plot[:,:,9]
 ds = pd.DataFrame(np.concatenate((
     np.concatenate((motif_usage_to_plot_[0,:,:].T.flatten(), motif_usage_to_plot_[1,:,:].T.flatten()), 0).reshape(-1, 1),
-    np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
+    np.concatenate((HC_idx, BD_idx), 0).reshape(-1, 1),
     np.concatenate((merged_states, merged_states), 0).reshape(-1, 1)), 1),
     columns=['motif frequency','is_BD','state'])
 w = 6/10 * 6
@@ -516,15 +571,16 @@ fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 for epoch in range(1, 4):
     motif_usage_ = eval("Epoch{}_motif_usage".format(epoch))
     motif_usage_control_ = eval("Epoch{}_motif_usage_ctl".format(epoch))
+    motif_usage_s3d = pd.read_csv(r'C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv')
     print("Epoch {}".format(epoch))
     for i in range(n_cluster):
-        CP = np.vstack(motif_usage_[0])[:,i]
+        HC = np.vstack(motif_usage_[0])[:,i]
         BD = np.vstack(motif_usage_[1])[:,i]
-        s = stats.ttest_ind(CP, BD, nan_policy='omit')
+        s = stats.ttest_ind(HC, BD, nan_policy='omit')
         print("motif  {}\n 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
 
-        corr_HAM_D_score = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
-        corr_YMRS_score = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
+        corr_HAM_D_score = scipy.stats.pearsonr(HC, HAM_D_score[:n_subject_in_population])
+        corr_YMRS_score = scipy.stats.pearsonr(HC, YMRS_score[:n_subject_in_population])
         print("          YMARS: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0][0], corr_YMRS_score[1]))
         print("          HAM_D: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0][0], corr_HAM_D_score[1]))
 
@@ -535,15 +591,15 @@ for epoch in range(1, 4):
         print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0][0], corr_HAM_D_score_BD[1]))
 
         print("  Control \n")
-        CP_ctl = np.vstack(motif_usage_control_[0])[:,i]
+        HC_ctl = np.vstack(motif_usage_control_[0])[:,i]
         BD_ctl = np.vstack(motif_usage_control_[1])[:,i]
-        s_ctl = stats.ttest_ind(CP_ctl, BD_ctl)
+        s_ctl = stats.ttest_ind(HC_ctl, BD_ctl)
         print(" 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_ctl.statistic, s_ctl.pvalue))
         # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
-        corr_HAM_D_score_ctl = scipy.stats.pearsonr(CP_ctl, HAM_D_score[:n_subject_in_population])
-        corr_YMRS_score_ctl = scipy.stats.pearsonr(CP_ctl, YMRS_score[:n_subject_in_population])
-        print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_ctl[0][0], corr_YMRS_score_ctl[1]))
-        print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_ctl[0][0], corr_HAM_D_score_ctl[1]))
+        corr_HAM_D_score_ctl = scipy.stats.pearsonr(HC_ctl, HAM_D_score[:n_subject_in_population])
+        corr_YMRS_score_ctl = scipy.stats.pearsonr(HC_ctl, YMRS_score[:n_subject_in_population])
+        print("          Pearson corr YMARS-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_ctl[0][0], corr_YMRS_score_ctl[1]))
+        print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_ctl[0][0], corr_HAM_D_score_ctl[1]))
 
         # only correlate with BD list
         corr_HAM_D_score_BD_ctl = scipy.stats.pearsonr(BD_ctl, HAM_D_score[n_subject_in_population:])
@@ -559,24 +615,24 @@ for epoch in range(1, 4):
     print("Epoch {}".format(epoch))
     motif_usage_cat_score = np.asarray(motif_usage_cat_score)
     for i, motif_behavior in enumerate(score_bahavior_names):
-        CP_score = np.vstack(motif_usage_score_[0])[:, i]
+        HC_score = np.vstack(motif_usage_score_[0])[:, i]
         BD_score = np.vstack(motif_usage_score_[1])[:, i]
         print(" Score motif  {}".format(motif_behavior))
-        if np.sum(CP_score) == 0 or np.sum(BD_score) == 0:
+        if np.sum(HC_score) == 0 or np.sum(BD_score) == 0:
             print(" ")
-            # print(np.sum(CP_score) == 0)
+            # print(np.sum(HC_score) == 0)
             # print(np.sum(BD_score) == 0)
 
             continue
-        s_score = stats.ttest_ind(CP_score, BD_score)
+        s_score = stats.ttest_ind(HC_score, BD_score)
 
         print(" 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_score.statistic, s_score.pvalue))
         # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
-        corr_HAM_D_score_score = scipy.stats.pearsonr(CP_score, HAM_D_score[:n_subject_in_population])
-        corr_YMRS_score_score = scipy.stats.pearsonr(CP_score, YMRS_score[:n_subject_in_population])
-        print("          Pearson corr YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_score[0][0],
+        corr_HAM_D_score_score = scipy.stats.pearsonr(HC_score, HAM_D_score[:n_subject_in_population])
+        corr_YMRS_score_score = scipy.stats.pearsonr(HC_score, YMRS_score[:n_subject_in_population])
+        print("          Pearson corr YMARS-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_score[0][0],
                                                                                    corr_YMRS_score_score[1]))
-        print("          Pearson corr HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_score[0][0],
+        print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_score[0][0],
                                                                                    corr_HAM_D_score_score[1]))
 
         # only correlate with BD list
@@ -597,12 +653,12 @@ for epoch in range(1, 4):
     states = np.asarray(states).flatten()
     sns.set_style('white')
 
-    CP_idx = np.zeros(n_subject_in_population * n_cluster)
+    HC_idx = np.zeros(n_subject_in_population * n_cluster)
     BD_idx = np.ones(n_subject_in_population * n_cluster)
 
     ds = pd.DataFrame(np.concatenate((
         np.concatenate((motif_usage_cat[0, :, :].T.flatten(), motif_usage_cat[1, :, :].T.flatten()), 0).reshape(-1, 1),
-        np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
+        np.concatenate((HC_idx, BD_idx), 0).reshape(-1, 1),
         np.concatenate((states, states), 0).reshape(-1, 1)), 1),
         columns=['motif frequency', 'is_BD', 'state'])
 
@@ -610,7 +666,7 @@ for epoch in range(1, 4):
     violin = sns.boxplot(y="motif frequency", x='state',hue='is_BD',
                    data=ds, orient="v", palette=sns.color_palette("tab10"))
     handles = violin.legend_.legendHandles
-    dict_name = {0.0:'CP', 1.0:'BD'}
+    dict_name = {0.0:'HC', 1.0:'BD'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
     #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
     x = np.arange(n_cluster)

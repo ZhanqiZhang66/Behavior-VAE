@@ -196,36 +196,46 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         Epoch3_labels[j].append(epoch_3_label)
         Epoch3_latent_vector[j].append(epoch_3_latent_vector)
+    #
+    #     if i == 0:
+    #         l = label
+    #         latent = latent_vector
+    #     else:
+    #         latent = np.concatenate([latent, latent_vector])
+    #         l = np.concatenate([l,label])
+    #
+    #     motif_usage_cat[j].append(motif_usage/ np.sum(motif_usage))
+    #     num_points = latent_vector.shape[0]
+    #     n += num_points
+    #
+    # latent_variance_per_state = []
+    # stats_per_latent_per_state = np.empty((n_cluster, np.shape(latent_vector)[1], 2))  # 10 x 10
+    # for state_i in range(n_cluster):
+    #     state_i_idx = label == state_i
+    #     latent_state_i = latent_vector[state_i_idx, :]  # time of (state i) x 10
+    #     K_per_state = np.cov(latent_state_i.T)
+    #     latent_variance_per_state.append([np.mean(latent_state_i), np.trace(K_per_state)])
+    #     for latent_d in range(np.shape(latent_vector)[1]):
+    #         latent_d_state_i = latent_state_i[:, latent_d]
+    #         stats_per_latent_per_state[state_i, latent_d, 0] = np.nanmean(latent_d_state_i)
+    #         stats_per_latent_per_state[state_i, latent_d, 1] = np.nanvar(latent_d_state_i)
+    #
+    # Stats_per_latent_per_state[j].append(stats_per_latent_per_state)
+    # Latent_vectors_per_state[j].append(latent_variance_per_state)
+    #
+    # N[j] = n
+    # Latent_vectors[j] = latent
+    # Labels[j] = l
+    #
+#%%
+jack_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\jack_temp'
 
-        if i == 0:
-            l = label
-            latent = latent_vector
-        else:
-            latent = np.concatenate([latent, latent_vector])
-            l = np.concatenate([l,label])
-
-        motif_usage_cat[j].append(motif_usage/ np.sum(motif_usage))
-        num_points = latent_vector.shape[0]
-        n += num_points
-
-    latent_variance_per_state = []
-    stats_per_latent_per_state = np.empty((n_cluster, np.shape(latent_vector)[1], 2))  # 10 x 10
-    for state_i in range(n_cluster):
-        state_i_idx = label == state_i
-        latent_state_i = latent_vector[state_i_idx, :]  # time of (state i) x 10
-        K_per_state = np.cov(latent_state_i.T)
-        latent_variance_per_state.append([np.mean(latent_state_i), np.trace(K_per_state)])
-        for latent_d in range(np.shape(latent_vector)[1]):
-            latent_d_state_i = latent_state_i[:, latent_d]
-            stats_per_latent_per_state[state_i, latent_d, 0] = np.nanmean(latent_d_state_i)
-            stats_per_latent_per_state[state_i, latent_d, 1] = np.nanvar(latent_d_state_i)
-
-    Stats_per_latent_per_state[j].append(stats_per_latent_per_state)
-    Latent_vectors_per_state[j].append(latent_variance_per_state)
-
-    N[j] = n
-    Latent_vectors[j] = latent
-    Labels[j] = l
+np.save(jack_path + '\Epoch1_labels', np.array(Epoch1_labels, dtype=object))
+np.save(jack_path + '\Epoch1_latent_vector', np.array(Epoch1_latent_vector, dtype=object))
+np.save(jack_path + '\Epoch2_labels', np.array(Epoch2_labels, dtype=object))
+np.save(jack_path + '\Epoch2_latent_vector', np.array(Epoch2_latent_vector, dtype=object))
+np.save(jack_path + '\Epoch3_labels', np.array(Epoch3_labels, dtype=object))
+np.save(jack_path + '\Epoch3_latent_vector', np.array(Epoch3_latent_vector, dtype=object))
 
 #%% #TODO: see if we can decode position latent
 #%%
@@ -1225,7 +1235,7 @@ for epoch in range(1, 4):
                 idx_g = np.where(label_this_epoch_this_pop_this_person == g)[0]
                 latent_vec_this_epoch_this_pop_this_person_this_motif = latent_vec_this_epoch_this_pop_this_person[
                     idx_g]
-                if len(latent_vec_this_epoch_this_pop_this_person_this_motif):
+                if len(latent_vec_this_epoch_this_pop_this_person_this_motif) > 1:
                     person_centroid = np.nanmean(latent_vec_this_epoch_this_pop_this_person_this_motif, axis=0)
                     person_volume = np.trace(np.cov(latent_vec_this_epoch_this_pop_this_person_this_motif.T))
                 else:
