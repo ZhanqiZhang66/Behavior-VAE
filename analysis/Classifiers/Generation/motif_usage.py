@@ -98,13 +98,12 @@ def loadKineticsMap(path):
     return map
 
 def loadAvaMap(path):
-    map = {}
+    map = {0: "none"}
     with open(path, 'r') as file:
         lines = file.readlines()
         for line in lines:
             i = int(line.split(":")[0])
-            map[i-1] = line.split(": ")[1]
-    map[i] = "none"
+            map[i] = line.split(": ")[1]
     for j in range(1, i):
         if j not in map:
             map[j] = "none"
@@ -185,7 +184,12 @@ graphMotifUsage(path=sFigPath, motifUsage=sMotifUsage, BD=BD,
                 motifSize=401, title='S3D', top=10, wmulti=20, labelMap=k400Map)
 
 
-
+#%%
+mLabels = load_motif_labels(mLabelPath, videos, 27000)
+mMotifUsage = generateMotifUsage(mLabels, 1, 81, scaled=True, missing=True)
+# %%
+graphMotifUsage(path=mFigPath, motifUsage=mMotifUsage, BD=BD, 
+                motifSize=81, title='MMAction', top=10, wmulti=20, labelMap=avaMap)
 
 
 
