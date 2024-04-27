@@ -28,16 +28,12 @@ from pathlib import Path
 import pathlib
 from data.load_data import load_pt_data
 from analysis.Classifiers.Generation.utils import my_colormap
-#%% Paths
-if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
-    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
-
-elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
-    onedrive_path = r'D:\OneDrive - UC San Diego'
-    github_path = r'D:\OneDrive - UC San Diego\GitHub'
-else:
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+from plotting.get_paths import get_my_path
+#%%
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
 #%% Flags
 # import argparse
 #
@@ -334,6 +330,11 @@ print("\n Finished K-means clustering on filtered DLC data")
 standard_embedding = umap.UMAP(n_components=3,random_state=42).fit_transform(time_seq_hat[:300000,:])
 np.save(r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\BD20-Jun5-2022\data\time-seq-umap-embed.npy',standard_embedding)
 #%% Plot keypoints overlapping motif segmentations [three approaches]
+from analysis.Classifiers.Generation.motif_usage import load_motif_labels
+sLabelPath  = r'{}\S3D\s3d_labels\s3d_labels_{}.npy'.format(data_path, "{}", "{}")
+mLabelPath  = r'{}\MMAction\mmaction_labels\mmaction_labels_{}.npy'.format(data_path, "{}", "{}")
+sLabels = load_motif_labels(sLabelPath, videos, 27000)
+mLabels = load_motif_labels(mLabelPath, videos, 27000)
 titles = ["vame", 'dlc k-means', 'scores', 'scored_merged']
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
@@ -357,6 +358,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
         score_label = np.load(
             r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(
                 onedrive_path, project_name, v, n_cluster,  v))
+
+
         score_label[score_label<0] = -1
         # bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
         score_label_merged = score_label.copy()
@@ -374,9 +377,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         # a colored line plot for every body keypoint
         for body_i in range(39, 41, 2):
-            fig, axs = plt.subplots(4, 1, figsize=(12, 12))
+            fig, axs = plt.subplots(6, 1, figsize=(12, 12))
             # plot motif segmentation in three approaches [vame, dlc, score]
-            for fig_i in range(4):
+            for fig_i in range(len(labels)):
                 d = np.concatenate((labels[fig_i].reshape(-1, 1), data[temp_win // 2:-temp_win // 2]), axis=1)
 
                 df = pd.DataFrame(d, columns=dlc_labels)
@@ -590,6 +593,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
 # %% Plot latent trajactory overlapping motif segmentations [three approaches]
 from sklearn.decomposition import PCA
+def map_to_range(lst):
+    unique_values = sorted(set(lst))  # Get unique values from the list and sort them
+    mapping = {value: i % 10 for i, value in enumerate(unique_values)}  # Map each unique value to 0-9
+    mapped_list = [mapping[value] for value in lst]  # Map values in the list to 0-9 based on the mapping
+    return mapped_list
 
 titles = ["vame", 'dlc k-means', 'scores', 'scored_merged']
 for j, videos in enumerate([control_videos, BD_videos]):
@@ -614,6 +622,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                                                                                                         n_cluster,
                                                                                                         v))
         dlc_cluster_label = dlc_cluster_label[temp_win // 2:-temp_win // 2]
+        mmaction_label = mLabels[v]
+        s3d_label = sLabels[v]
         score_label = np.load(
             r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(
                 onedrive_path, project_name, v, n_cluster, v))
@@ -627,7 +637,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         score_label_merged[score_label_merged == 3] = 2
         score_label_merged[score_label_merged == 5] = 4
         score_label_merged[score_label_merged == 7] = 6
-        color_dic = {0:0, 1:0, 2:1, 3:1, 4:2, 5:2, 6:3, 7:3, 8:4, 9:5}
+
 
         # for easier visualization, we only plot the first 15 min
         data = data[temp_win // 2:-temp_win // 2]
@@ -644,14 +654,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
                   dlc_cluster_label,
                   score_label,
                   score_label_merged,
+                  mmaction_label,
+                  s3d_label
                   ]
         # now all these labels are >= 27000
 
         # a colored line plot for every body keypoint
 
-        fig, axs = plt.subplots(7, 1, figsize=(12, 21)) #4
-        # plot motif segmentation in three approaches [vame, dlc, score]
-        for fig_i in range(4):
+        fig, axs = plt.subplots(len(labels)+2, 1, figsize=(12, 24)) #4
+        # plot motif segmentation in five approaches [vame, dlc, score, mmaction, s3d]
+        for fig_i in range(len(labels)+2):
             d = np.concatenate((labels[fig_i].reshape(-1, 1), data), axis=1)
 
             df = pd.DataFrame(d, columns=dlc_labels)
@@ -667,8 +679,15 @@ for j, videos in enumerate([control_videos, BD_videos]):
             gray_colors = ['#83858c','#3c4e57','#ced7dd','#f4edea', '#000000','#b5838d']#my_colormap('greyscale_categorical6')
             condition = df['label']
             current_c = condition[0]
+            # color_dic = {0: 0, 1: 0, 2: 1, 3: 1, 4: 2, 5: 2, 6: 3, 7: 3, 8: 4, 9: 5}
+            labels_key = sorted(set(condition))
+            labels_value = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+            color_dic = dict(zip(labels_key, labels_value))
+
             spans = [[0, 0]]
             span_label = [current_c]
+
+
             for ii, c in enumerate(condition):
                 if c != current_c:
                     # change to i-1 if gap between two conditions is to be left empty
@@ -679,12 +698,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
             # assumes that the last condition is not on its own but same as previous
             x = df.iloc[:, 0]
             X = np.arange(len(x))
-            if fig_i == 0 or fig_i == 1:
+            if fig_i == 0 or fig_i == 1 or fig_i == 4 or fig_i == 5:
                 spans[-1][-1] = len(condition) - 1
                 # span_label.append(condition[-1])
                 for iii in range(len(spans)):
                     span = spans[iii]
                     l_label = span_label[iii]
+                    if fig_i == 4 or fig_i == 5:
+                        l_label = color_dic[int(l_label)]
                     axs[fig_i].axvspan(span[0], span[1], alpha=1, color=cmap[int(l_label * 2 + 0)])
 
                 legend = [Patch(facecolor=cmap[int(0* 2 )], alpha=1, label=0),
@@ -718,7 +739,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                           Patch(facecolor=uniform_colors[int(8)], alpha=0.8, label="interact"),
                           Patch(facecolor=uniform_colors[int(9)], alpha=0.8, label="wear"),
                           ]
-            else:
+            elif fig_i == 3:
                 spans[-1][-1] = len(condition) - 1
                 # span_label.append(condition[-1])
                 for iii in range(len(spans)):
@@ -797,6 +818,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         plt.suptitle('{}-{}'.format(group[j], v))
         plt.show()
+        fadsfa
 
         pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_latent'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)

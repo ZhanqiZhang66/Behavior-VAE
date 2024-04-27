@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import random
 import copy
 import json
-
+import scipy
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
@@ -16,7 +16,7 @@ from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score, precision_score, recall_score, classification_report
 from sklearn.model_selection import cross_validate, cross_val_predict
 from sklearn.feature_selection import SelectKBest, f_classif
-
+from scipy import stats
 from sklearn.linear_model import Lasso
 from sklearn.model_selection import GridSearchCV, KFold
 
@@ -26,6 +26,7 @@ from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from sklearn import linear_model
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.preprocessing import MinMaxScaler
+from data.load_data import load_pt_data
 import itertools
 #%% Path
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
@@ -104,6 +105,20 @@ ensm_epoch1 = ['ens_epoch1_m0', 'ens_epoch1_m1', 'ens_epoch1_m2', 'ens_epoch1_m3
         'ens_epoch1_m5', 'ens_epoch1_m6', 'ens_epoch1_m7', 'ens_epoch1_m8', 'ens_epoch1_m9']
 ensm_diff = ['ens_diff_m0', 'ens_diff_m1', 'ens_diff_m2', 'ens_diff_m3', 'ens_diff_m4',
         'ens_diff_m5', 'ens_diff_m6', 'ens_diff_m7', 'ens_diff_m8', 'ens_diff_m9']
+n_subject_in_population = 25
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
+
+
+YMRS_score = []
+HAM_D_score = []
+for j, videos in enumerate([control_videos, BD_videos]):
+    n = 0
+    for i in range(len(videos)):
+        v = videos[i]
+        YMRS_score.append(YMRS[v])
+        HAM_D_score.append(HAM_D[v])
 
 volume_per_motif_epoch3 = ['vol_epoch3_motif0', 'vol_epoch3_motif1', 'vol_epoch3_motif2', 'vol_epoch3_motif3', 
                          'vol_epoch3_motif4', 'vol_epoch3_motif5', 'vol_epoch3_motif6', 
@@ -117,7 +132,6 @@ volume_per_motif_diff = ['vol_diff_motif0', 'vol_diff_motif1', 'vol_diff_motif2'
                          'vol_diff_motif8', 'vol_diff_motif9']
 
 
-#%% Classifier
 def classify(df, features, max_iter, seed):
     X = df[features]
     y = df['BD']
@@ -152,23 +166,7 @@ def classify(df, features, max_iter, seed):
     print('Recall: %.05f (%.05f)' % (np.mean(rec), np.std(rec)))
     return [acc, pre, rec]
 
-# Feature Selection
-#     X = vame_df.drop('BD', axis=1)
-#     y = vame_df['BD']
-#
-#     lgr = linear_model.LogisticRegression()
-#     sfs = SequentialFeatureSelector(lgr,
-#                                     n_features_to_select="auto",
-#                                     tol=-0.02,
-#                                     direction="backward",
-#                                     scoring='accuracy',
-#                                     cv=4,
-#                                     n_jobs=5)
-#     selected_features = sfs.fit(X, y)
-#     selected_features_list = selected_features.get_support()
-#     top_features = list(X.columns[selected_features_list])
-#     print(top_features)
-#     print(f"selected {len(top_features)}  out of {np.shape(X)[1]} features")
+
 def feature_selection(X, y, tol=-0.02):
     lgr = linear_model.LogisticRegression()
     sfs = SequentialFeatureSelector(lgr,
@@ -192,6 +190,9 @@ assessment_df.drop('gender', axis=1, inplace=True)
 
 bd_df = assessment_df[['video', 'BD']]
 assessment_df.drop('video', axis=1, inplace=True)
+
+#%% Reading VAME data
+
 
 #%%
 # Motif dwell time
@@ -338,6 +339,7 @@ for column in s3d_motif_df:
             s3d_motif_df.drop(column, axis=1, inplace=True)
 
 
+
 # ENS average between motif
 s3d_ens_df = pd.read_csv(s3d_ens_path)
 s3d_ens_df.rename(columns=lambda x: f'ens_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
@@ -377,6 +379,20 @@ for i in top_10_motifs:
 for i in top_10_motifs:
     v = f'ens_epoch3_m{i}'
     s3d_df[v] = s3d_df[v] - s3d_df[v]
+import scipy
+HC_motif_usage = s3d_motif_df[bd_df['BD']==0]
+HC_motif_usage.drop('video', axis=1, inplace=True)
+BD_motif_usage = s3d_motif_df[bd_df['BD']==1]
+BD_motif_usage.drop('video', axis=1, inplace=True)
+for motif_i_usage in HC_motif_usage.columns:
+    s = stats.ttest_ind(HC_motif_usage[motif_i_usage], BD_motif_usage[motif_i_usage])
+    print(f"{motif_i_usage}")
+    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s.statistic, s.pvalue))
+    # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
+    corr_HAM_D_score = scipy.stats.pearsonr(BD_motif_usage[motif_i_usage], HAM_D_score[:n_subject_in_population])
+    corr_YMRS_score = scipy.stats.pearsonr(BD_motif_usage[motif_i_usage], YMRS_score[:n_subject_in_population])
+    print("          Pearson corr YMARS-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0][0], corr_YMRS_score[1]))
+    print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0][0], corr_HAM_D_score[1]))
 #%%
 """
 MMACTION
@@ -430,6 +446,19 @@ for i in top_10_motifs:
     v = f'ens_epoch3_m{i}'
     mmaction_df[v] = mmaction_df[v] - mmaction_df[v]
 
+HC_motif_usage = mmaction_motif_df[bd_df['BD']==0]
+HC_motif_usage.drop('video', axis=1, inplace=True)
+BD_motif_usage = mmaction_motif_df[bd_df['BD']==1]
+BD_motif_usage.drop('video', axis=1, inplace=True)
+for motif_i_usage in HC_motif_usage.columns:
+    s = stats.ttest_ind(HC_motif_usage[motif_i_usage], BD_motif_usage[motif_i_usage])
+    print(f"{motif_i_usage}")
+    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s.statistic, s.pvalue))
+    # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
+    corr_HAM_D_score = scipy.stats.pearsonr(BD_motif_usage[motif_i_usage], HAM_D_score[:n_subject_in_population])
+    corr_YMRS_score = scipy.stats.pearsonr(BD_motif_usage[motif_i_usage], YMRS_score[:n_subject_in_population])
+    print("          Pearson corr YMARS-HC: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0][0], corr_YMRS_score[1]))
+    print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0][0], corr_HAM_D_score[1]))
 #%%
 assessmentNames = assessment_df.columns[2:]
 #%%

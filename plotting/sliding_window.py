@@ -20,7 +20,7 @@ from vame.analysis.pose_segmentation import get_motif_usage
 from sklearn.decomposition import PCA
 from data.load_data import load_pt_data
 #%%
-load_precomputed_sliding_window = True
+load_precomputed_sliding_window = False
 #%%
 #%%
 if not load_precomputed_sliding_window:
@@ -29,7 +29,7 @@ if not load_precomputed_sliding_window:
         zero_rows = np.all(transition == 0, axis=1)
         zero_rows_i =  np.where(zero_rows == True)
         zero_cols = np.all(transition == 0, axis=0)
-        return len(zero_rows_i[0]),  np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
+        return len(zero_rows[0]),  np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
     def add_self_transition(transition_m, last_state):
         transition = transition_m.copy()
         zero_rows = np.all(transition == 0, axis=1)
@@ -409,14 +409,16 @@ for i in range(num_metrics):
     plt.show()
     pwd = r'{}\Behavior_VAE_data\{}\figure\transition_metrics'.format(onedrive_path, project_name)
     Path.mkdir(Path(pwd), exist_ok=True)
-    fname = 'average {}.png'.format(metric_names[i])
-    fname_pdf = 'average {}.pdf'.format(metric_names[i])
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
-    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fname = 'average {}.png'.format(metric_names[i])
+    # fname_pdf = 'average {}.pdf'.format(metric_names[i])
+    fname_svg = 'average {}.svg'.format(metric_names[i])
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_svg), transparent=True)
 
 #plt.suptitle("sliding window")
 
-/0#%% Plot per patient L0 metrics
+#%% Plot per patient L0 metrics
 num_metrics = 1
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)

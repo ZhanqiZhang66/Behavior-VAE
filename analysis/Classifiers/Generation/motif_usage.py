@@ -3,12 +3,17 @@ import csv
 import os
 import numpy as np
 from collections import Counter
-from utils import load_motif_labels
+from analysis.Classifiers.Generation.utils import load_motif_labels
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 
-
+from plotting.get_paths import get_my_path
+#%%
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
 #%%
 def generateMotifUsage(labels, split, motifSize, scaled, missing):
     frames = len(labels[next(iter(labels))])
@@ -52,12 +57,12 @@ def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6, lab
     motif = [f'Motif {i}' for i in range(motifSize)] * 50
     if labelMap:
         motif = [f'{labelMap[i]}' for i in range(motifSize)] * 50
-    print(motif)
+    # print(motif)
     value = [motifUsage[v][0] for v in videos]
     value = [motif for v in value for motif in v]
     #value = [motif / 27000 for motif in value]
 
-    print(len(population), len(motif), len(value))
+    # print(len(population), len(motif), len(value))
 
     df = pd.DataFrame({'Population': population,
                     'Motif': motif,
@@ -72,10 +77,11 @@ def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6, lab
 
     w = motifSize/10 * wmulti
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-    violin = sns.boxplot(x='Motif', y='Values', hue='Population', data=df)
+    violin = sns.boxplot(x='Motif', y='Values', hue='Population', data=df, palette=sns.color_palette("tab10"))
     violin.legend_.remove()
     #handles = violin.legend_.legendHandles
     # ax.legend(handles, labels)
+    plt.ylim([0,1])
     plt.xlabel('Motif')
     plt.ylabel('Values')
     ax.set_title(title)
@@ -126,40 +132,38 @@ BD = ["BC1ADPI", "BC1BRBU", "BC1CISI", "BC1DOBO", "BC1JACL",
  
 
 #%%
-videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", 'BC1BRBU']
-BD = ["BC1ADPI", 'BC1BRBU']
 
 #%%
-vLabelPath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\\10_km_label_{}.npy'
-vMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_overall.csv"
-v3MotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\motif_usage_3_split.csv"
-vFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification"
+vLabelPath = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\\10_km_label_{}.npy'.format(onedrive_path, "{}", "{}")
+vMotifPath = r"{}\SURF\VAME\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+v3MotifPath = r"{}\SURF\VAME\motif_usage_3_split.csv".format(onedrive_path, "{}", "{}")
+vFigPath = r"{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification".format(onedrive_path, "{}", "{}")
 
 #%%
-hLabelPath  = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\score_labels_{}.npy'
-hMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\hBPM\motif_usage_overall.csv"
-hFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification"
+hLabelPath  = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\score_labels_{}.npy'.format(onedrive_path, "{}", "{}")
+hMotifPath = r"{}\SURF\hBPM\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+hFigPath = r"{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification".format(onedrive_path, "{}", "{}")
 
 #%%
-sLabelPath  = r'C:\Users\kietc\SURF\jack-data\S3D\s3d_labels\s3d_labels_{}.npy'
-sMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\S3D\motif_usage_overall.csv"
-sFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage"
+sLabelPath  = r'{}\S3D\s3d_labels\s3d_labels_{}.npy'.format(data_path, "{}", "{}")
+sMotifPath = r"{}\SURF\S3D\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+sFigPath = r"{}\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage".format(onedrive_path, "{}", "{}")
 
 #%%
-mLabelPath  = r'C:\Users\kietc\SURF\jack-data\MMAction\mmaction_labels\mmaction_labels_{}.npy'
-mMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\MMAction\motif_usage_overall.csv"
-mFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage"
+mLabelPath  = r'{}\MMAction\mmaction_labels\mmaction_labels_{}.npy'.format(data_path, "{}", "{}")
+mMotifPath = r"{}\SURF\MMAction\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+mFigPath = r"{}\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage".format(onedrive_path, "{}", "{}")
 
 #%%
-dLabelPath = r'C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\DLC_10_km_label_{}.npy'
-dMotifPath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\DLC\motif_usage_overall.csv"
-dFigPath = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification"
+dLabelPath = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\DLC_10_km_label_{}.npy'.format(onedrive_path, "{}", "{}")
+dMotifPath = r"{}\SURF\DLC\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+dFigPath = r"{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification".format(onedrive_path, "{}", "{}")
 
 # %%
-avaPath = r'C:\Users\kietc\SURF\Behavior-VAE\analysis\Classifiers\ava_80_label_map.txt'
+avaPath = r'{}\Behavior-VAE\analysis\Classifiers\ava_80_label_map.txt'.format(github_path, "{}", "{}")
 avaMap = loadAvaMap(avaPath)
 # %%
-k400Path = r'C:\Users\kietc\SURF\Behavior-VAE\analysis\Classifiers\kinetics_400_label_map.txt'
+k400Path = r'{}\Behavior-VAE\analysis\Classifiers\kinetics_400_label_map.txt'.format(github_path, "{}", "{}")
 k400Map = loadKineticsMap(k400Path)
 
 # %%
@@ -180,7 +184,7 @@ graphMotifUsage(path=vFigPath, motifUsage=vMotifUsage, BD=BD,
 sLabels = load_motif_labels(sLabelPath, videos, 27000)
 sMotifUsage = generateMotifUsage(sLabels, 1, 401, scaled=True, missing=True)
 # %%
-graphMotifUsage(path=sFigPath, motifUsage=sMotifUsage, BD=BD, 
+graphMotifUsage(path=sFigPath, motifUsage=sMotifUsage, BD=BD,
                 motifSize=401, title='S3D', top=10, wmulti=20, labelMap=k400Map)
 
 
