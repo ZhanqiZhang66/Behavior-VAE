@@ -21,7 +21,7 @@ def zero_center(vector):
     A NumPy array with the same shape as `vector`, but with the mean subtracted
     from each element.
   """
-  mean = np.mean(vector)
+  mean = np.nanmean(vector)
   return vector - mean
 def epoch_motif_volume(epoch_idx, epoch_duration, overall_latent_vector):
     zero_centered_overall_latent_vector = zero_center(overall_latent_vector)
@@ -61,8 +61,8 @@ videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1
                   "BC1LESA", "BC1LOKE", "BC1LOMI", "BC1LUOR", "BC1LUSE", "BC1MAMA", "BC1MEMA", "BC1MISE", 
                   "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
 
-hc = ["BC1AASA", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", "BC1ANWI", "BC1ASKA", "BC1ATKU", "BC1BRPO", "BC1BRSC", "BC1CERO", "BC1COGR", "BC1DAAR", "BC1DEBR", "BC1FEMO", "BC1GESA", "BC1GRLE", "BC1HAKO", "BC1HETR", "BC1JECO", "BC1JUPA", "BC1MOKI", "BC1NITA"]
-
+control_videos = ["BC1AASA", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", "BC1ANWI", "BC1ASKA", "BC1ATKU", "BC1BRPO", "BC1BRSC", "BC1CERO", "BC1COGR", "BC1DAAR", "BC1DEBR", "BC1FEMO", "BC1GESA", "BC1GRLE", "BC1HAKO", "BC1HETR", "BC1JECO", "BC1JUPA", "BC1MOKI", "BC1NITA"]
+BD_videos = [v for v in videos if v not in control_videos]
 #%%
 path = r"C:\Users\kietc\OneDrive - UC San Diego\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\latent_vector_{}.npy"
 
@@ -71,4 +71,3 @@ volume = compute_latent_motif_volume(path)
 # %%
 volumePath = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\VAME\volume.csv"
 save_motif_volume(volumePath, volume)
-# %%
