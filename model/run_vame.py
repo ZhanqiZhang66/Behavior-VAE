@@ -85,8 +85,8 @@ vame.community(config, show_umap=True, cut_tree=None)
 #%%
 from vame.analysis.community_analysis import get_labels, compute_transition_matrices
 model_name = cfg['model_name']
-n_cluster = 10
-files = ['BC1ANGA', 'BC1LOKE']
+n_cluster = 30
+files = videos
 labels = get_labels(cfg, files, model_name, n_cluster)
 transition_matrices = compute_transition_matrices(files, labels, n_cluster)
 trees = []

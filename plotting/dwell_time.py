@@ -158,13 +158,15 @@ for j, videos in enumerate([control_videos, BD_videos]):
         np.save(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v), motif_usage)
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
 
-        control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
-        control_cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, n_cluster, v))
-        control_motif_usage = get_motif_usage(control_label, n_cluster)
+        if n_cluster == 10:
+            control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+            control_cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, n_cluster, v))
+            control_motif_usage = get_motif_usage(control_label, n_cluster)
 
-        score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
-        # score_label = score_label[:15*60*30]
-        score_label_merged = score_label.copy()
+            score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
+            # score_label = score_label[:15*60*30]
+            score_label_merged = score_label.copy()
+            score_motif_usage = get_motif_usage(score_label, n_scores)
 
         label_delimiter = divide_with_delimiter(label[:five_min_frame_no*3])
         score_label_delimiter = divide_with_delimiter(score_label[:five_min_frame_no*3])
@@ -190,8 +192,43 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
 
 
+        if n_cluster == 10:
 
-        score_motif_usage = get_motif_usage(score_label, n_scores)
+            # ----------DLC control----------concat labels, motif usage for 3 epochs for control
+            epoch_1_label_ctl = control_label[:five_min_frame_no + offset]
+            epoch_2_label_ctl = control_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
+            epoch_3_label_ctl = control_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+
+            epoch_1_motif_usage_ctl = get_motif_usage(epoch_1_label_ctl, n_cluster)
+            epoch_2_motif_usage_ctl = get_motif_usage(epoch_2_label_ctl, n_cluster)
+            epoch_3_motif_usage_ctl = get_motif_usage(epoch_3_label_ctl, n_cluster)
+
+            Epoch1_labels_ctl[j].append(epoch_1_label_ctl)
+            Epoch1_motif_usage_ctl[j].append(epoch_1_motif_usage_ctl / np.sum(epoch_1_motif_usage_ctl))
+
+            Epoch2_labels_ctl[j].append(epoch_2_label_ctl)
+            Epoch2_motif_usage_ctl[j].append(epoch_2_motif_usage_ctl / np.sum(epoch_2_motif_usage_ctl))
+
+            Epoch3_labels_ctl[j].append(epoch_3_label_ctl)
+            Epoch3_motif_usage_ctl[j].append(epoch_3_motif_usage_ctl / np.sum(epoch_3_motif_usage_ctl))
+
+            # ----------SCORES-----------concat labels, motif usage for 3 epochs for scores--------
+            epoch_1_label_score = score_label_merged[:five_min_frame_no + offset]
+            epoch_2_label_score = score_label_merged[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
+            epoch_3_label_score = score_label_merged[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+
+            epoch_1_motif_usage_score = get_motif_usage(epoch_1_label_score, n_scores)
+            epoch_2_motif_usage_score = get_motif_usage(epoch_2_label_score, n_scores)
+            epoch_3_motif_usage_score = get_motif_usage(epoch_3_label_score, n_scores)
+
+            Epoch1_labels_score[j].append(epoch_1_label_score)
+            Epoch1_motif_usage_score[j].append(epoch_1_motif_usage_score / np.sum(epoch_1_motif_usage_score))
+
+            Epoch2_labels_score[j].append(epoch_2_label_score)
+            Epoch2_motif_usage_score[j].append(epoch_2_motif_usage_score / np.sum(epoch_2_motif_usage_score))
+
+            Epoch3_labels_score[j].append(epoch_3_label_score)
+            Epoch3_motif_usage_score[j].append(epoch_3_motif_usage_score / np.sum(epoch_3_motif_usage_score))
 
         door_close_time = start_frame[v]
         start_time = start_frame[v] #start_frame.loc[v_index, 'n']
@@ -216,65 +253,35 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch3_labels[j].append(epoch_3_label)
         Epoch3_motif_usage[j].append(epoch_3_motif_usage/ np.sum(epoch_3_motif_usage))
 
-        # ----------DLC control----------concat labels, motif usage for 3 epochs for control
-        epoch_1_label_ctl = control_label[:five_min_frame_no + offset]
-        epoch_2_label_ctl = control_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
-        epoch_3_label_ctl = control_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
 
-        epoch_1_motif_usage_ctl = get_motif_usage(epoch_1_label_ctl, n_cluster)
-        epoch_2_motif_usage_ctl = get_motif_usage(epoch_2_label_ctl, n_cluster)
-        epoch_3_motif_usage_ctl = get_motif_usage(epoch_3_label_ctl, n_cluster)
-
-        Epoch1_labels_ctl[j].append(epoch_1_label_ctl)
-        Epoch1_motif_usage_ctl[j].append(epoch_1_motif_usage_ctl/ np.sum(epoch_1_motif_usage_ctl))
-
-        Epoch2_labels_ctl[j].append(epoch_2_label_ctl)
-        Epoch2_motif_usage_ctl[j].append(epoch_2_motif_usage_ctl/ np.sum(epoch_2_motif_usage_ctl))
-
-        Epoch3_labels_ctl[j].append(epoch_3_label_ctl)
-        Epoch3_motif_usage_ctl[j].append(epoch_3_motif_usage_ctl/ np.sum(epoch_3_motif_usage_ctl))
-
-        # ----------SCORES-----------concat labels, motif usage for 3 epochs for scores--------
-        epoch_1_label_score = score_label_merged[:five_min_frame_no + offset]
-        epoch_2_label_score = score_label_merged[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
-        epoch_3_label_score = score_label_merged[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
-
-        epoch_1_motif_usage_score = get_motif_usage(epoch_1_label_score, n_scores)
-        epoch_2_motif_usage_score = get_motif_usage(epoch_2_label_score, n_scores)
-        epoch_3_motif_usage_score = get_motif_usage(epoch_3_label_score, n_scores)
-
-        Epoch1_labels_score[j].append(epoch_1_label_score)
-        Epoch1_motif_usage_score[j].append(epoch_1_motif_usage_score / np.sum(epoch_1_motif_usage_score))
-
-        Epoch2_labels_score[j].append(epoch_2_label_score)
-        Epoch2_motif_usage_score[j].append(epoch_2_motif_usage_score / np.sum(epoch_2_motif_usage_score))
-
-        Epoch3_labels_score[j].append(epoch_3_label_score)
-        Epoch3_motif_usage_score[j].append(epoch_3_motif_usage_score / np.sum(epoch_3_motif_usage_score))
 
 
         if i == 0:
             l = label
-            l_control = control_label
-            l_score = score_label
+
 
             m = motif_usage
-            m_control = control_motif_usage
-            m_score = score_motif_usage
+
 
             Cluster_center.append(cluster_center)
             m_e1 = epoch_1_motif_usage
             m_e2 = epoch_2_motif_usage
             m_e3 = epoch_3_motif_usage
 
-            Cluster_center_ctl.append(control_cluster_center)
-            m_e1_ctl = epoch_1_motif_usage_ctl
-            m_e2_ctl = epoch_2_motif_usage_ctl
-            m_e3_ctl = epoch_3_motif_usage_ctl
 
-            m_e1_score = epoch_1_motif_usage_score
-            m_e2_score = epoch_2_motif_usage_score
-            m_e3_score = epoch_3_motif_usage_score
+            if n_cluster == 10:
+                l_control = control_label
+                l_score = score_label
+                m_control = control_motif_usage
+                m_score = score_motif_usage
+                Cluster_center_ctl.append(control_cluster_center)
+                m_e1_ctl = epoch_1_motif_usage_ctl
+                m_e2_ctl = epoch_2_motif_usage_ctl
+                m_e3_ctl = epoch_3_motif_usage_ctl
+
+                m_e1_score = epoch_1_motif_usage_score
+                m_e2_score = epoch_2_motif_usage_score
+                m_e3_score = epoch_3_motif_usage_score
             # print(np.shape(m_e3))
         else:
             l = np.concatenate([l,label])
@@ -284,23 +291,26 @@ for j, videos in enumerate([control_videos, BD_videos]):
             m_e2 += np.asarray(epoch_2_motif_usage)
             m_e3 += np.asarray(epoch_3_motif_usage)
 
-            l_control = np.concatenate([l_control, control_label])
-            m_control += control_motif_usage
-            Cluster_center_ctl.append(control_cluster_center)
-            m_e1_ctl += np.asarray(epoch_1_motif_usage_ctl)
-            m_e1_ctl += np.asarray(epoch_2_motif_usage_ctl)
-            m_e1_ctl += np.asarray(epoch_3_motif_usage_ctl)
 
-            l_score = np.concatenate([l_score, score_label])
-            m_score += score_motif_usage
-            m_e1_score += np.asarray(epoch_1_motif_usage_score)
-            m_e2_score += np.asarray(epoch_2_motif_usage_score)
-            m_e3_score += np.asarray(epoch_3_motif_usage_score)
+            if n_cluster == 10:
+                l_control = np.concatenate([l_control, control_label])
+                m_control += control_motif_usage
+                Cluster_center_ctl.append(control_cluster_center)
+                m_e1_ctl += np.asarray(epoch_1_motif_usage_ctl)
+                m_e1_ctl += np.asarray(epoch_2_motif_usage_ctl)
+                m_e1_ctl += np.asarray(epoch_3_motif_usage_ctl)
+
+                l_score = np.concatenate([l_score, score_label])
+                m_score += score_motif_usage
+                m_e1_score += np.asarray(epoch_1_motif_usage_score)
+                m_e2_score += np.asarray(epoch_2_motif_usage_score)
+                m_e3_score += np.asarray(epoch_3_motif_usage_score)
             # print(np.shape(m_e3))
 
         motif_usage_cat[j].append(motif_usage/ np.sum(motif_usage))
-        motif_usage_cat_ctl[j].append(control_motif_usage / np.sum(control_motif_usage))
-        motif_usage_cat_score[j].append(score_motif_usage / np.sum(score_motif_usage))
+        if n_cluster == 10:
+            motif_usage_cat_ctl[j].append(control_motif_usage / np.sum(control_motif_usage))
+            motif_usage_cat_score[j].append(score_motif_usage / np.sum(score_motif_usage))
 
         num_points = label.shape[0]
         n += num_points
@@ -311,20 +321,20 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Motif_usages[j] = m
     Motif_usage_pct[j] = m/n
     Labels[j] = l
+    if n_cluster == 10:
+        Epoch1_motif_usage_cat_ctl[j] = m_e1_ctl
+        Epoch2_motif_usage_cat_ctl[j] = m_e2_ctl
+        Epoch3_motif_usage_cat_ctl[j] = m_e3_ctl
+        Motif_usages_ctl[j] = m_control
+        Motif_usage_pct_ctl[j] = m_control / n
+        Labels_ctl[j] = l_control
 
-    Epoch1_motif_usage_cat_ctl[j] = m_e1_ctl
-    Epoch2_motif_usage_cat_ctl[j] = m_e2_ctl
-    Epoch3_motif_usage_cat_ctl[j] = m_e3_ctl
-    Motif_usages_ctl[j] = m_control
-    Motif_usage_pct_ctl[j] = m_control / n
-    Labels_ctl[j] = l_control
-
-    Epoch1_motif_usage_cat_score[j] = m_e1_score
-    Epoch2_motif_usage_cat_score[j] = m_e2_score
-    Epoch3_motif_usage_cat_score[j] = m_e3_score
-    Motif_usages_score[j] = m_score
-    Motif_usage_pct_score[j] = m_score / n
-    Labels_score[j] = l_control
+        Epoch1_motif_usage_cat_score[j] = m_e1_score
+        Epoch2_motif_usage_cat_score[j] = m_e2_score
+        Epoch3_motif_usage_cat_score[j] = m_e3_score
+        Motif_usages_score[j] = m_score
+        Motif_usage_pct_score[j] = m_score / n
+        Labels_score[j] = l_control
 
 
 print(f"{matching_labels/total_label_chunks} labels are matched between score and VAME labels")
