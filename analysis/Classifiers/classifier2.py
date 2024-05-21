@@ -28,6 +28,7 @@ from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.preprocessing import MinMaxScaler
 from data.load_data import load_pt_data
 import itertools
+from sklearn.preprocessing import scale
 #%% Path
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -291,6 +292,14 @@ HBPM
 #%%
 hbpm_motif_df = pd.read_csv(hbpm_motif_path)
 hbpm_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else x, inplace=True)
+# Ignore the first column
+hbpm_motif_df_values = hbpm_motif_df.iloc[:, 1:].values
+# Normalize by row
+row_sums = hbpm_motif_df_values.sum(axis=1)
+hbpm_motif_df1= hbpm_motif_df_values / row_sums[:, np.newaxis]
+# Combine with the first column
+hbpm_motif_df = pd.DataFrame(np.hstack((hbpm_motif_df[['video']].values, hbpm_motif_df1)), columns=hbpm_motif_df.columns)
+
 
 # ENS average between motif
 hbpm_ens_df = pd.read_csv(hbpm_ens_path)
@@ -338,6 +347,14 @@ for column in s3d_motif_df:
         if column_motif not in top_10_motifs:
             s3d_motif_df.drop(column, axis=1, inplace=True)
 
+# Ignore the first column
+s3d_motif_df_values = s3d_motif_df.iloc[:, 1:].values
+# Normalize by row
+row_sums = s3d_motif_df_values.sum(axis=1)
+s3d_motif_df1 = s3d_motif_df_values / row_sums[:, np.newaxis]
+
+# Combine with the first column
+s3d_motif_df = pd.DataFrame(np.hstack((s3d_motif_df[['video']].values, s3d_motif_df1)), columns=s3d_motif_df.columns)
 
 
 # ENS average between motif
@@ -406,6 +423,13 @@ for column in mmaction_motif_df:
         column_motif = int(column[5:])
         if column_motif not in top_10_motifs:
             mmaction_motif_df.drop(column, axis=1, inplace=True)
+# Ignore the first column
+mmaction_motif_df_values = mmaction_motif_df.iloc[:, 1:].values
+# Normalize by row
+row_sums = mmaction_motif_df_values.sum(axis=1)
+mmaction_motif_df1 = mmaction_motif_df_values / row_sums[:, np.newaxis]
+# Combine with the first column
+mmaction_motif_df = pd.DataFrame(np.hstack((mmaction_motif_df[['video']].values, mmaction_motif_df1)), columns=mmaction_motif_df.columns)
 
 # ENS average between motif
 mmaction_ens_df = pd.read_csv(mmaction_ens_path)
@@ -461,6 +485,61 @@ for motif_i_usage in HC_motif_usage.columns:
     print("          Pearson corr HAM_D-HC: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0][0], corr_HAM_D_score[1]))
 #%%
 assessmentNames = assessment_df.columns[2:]
+#%% Compute the Entropy of dwell time of each approach
+from scipy.stats import entropy
+dfs = [vame_motif_df, mmaction_motif_df, s3d_motif_df, dlc_motif_df, hbpm_motif_df]
+dfs_name =  ['vame', 'mmaction','s3d', 'dlc', 'hbpm']
+entropy_values = []
+entropy_values_std = []
+for i, df in enumerate(dfs):
+    df = pd.merge(bd_df, df, on='video')
+    X = df.drop('video', axis=1)
+    y = df['BD']
+    BD_motif_usage = df[bd_df['BD'] == 1]
+    BD_motif_usage.drop('video', axis=1, inplace=True)
+    HC_motif_usage = df[bd_df['BD'] == 0]
+    HC_motif_usage.drop('video', axis=1, inplace=True)
+    BD_motif_usage_values = BD_motif_usage.values
+    HC_motif_usage_values = HC_motif_usage.values
+    entropy_of_BD = []
+    for row in BD_motif_usage_values:
+        probabilities = row.astype(float)
+        entropy_of_BD.append(entropy(probabilities, base=2))  # Compute entropy
+    entropy_of_HC = []
+    for row in HC_motif_usage_values:
+        probabilities = row.astype(float)
+        entropy_of_HC.append(entropy(probabilities, base=2))  #
+    entropy_values.append((np.mean(entropy_of_BD), np.mean(entropy_of_HC)))
+    entropy_values_std.append((np.std(entropy_of_BD), np.std(entropy_of_HC)))
+
+# Extracting mean and std_devs into separate lists
+BD_mean_values = [x[0] for x in entropy_values]
+BD_std_devs = [x[0] for x in entropy_values_std]
+HC_mean_values = [x[1] for x in entropy_values]
+HC_std_devs = [x[1] for x in entropy_values_std]
+from pathlib import Path
+# Plotting the bar graph
+fig, ax = plt.subplots()
+index = np.arange(len(dfs_name))
+bar_width = 0.35
+opacity = 0.8
+b_o_colors = ['#1f77b4', '#ff7f0e']
+# Plotting bars for mean
+plt.errorbar(index, BD_mean_values, yerr=BD_std_devs, color=b_o_colors[1], label='BD', marker='o', linestyle='')
+plt.errorbar(index + bar_width, HC_mean_values, yerr=HC_std_devs, color=b_o_colors[0], label='HC', marker='o', linestyle='')
+plt.ylabel('Entropy')
+plt.xticks(index + bar_width / 2, dfs_name)
+plt.legend()
+plt.tight_layout()
+plt.show()
+project_name = 'BD25-HC25-final-May17-2023'
+n_cluster = 10
+pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
+Path(pwd).mkdir(parents=True, exist_ok=True)
+fname = "dwell-time-entropy-{}.png".format(n_cluster)
+fname_pdf = "dwell-time-entropy-{}.pdf".format(n_cluster)
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 '''
 Feature Selection
