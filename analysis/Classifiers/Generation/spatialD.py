@@ -24,6 +24,10 @@ for v in videos:
     center_necks[v] = [center_neck[:, 15], center_neck[:, 16]]
 
 
+"""
+START OF PLOTTING
+"""
+
 #%%
 def plot_colored_by_time(ax, x_coords, y_coords, cmap_name):
     # Create the segments for the line
@@ -39,12 +43,6 @@ def plot_colored_by_time(ax, x_coords, y_coords, cmap_name):
     # Add the LineCollection to the plot
     ax.add_collection(lc)
 
-
-
-#%%
-pth = "\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\YOUR_VIDEO\VAME\kmeans-10\cluster_videos\motif_X\YOUR_VIDEO_motif_X_N.csv"
-
-
 #%%
 motif1 = {
     'BC1AASA': [24267, 24363], # 3900
@@ -52,7 +50,6 @@ motif1 = {
     'BC1ALKA': [8550, 8639], # 804
     'BC1ALPA': [3742, 3855], # 942
     'BC1ALRO': [9255, 9344], # 822
-
 }
 
 #%%
@@ -89,7 +86,9 @@ for i in range(1): #len(coords)
 plt.grid(True)
 plt.show()
 
-
+"""
+END OF PLOTTING
+"""
 
 
 
@@ -108,6 +107,9 @@ save_vector_to_file(path, center_necks[v])
 #%%
 for v in videos:
     save_vector_to_file(path.format(v), center_necks[v])
+
+
+
 
 #%%
 import scipy.io
