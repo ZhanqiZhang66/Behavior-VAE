@@ -2,6 +2,9 @@
 
 import numpy as np
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
+import matplotlib.collections as mcollections
+
 
 
 #%%
@@ -18,181 +21,121 @@ center_necks = {}
 #%%
 for v in videos:
     center_neck = np.load(dlc_path.format(v, v))
-    center_necks[v] = [center_neck[:][15], center_neck[:][16]]
+    center_necks[v] = [center_neck[:, 15], center_neck[:, 16]]
+
+
+"""
+START OF PLOTTING
+"""
+
+#%%
+def plot_colored_by_time(ax, x_coords, y_coords, cmap_name):
+    # Create the segments for the line
+    points = np.array([x_coords, y_coords]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    # Create a LineCollection with a colormap
+    norm = plt.Normalize(0, len(x_coords) - 1)
+    lc = mcollections.LineCollection(segments, cmap=cmap_name, norm=norm)
+    lc.set_array(np.arange(len(x_coords)))
+    lc.set_linewidth(2)  # Adjust the linewidth for the line
+
+    # Add the LineCollection to the plot
+    ax.add_collection(lc)
+
+#%%
+motif1 = {
+    'BC1AASA': [24267, 24363], # 3900
+    'BC1ADPI': [19325, 19426], # 1032
+    'BC1ALKA': [8550, 8639], # 804
+    'BC1ALPA': [3742, 3855], # 942
+    'BC1ALRO': [9255, 9344], # 822
+}
+
+#%%
+clips = motif1
+coords = []
+
+for v in clips:
+    coords.append([center_necks[v][0][clips[v][0]: clips[v][1]],center_necks[v][1][clips[v][0]: clips[v][1]]] )
+
+#%%
+# Create the plot
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# List of colormaps for variety
+colormaps = ['viridis', 'plasma', 'inferno', 'magma', 'cividis', 'twilight', 'hsv', 'spring', 'summer', 'autumn']
+
+# Plot each set of coordinates with a different colormap
+for i, coordinates in enumerate(coords):
+    x_coords = np.array(coordinates[0])
+    y_coords = np.array(coordinates[1])
+    plot_colored_by_time(ax, x_coords, y_coords, colormaps[i % len(colormaps)]) #
+
+# Set the limits of the plot to match the room dimensions
+ax.set_xlim(0, 720)
+ax.set_ylim(0, 480)
+
+
+# Add colorbars for each line collection
+for i in range(1): #len(coords)
+    cbar = plt.colorbar(mappable=ax.collections[i], ax=ax, orientation='vertical')
+    cbar.set_label(f'Time for Coordinates {i+1}')
+
+# Show the plot
+plt.grid(True)
+plt.show()
+
+"""
+END OF PLOTTING
+"""
+
 
 
 #%%
-def save_vector_to_file(vector, filename):
+def save_vector_to_file(filename, vector):
     with open(filename, 'w') as file:
         file.write("Format: CenterX(mm) CenterY(mm)\n\n0\t0\n")
+        for i in range(27000):
+            file.write(f"{vector[0][i]}\t{vector[1][i]}\n")  # Write the coordinates to the file
 
-        for subject, (x_list, y_list) in vector.items():
-            # Check if both x_list and y_list have 27000 values
-            if len(x_list) == len(y_list) == 27000:
-                # Iterate through corresponding x and y values
-                for x, y in zip(x_list, y_list):
-                    file.write(f"{x}\t{y}\n")  # Write the coordinates to the file
-            else:
-                print(f"Issue with {subject}: x_list and y_list must both have 27000 values.")
+#%%        
+path = r'C:\Users\kietc\OneDrive - UC San Diego\SURF\TRC\{}_TRC.txt'
+#%%
+save_vector_to_file(path, center_necks[v])
+
+#%%
+for v in videos:
+    save_vector_to_file(path.format(v), center_necks[v])
+
+
 
 
 #%%
-def spatialD(x, y, n, K):
-    """
-    Calculate spatial d parameters for a series of locations (x, y).
+import scipy.io
+import numpy as np
+import csv
 
-    Inputs:
-    x, y:   Arrays of corresponding length representing (x, y) coordinates.
-            Data points can be recorded at regular time intervals.
-    n:      Number of data points to consider for calculating an incremental d.
-    K:      Array of resolutions (e.g., K=[1,2,3,4]).
 
-    Outputs:
-    D:      Spatial d parameter averaged over the time interval of the recording.
-    Dloc:   Array of all local D values calculated on intervals of n data points.
-    Kloc:   Array of resolutions corresponding to local D values (K values used).
-    Lloc:   Array of path length values corresponding to local D calculations.
+path = r"C:\Users\kietc\OneDrive - UC San Diego\Documents\MATLAB\Results\D"
 
-    References:
-    Paulus & Geyer (1991) and Higushi (1988)
-    """
+# %%
+def save_D(path, D):
+    with open(path, 'w') as csvfile:
+        csvwriter = csv.writer(csvfile, lineterminator="\n")
+        header = ['video', 'spatialD']
+        csvwriter.writerow(header)
 
-    Nk = len(K)
-    Nx = len(x)
-    NBinterv = Nx - n + 1
-
-    if Nx < n:
-        # If data chunk is not long enough
-        D = 0  # Impossible value for d, continue running program
-        Dloc = np.zeros(NBinterv)
-        Kloc = np.zeros(NBinterv * Nk)
-        Lloc = np.zeros(NBinterv * Nk)
-        
-    else:
-        Dloc = np.zeros(NBinterv)
-        Kloc = np.zeros(NBinterv * Nk)
-        Lloc = np.zeros(NBinterv * Nk)
-
-        for interv in range(NBinterv): # Loop on number of intervals studied over the whole initial xy-vector
-            xx = x[interv:interv+n]
-            yy = y[interv:interv+n]
-
-            L = np.zeros(Nk)
-
-            for it in range(Nk): #Loop on resolution  
-                LLL = []
-                k = K[it]
-
-                # Calculate L(k) - path length with resolution k
-                # (calculated using the average of the vectors of xy-data every k points on the interval - there are k such vectors)
-                for i in range(1, k+1):
-                    III = np.arange(i-1, n, k)
-                    xxx = xx[III]
-                    yyy = yy[III]
-                    LLL.append(np.sum(np.sqrt(np.diff(xxx)**2 + np.diff(yyy)**2)) * ((n-1) / k) / np.floor((n-i) / k) / k)
-
-                L[it] = np.sum(LLL) / k
-
-                # Record local values
-                index = interv * Nk + it
-                Lloc[index] = L[it]
-                Kloc[index] = k
-
-            # Linear least squares fit
-            P = np.polyfit(np.log(K), np.log(L), 1)
-            slope = -P[0]
-            if 0 <= slope < 3:
-                Dloc[interv] = slope
-            else:
-                Dloc[interv] = 0
-
-        # Average of terms greater than 0
-        Dloc_positive = Dloc[Dloc > 0]
-        if len(Dloc_positive) > 0:
-            D = np.mean(Dloc_positive)
-        else:
-            D = 0
-
-    return {
-        'D': D,
-        'Dloc': Dloc,
-        'Kloc': Kloc,
-        'Lloc': Lloc
-    }
-
+        for v in videos:
+            csvwriter.writerow([v, D[v]])
 
 #%%
-n = 27000
-
-results = {}
-
+D = {}
 
 for v in videos:
-    results[v] = spatialD(center_necks[v][0], center_necks[v][1], )
-
-#%% Main
-    
-what = 1  # what=0 => calculate parameters with and without artifacts
-              # what=1 => calculate parameters only on data without artifacts
-filter_cutoff = 5  # Hz
-artifact_cutoff = 30  # pixels per 0.033s
-nmin = 24  # minimum number of data points to create a valid chunk of data
-denominator = 27000
-f = 30  # Hz - frequency of data recording
-
-K = [2**i for i in range(6)]  # Vector of resolutions for spatial-d calculation
-n_spatialD = 2**5*2 + 1  # Multiple of all values in K - Number of data points to consider for an incremental Spatial-D calculation
-beams = [96, 64]  # Number of beams in the x and y direction [beams_x, beams_y]
-RoomDim = [720, 480]  # Dimension of the room in number of pixels [MaxPix_x, MaxPix_y]
-RoomDim_width = 4.3  # in meters
-
-DistTravelled_cutoff = 0.06  # Radius in meters defining purposeful movement (6cm)
-DistTravelled_cutoff_pixels = int(DistTravelled_cutoff / RoomDim_width * RoomDim[0])  # in pixels
-
-# Call activity function with specified parameters
-Results = activity(what, xy_original, filter_cutoff, artifact_cutoff, nmin, denominator, f, n_spatialD, K, beams, RoomDim, DistTravelled_cutoff_pixels)
-
-t = Results.t
-xy = Results.xy
-
-d = Results.d
-d_filt = Results.d_filt
-d_filt_clean = Results.d_filt_clean
-td_clean = Results.td_clean
-
-# xy after filter and artifact cleaning + beam conversion if relevant
-x_filt_clean = Results.x_filt_clean  
-y_filt_clean = Results.y_filt_clean
-txy_clean = Results.txy_clean
-
-# xy after filter and artifact cleaning + no beam conversion
-x_filt_clean_nobeam = Results.x_filt_clean_nobeam  
-y_filt_clean_nobeam = Results.y_filt_clean_nobeam
-
-# xy after travelled-filter - no beam conversion
-t_filt_clean_DT = Results.t_filt_clean_DT  # filtered using travelled cutoff
-x_filt_clean_DT = Results.x_filt_clean_DT  # filtered using travelled cutoff
-y_filt_clean_DT = Results.y_filt_clean_DT  # filtered using travelled cutoff
-
-counts = Results.counts
-counts_filt = Results.counts_filt
-counts_filt_clean = Results.counts_filt_clean
-
-# Spatial-D results
-if what == 0:
-    Dspa = Results.Dspa  # Average spatial-D for this subject - no data processing
-    Dloc = Results.Dloc  # Vector of all spatial-D values calculated on interval increments of 12 data points
-
-    Dspa_filt = Results.Dspa_filt  # Average spatial-D for this subject - after low pass filter
-    Dloc_filt = Results.Dloc_filt
-
-Dspa_filt_clean = Results.Dspa_filt_clean  # Average spatial-D for this subject - after low pass filter & artifact cleaning
-Dspa_chunk = Results.Dspa_chunk
-N_chunk = Results.N_chunk
-Dloc_chunk = Results.Dloc_chunk
-K_chunk = Results.Kchunk
-L_chunk = Results.Lchunk
-
-MovedDist = Results.MovedDist  # Distance Moved in terms of number of room x-length - filtered/non-artifacted signal
-TravelledDist = Results.TravelledDist  # Distance Travelled in terms of number of room x-length - filtered/non-artifacted signal
-
+    mat_contents = scipy.io.loadmat(path + '\\' + v + '_D.mat')
+    D[v] = mat_contents['tempD'][0][0]
+# %%
+path = r"C:\Users\kietc\OneDrive - UC San Diego\SURF\spatialD.csv"
+save_D(path, D)
+# %%
