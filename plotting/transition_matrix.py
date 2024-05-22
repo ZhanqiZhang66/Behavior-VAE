@@ -20,6 +20,7 @@ from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
+import ndd
 #%%
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -38,7 +39,7 @@ project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
 dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
-n_cluster = 30
+n_cluster = 10
 n_scores = 11
 model_name = 'VAME'
 
@@ -207,8 +208,19 @@ def add_self_transition(transition_m, last_state):
     #     transition[last_state - n_rows_removed][last_state - n_rows_removed] = 1
     return transition
 
-def compute_l0_entropy(transition_m, last_state):
+def compute_entropy(transition_m, last_state):
+    """
+    Compute the entropy of a transition matrix.
+
+    Parameters:
+    transition_m (list): The transition matrix to be analyzed.
+    last_state (int): the last motif of the previous transition matrix
+
+    Returns:
+    entropy (float): the entropy of the transition matrix
+    """
     # https://stackoverflow.com/questions/31791728/python-code-explanation-for-stationary-distribution-of-a-markov-chain
+    # http://reeves.ee.duke.edu/information_theory/lecture4-Entropy_Rates.pdf
     invertible_T = add_self_transition(transition_m, last_state)
     if len(invertible_T):
         S, U = scipy.linalg.eig(invertible_T.T)
@@ -219,6 +231,46 @@ def compute_l0_entropy(transition_m, last_state):
         entropy = stationary.dot(H)
     else:
         entropy = 0
+    return entropy
+def count_probability(transition_matrix):
+    """
+    Counts the occurrences of each probability in the transition matrix and returns the counts in the order of first appearance.
+
+    Parameters:
+    array (list): The list of numbers to be counted.
+
+    Returns:
+    list: A list of counts corresponding to each unique number in the array.
+    """
+    count_dict = {}
+    counts = []
+    for number in transition_matrix:
+        if number in count_dict:
+            count_dict[number] += 1
+        else:
+            count_dict[number] = 1
+            counts.append(count_dict[number])
+        # Update counts for each occurrence
+        counts[-1] = count_dict[number]
+    return [count_dict[number] for number in count_dict]
+def compute_Bayesian_entropy_estimation(transition_m, last_state):
+    """
+    Compute the Bayesian entropy estimation of a list of occurrences of transition probability.
+
+    Parameters:
+    transition_m (list): occurrences of each probability in the transition matrix
+    last_state (int): the last motif of the previous transition matrix
+
+    Returns:
+    entropy (float): the Bayesian entropy estimation of the transition matrix
+    """
+    invertible_T = add_self_transition(transition_m, last_state)
+    if len(invertible_T):
+        H, std = ndd.entropy(count_probability(invertible_T.flatten()), return_std=True)
+        entropy = H
+    else:
+        entropy = 0
+        std = np.nan
     return entropy
 def effective_num_states(transtion_m):
     effective_num_every_state = []
@@ -233,7 +285,9 @@ def effective_num_states(transtion_m):
     return effective_num_every_state, effective_num_avg
 
 # https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors
-
+#%%
+five_min_frame_no = 9000
+offset = 0
 #%% Load transition matrix in each video, and append into two classes (BD, CP)
 YMRS_score = []
 HAM_D_score = []
@@ -271,7 +325,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         # Entropy, and classic metrics of transition matrix
         num_zero_row, num_one_item, num_zero_item = count_zeros(transition_m)
-        entropy = compute_l0_entropy(transition_m, label[-1])
+        entropy = compute_Bayesian_entropy_estimation(transition_m, label[-1])
         effective_num_every_state, effective_num_avg = effective_num_states(transition_m)
         Entropies[j].append(entropy)
         Effective_num_states[j].append(effective_num_avg)
@@ -279,14 +333,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         if n_cluster == 10:
             num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
-            entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
+            entropy_ctl = compute_Bayesian_entropy_estimation(control_transition, control_label[-1])
             effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
             Entropies_ctl[j].append(entropy_ctl)
             Effective_num_states_ctl[j].append(effective_num_avg_ctl)
             Effective_num_states_list_ctl[j].append(effective_num_every_state_ctl)
 
             num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
-            entropy_score = compute_l0_entropy(score_transition, control_label[-1])
+            entropy_score = compute_Bayesian_entropy_estimation(score_transition, control_label[-1])
             effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
             Entropies_score[j].append(entropy_score)
             Effective_num_states_score[j].append(effective_num_avg_score)
@@ -341,8 +395,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(
                 epoch_1_transition_matrix_score[0])
 
-            entropy_ctl = compute_l0_entropy(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
-            entropy_score = compute_l0_entropy(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
+            entropy_ctl = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
+            entropy_score = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
 
             effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(
                 epoch_1_transition_matrix_ctl[0])
@@ -374,8 +428,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             num_zero_row_2_score, num_one_item_2_score, num_zero_item_2_score = count_zeros(
                 epoch_2_transition_matrix_score[0])
 
-            entropy_2_ctl = compute_l0_entropy(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])
-            entropy_2_score = compute_l0_entropy(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])
+            entropy_2_ctl = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])
+            entropy_2_score = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])
 
             effective_num_every_state_2ctl, effective_num_avg_2ctl = effective_num_states(
                 epoch_2_transition_matrix_ctl[0])
@@ -400,8 +454,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             num_zero_row_3_score, num_one_item_3_score, num_zero_item_3_score = count_zeros(
                 epoch_3_transition_matrix_score[0])
 
-            entropy_3_ctl = compute_l0_entropy(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
-            entropy_3_score = compute_l0_entropy(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])
+            entropy_3_ctl = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
+            entropy_3_score = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])
 
             effective_num_every_state_3ctl, effective_num_avg_3ctl = effective_num_states(
                 epoch_3_transition_matrix_ctl[0])
@@ -467,7 +521,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         num_zero_row, num_one_item, num_zero_item = count_zeros(epoch_1_transition_matrix[0])
 
 
-        entropy = compute_l0_entropy(epoch_1_transition_matrix[0], epoch_1_label[-1])
+        entropy = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix[0], epoch_1_label[-1])
 
 
         effective_num_every_state, effective_num_avg = effective_num_states(epoch_1_transition_matrix[0])
@@ -487,7 +541,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         num_zero_row_2, num_one_item_2, num_zero_item_2 = count_zeros(epoch_2_transition_matrix[0])
 
 
-        entropy_2 = compute_l0_entropy(epoch_2_transition_matrix[0], epoch_2_label[-1])
+        entropy_2 = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix[0], epoch_2_label[-1])
 
 
         effective_num_every_state2, effective_num_avg2 = effective_num_states(epoch_2_transition_matrix[0])
@@ -507,7 +561,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         num_zero_row_3, num_one_item_3, num_zero_item_3 = count_zeros(epoch_3_transition_matrix[0])
 
 
-        entropy_3 = compute_l0_entropy(epoch_3_transition_matrix[0], epoch_3_label[-1])
+        entropy_3 = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix[0], epoch_3_label[-1])
 
 
         effective_num_every_state3, effective_num_avg3 = effective_num_states(epoch_3_transition_matrix[0])
@@ -726,8 +780,8 @@ Path(pwd).mkdir(parents=True, exist_ok=True)
 fname = "L0-measures.png"
 fname_pdf = "L0-measures.pdf"
 
-fig.savefig(os.path.join(pwd, fname), transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+# fig.savefig(os.path.join(pwd, fname), transparent=True)
+# fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
 
 #%% Plot L1, l2 distance
@@ -915,8 +969,8 @@ for epoch in range(1,4):
     Path(pwd).mkdir(exist_ok=True)
     fname = f"epoch{epoch}-L0-measures-{transition_group[k]}.png"
     fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
-    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Effective number stat test
 def statistic(x, y, axis):
     return np.mean(x, axis=axis) - np.mean(y, axis=axis)
