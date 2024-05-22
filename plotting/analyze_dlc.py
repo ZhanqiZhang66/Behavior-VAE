@@ -585,13 +585,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
             fig.colorbar(scatter_plt)
             fig.show()
 
+
             pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_dlc'.format(onedrive_path, project_name)
             fname = "{}-{}_{}_{}_trajectory_dlc.png".format(group[j], v, n_cluster, df.columns[body_i][:-1])
             fname_pdf = "{}-{}_{}_{}_trajectory_dlc.pdf".format(group[j], v, n_cluster, df.columns[body_i][:-1])
             fig.savefig(os.path.join(pwd, fname), transparent=True)
             fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-# %% Plot latent trajactory overlapping motif segmentations [three approaches]
+#%% Plot latent trajactory overlapping motif segmentations [three approaches]
 from sklearn.decomposition import PCA
 def map_to_range(lst):
     unique_values = sorted(set(lst))  # Get unique values from the list and sort them

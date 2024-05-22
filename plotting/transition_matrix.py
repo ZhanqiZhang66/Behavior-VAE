@@ -38,7 +38,7 @@ project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
 dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
-n_cluster = 10
+n_cluster = 30
 n_scores = 11
 model_name = 'VAME'
 
@@ -250,16 +250,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
         transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v, n_cluster, v))
         cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,project_name, v,n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        if n_cluster == 10:
+            control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
 
-        control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+            control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
+            control_adjacent_m = get_adjacency_matrix(control_label, n_cluster)[0]
 
-        control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
-        control_adjacent_m = get_adjacency_matrix(control_label, n_cluster)[0]
-
-        score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
-        score_label = score_label[: 27000]
-        score_transition = compute_transition_matrices([v], [score_label], n_cluster)[0]
-        score_adjacent_m = get_adjacency_matrix(score_label, n_cluster)[0]
+            score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
+            score_label = score_label[: 27000]
+            score_transition = compute_transition_matrices([v], [score_label], n_cluster)[0]
+            score_adjacent_m = get_adjacency_matrix(score_label, n_cluster)[0]
 
         transition = transition_m.copy()
         transition_matrices.append(transition_m)
@@ -277,30 +277,156 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Effective_num_states[j].append(effective_num_avg)
         Effective_num_states_list[j].append(effective_num_every_state)
 
-        num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
-        entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
-        effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
-        Entropies_ctl[j].append(entropy_ctl)
-        Effective_num_states_ctl[j].append(effective_num_avg_ctl)
-        Effective_num_states_list_ctl[j].append(effective_num_every_state_ctl)
+        if n_cluster == 10:
+            num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
+            entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
+            effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
+            Entropies_ctl[j].append(entropy_ctl)
+            Effective_num_states_ctl[j].append(effective_num_avg_ctl)
+            Effective_num_states_list_ctl[j].append(effective_num_every_state_ctl)
 
-        num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
-        entropy_score = compute_l0_entropy(score_transition, control_label[-1])
-        effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
-        Entropies_score[j].append(entropy_score)
-        Effective_num_states_score[j].append(effective_num_avg_score)
-        Effective_num_states_list_score[j].append(effective_num_every_state_score)
+            num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
+            entropy_score = compute_l0_entropy(score_transition, control_label[-1])
+            effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
+            Entropies_score[j].append(entropy_score)
+            Effective_num_states_score[j].append(effective_num_avg_score)
+            Effective_num_states_list_score[j].append(effective_num_every_state_score)
+
+            epoch_1_label_ctl = control_label[offset:five_min_frame_no + offset]
+            epoch_2_label_ctl = control_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
+            epoch_3_label_ctl = control_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+            epoch_1_label_score = score_label[offset:five_min_frame_no + offset]
+            epoch_2_label_score = score_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
+            epoch_3_label_score = score_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+
+            epoch_1_transition_matrix_ctl = compute_transition_matrices([v], [epoch_1_label_ctl], n_cluster)
+            epoch_2_transition_matrix_ctl = compute_transition_matrices([v], [epoch_2_label_ctl], n_cluster)
+            epoch_3_transition_matrix_ctl = compute_transition_matrices([v], [epoch_3_label_ctl], n_cluster)
+            epoch_1_adjacent_matrix_ctl = get_adjacency_matrix(epoch_1_label_ctl, n_cluster)[0]
+            epoch_2_adjacent_matrix_ctl = get_adjacency_matrix(epoch_2_label_ctl, n_cluster)[0]
+            epoch_3_adjacent_matrix_ctl = get_adjacency_matrix(epoch_3_label_ctl, n_cluster)[0]
+
+            epoch_1_transition_matrix_score = compute_transition_matrices([v], [epoch_1_label_score], n_cluster)
+            epoch_2_transition_matrix_score = compute_transition_matrices([v], [epoch_2_label_score], n_cluster)
+            epoch_3_transition_matrix_score = compute_transition_matrices([v], [epoch_3_label_score], n_cluster)
+            epoch_1_adjacent_matrix_score = get_adjacency_matrix(epoch_1_label_score, n_cluster)[0]
+            epoch_2_adjacent_matrix_score = get_adjacency_matrix(epoch_2_label_score, n_cluster)[0]
+            epoch_3_adjacent_matrix_score = get_adjacency_matrix(epoch_3_label_score, n_cluster)[0]
+
+            Epoch1_labels_ctl[j].append(epoch_1_label_ctl)
+            Epoch1_transition_matrix_ctl[j].append(epoch_1_transition_matrix_ctl)
+            Epoch1_adjacent_matrix_ctl[j].append(epoch_1_adjacent_matrix_ctl)
+            Epoch1_labels_score[j].append(epoch_1_label_score)
+            Epoch1_transition_matrix_score[j].append(epoch_1_transition_matrix_score)
+            Epoch1_adjacent_matrix_score[j].append(epoch_1_adjacent_matrix_score)
+
+            Epoch2_labels_ctl[j].append(epoch_2_label_ctl)
+            Epoch2_transition_matrix_ctl[j].append(epoch_2_transition_matrix_ctl)
+            Epoch2_adjacent_matrix_ctl[j].append(epoch_2_adjacent_matrix_ctl)
+            Epoch2_labels_score[j].append(epoch_2_label_score)
+            Epoch2_transition_matrix_score[j].append(epoch_2_transition_matrix_score)
+            Epoch2_adjacent_matrix_score[j].append(epoch_2_adjacent_matrix_score)
+
+
+            Epoch3_labels_ctl[j].append(epoch_3_label_ctl)
+            Epoch3_transition_matrix_ctl[j].append(epoch_3_transition_matrix_ctl)
+            Epoch3_adjacent_matrix_ctl[j].append(epoch_3_adjacent_matrix_ctl)
+            Epoch3_labels_score[j].append(epoch_3_label_score)
+            Epoch3_transition_matrix_score[j].append(epoch_3_transition_matrix_score)
+            Epoch3_adjacent_matrix_score[j].append(epoch_3_adjacent_matrix_score)
+
+
+
+            num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(epoch_1_transition_matrix_ctl[0])
+            num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(
+                epoch_1_transition_matrix_score[0])
+
+            entropy_ctl = compute_l0_entropy(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
+            entropy_score = compute_l0_entropy(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
+
+            effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(
+                epoch_1_transition_matrix_ctl[0])
+            effective_num_every_state_score, effective_num_avg_score = effective_num_states(
+                epoch_1_transition_matrix_score[0])
+
+            num_zero_rows_ctl[j].append(num_zero_row_ctl)
+            num_ones_ctl[j].append(num_one_item_ctl)
+            num_zeros_ctl[j].append(num_zero_item_ctl)
+            num_zero_rows_score[j].append(num_zero_row_score)
+            num_ones_score[j].append(num_one_item_score)
+            num_zeros_score[j].append(num_zero_item_score)
+
+            Epoch1_Entropies_ctl[j].append(entropy_ctl)
+            Epoch1_Effective_num_every_state_ctl[j].append(effective_num_every_state_ctl)
+            Epoch1_Effective_num_avg_ctl[j].append(effective_num_avg_ctl)
+            Epoch1_num_zero_rows_ctl[j].append(num_zero_row_ctl)
+            Epoch1_num_ones_ctl[j].append(num_one_item_ctl)
+            Epoch1_num_zeros_ctl[j].append(num_zero_item_ctl)
+
+            Epoch1_Entropies_score[j].append(entropy_score)
+            Epoch1_Effective_num_every_state_score[j].append(effective_num_every_state_score)
+            Epoch1_Effective_num_avg_score[j].append(effective_num_avg_score)
+            Epoch1_num_zero_rows_score[j].append(num_zero_row_score)
+            Epoch1_num_ones_score[j].append(num_one_item_score)
+            Epoch1_num_zeros_score[j].append(num_zero_item_score)
+
+            num_zero_row_2_ctl, num_one_item_2_ctl, num_zero_item_2_ctl = count_zeros(epoch_2_transition_matrix_ctl[0])
+            num_zero_row_2_score, num_one_item_2_score, num_zero_item_2_score = count_zeros(
+                epoch_2_transition_matrix_score[0])
+
+            entropy_2_ctl = compute_l0_entropy(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])
+            entropy_2_score = compute_l0_entropy(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])
+
+            effective_num_every_state_2ctl, effective_num_avg_2ctl = effective_num_states(
+                epoch_2_transition_matrix_ctl[0])
+            effective_num_every_state_2score, effective_num_avg_2score = effective_num_states(
+                epoch_2_transition_matrix_score[0])
+
+            Epoch2_Entropies_ctl[j].append(entropy_2_ctl)
+            Epoch2_Effective_num_every_state_ctl[j].append(effective_num_every_state_2ctl)
+            Epoch2_Effective_num_avg_ctl[j].append(effective_num_avg_2ctl)
+            Epoch2_num_zero_rows_ctl[j].append(num_zero_row_2_ctl)
+            Epoch2_num_ones_ctl[j].append(num_one_item_2_ctl)
+            Epoch2_num_zeros_ctl[j].append(num_zero_item_2_ctl)
+
+            Epoch2_Entropies_score[j].append(entropy_2_score)
+            Epoch2_Effective_num_every_state_score[j].append(effective_num_every_state_2score)
+            Epoch2_Effective_num_avg_score[j].append(effective_num_avg_2score)
+            Epoch2_num_zero_rows_score[j].append(num_zero_row_2_score)
+            Epoch2_num_ones_score[j].append(num_one_item_2_score)
+            Epoch2_num_zeros_score[j].append(num_zero_item_2_score)
+
+            num_zero_row_3_ctl, num_one_item_3_ctl, num_zero_item_3_ctl = count_zeros(epoch_3_transition_matrix_ctl[0])
+            num_zero_row_3_score, num_one_item_3_score, num_zero_item_3_score = count_zeros(
+                epoch_3_transition_matrix_score[0])
+
+            entropy_3_ctl = compute_l0_entropy(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
+            entropy_3_score = compute_l0_entropy(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])
+
+            effective_num_every_state_3ctl, effective_num_avg_3ctl = effective_num_states(
+                epoch_3_transition_matrix_ctl[0])
+            effective_num_every_state_3score, effective_num_avg_3score = effective_num_states(
+                epoch_3_transition_matrix_score[0])
+
+            Epoch3_Entropies_ctl[j].append(entropy_3_ctl)
+            Epoch3_Effective_num_every_state_ctl[j].append(effective_num_every_state_3ctl)
+            Epoch3_Effective_num_avg_ctl[j].append(effective_num_avg_3ctl)
+            Epoch3_num_zero_rows_ctl[j].append(num_zero_row_3_ctl)
+            Epoch3_num_ones_ctl[j].append(num_one_item_3_ctl)
+            Epoch3_num_zeros_ctl[j].append(num_zero_item_3_ctl)
+
+            Epoch3_Entropies_score[j].append(entropy_3_score)
+            Epoch3_Effective_num_every_state_score[j].append(effective_num_every_state_3score)
+            Epoch3_Effective_num_avg_score[j].append(effective_num_avg_3score)
+            Epoch3_num_zero_rows_score[j].append(num_zero_row_3_score)
+            Epoch3_num_ones_score[j].append(num_one_item_3_score)
+            Epoch3_num_zeros_score[j].append(num_zero_item_3_score)
 
         num_state = n_cluster
         num_zero_rows[j].append(num_zero_row)
         num_ones[j].append(num_one_item)
         num_zeros[j].append(num_zero_item)
-        num_zero_rows_ctl[j].append(num_zero_row_ctl)
-        num_ones_ctl[j].append(num_one_item_ctl)
-        num_zeros_ctl[j].append(num_zero_item_ctl)
-        num_zero_rows_score[j].append(num_zero_row_score)
-        num_ones_score[j].append(num_one_item_score)
-        num_zeros_score[j].append(num_zero_item_score)
+
 
         start_time = start_frame[v][0]
         five_min_frame_no = int(5 * 60 * 30)
@@ -309,12 +435,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         epoch_1_label = label[offset:five_min_frame_no + offset]
         epoch_2_label = label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
         epoch_3_label = label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
-        epoch_1_label_ctl = control_label[offset:five_min_frame_no + offset]
-        epoch_2_label_ctl = control_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
-        epoch_3_label_ctl = control_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
-        epoch_1_label_score = score_label[offset:five_min_frame_no + offset]
-        epoch_2_label_score = score_label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
-        epoch_3_label_score = score_label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
+
 
         epoch_1_transition_matrix = compute_transition_matrices([v], [epoch_1_label], n_cluster)
         epoch_2_transition_matrix = compute_transition_matrices([v], [epoch_2_label], n_cluster)
@@ -323,63 +444,34 @@ for j, videos in enumerate([control_videos, BD_videos]):
         epoch_2_adjacent_matrix = get_adjacency_matrix(epoch_2_label, n_cluster)[0]
         epoch_3_adjacent_matrix = get_adjacency_matrix(epoch_3_label, n_cluster)[0]
 
-        epoch_1_transition_matrix_ctl = compute_transition_matrices([v], [epoch_1_label_ctl], n_cluster)
-        epoch_2_transition_matrix_ctl = compute_transition_matrices([v], [epoch_2_label_ctl], n_cluster)
-        epoch_3_transition_matrix_ctl = compute_transition_matrices([v], [epoch_3_label_ctl], n_cluster)
-        epoch_1_adjacent_matrix_ctl = get_adjacency_matrix(epoch_1_label_ctl, n_cluster)[0]
-        epoch_2_adjacent_matrix_ctl = get_adjacency_matrix(epoch_2_label_ctl, n_cluster)[0]
-        epoch_3_adjacent_matrix_ctl = get_adjacency_matrix(epoch_3_label_ctl, n_cluster)[0]
 
-        epoch_1_transition_matrix_score = compute_transition_matrices([v], [epoch_1_label_score], n_cluster)
-        epoch_2_transition_matrix_score = compute_transition_matrices([v], [epoch_2_label_score], n_cluster)
-        epoch_3_transition_matrix_score = compute_transition_matrices([v], [epoch_3_label_score], n_cluster)
-        epoch_1_adjacent_matrix_score = get_adjacency_matrix(epoch_1_label_score, n_cluster)[0]
-        epoch_2_adjacent_matrix_score = get_adjacency_matrix(epoch_2_label_score, n_cluster)[0]
-        epoch_3_adjacent_matrix_score = get_adjacency_matrix(epoch_3_label_score, n_cluster)[0]
 
         Epoch1_labels[j].append(epoch_1_label)
         Epoch1_transition_matrix[j].append(epoch_1_transition_matrix)
         Epoch1_adjacent_matrix[j].append(epoch_1_adjacent_matrix)
-        Epoch1_labels_ctl[j].append(epoch_1_label_ctl)
-        Epoch1_transition_matrix_ctl[j].append(epoch_1_transition_matrix_ctl)
-        Epoch1_adjacent_matrix_ctl[j].append(epoch_1_adjacent_matrix_ctl)
-        Epoch1_labels_score[j].append(epoch_1_label_score)
-        Epoch1_transition_matrix_score[j].append(epoch_1_transition_matrix_score)
-        Epoch1_adjacent_matrix_score[j].append(epoch_1_adjacent_matrix_score)
+
 
         Epoch2_labels[j].append(epoch_2_label)
         Epoch2_transition_matrix[j].append(epoch_2_transition_matrix)
         Epoch2_adjacent_matrix[j].append(epoch_2_adjacent_matrix)
-        Epoch2_labels_ctl[j].append(epoch_2_label_ctl)
-        Epoch2_transition_matrix_ctl[j].append(epoch_2_transition_matrix_ctl)
-        Epoch2_adjacent_matrix_ctl[j].append(epoch_2_adjacent_matrix_ctl)
-        Epoch2_labels_score[j].append(epoch_2_label_score)
-        Epoch2_transition_matrix_score[j].append(epoch_2_transition_matrix_score)
-        Epoch2_adjacent_matrix_score[j].append(epoch_2_adjacent_matrix_score)
+
+
 
         Epoch3_labels[j].append(epoch_3_label)
         Epoch3_transition_matrix[j].append(epoch_3_transition_matrix)
         Epoch3_adjacent_matrix[j].append(epoch_3_adjacent_matrix)
-        Epoch3_labels_ctl[j].append(epoch_3_label_ctl)
-        Epoch3_transition_matrix_ctl[j].append(epoch_3_transition_matrix_ctl)
-        Epoch3_adjacent_matrix_ctl[j].append(epoch_3_adjacent_matrix_ctl)
-        Epoch3_labels_score[j].append(epoch_3_label_score)
-        Epoch3_transition_matrix_score[j].append(epoch_3_transition_matrix_score)
-        Epoch3_adjacent_matrix_score[j].append(epoch_3_adjacent_matrix_score)
+
 
 
         # ==== Epoch 1 ====
         num_zero_row, num_one_item, num_zero_item = count_zeros(epoch_1_transition_matrix[0])
-        num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(epoch_1_transition_matrix_ctl[0])
-        num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(epoch_1_transition_matrix_score[0])
+
 
         entropy = compute_l0_entropy(epoch_1_transition_matrix[0], epoch_1_label[-1])
-        entropy_ctl = compute_l0_entropy(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
-        entropy_score = compute_l0_entropy(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
+
 
         effective_num_every_state, effective_num_avg = effective_num_states(epoch_1_transition_matrix[0])
-        effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(epoch_1_transition_matrix_ctl[0])
-        effective_num_every_state_score, effective_num_avg_score = effective_num_states(epoch_1_transition_matrix_score[0])
+
 
         Epoch1_Entropies[j].append(entropy)
         Epoch1_Effective_num_every_state[j].append(effective_num_every_state)
@@ -388,34 +480,18 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch1_num_ones[j].append(num_one_item)
         Epoch1_num_zeros[j].append(num_zero_item)
 
-        Epoch1_Entropies_ctl[j].append(entropy_ctl)
-        Epoch1_Effective_num_every_state_ctl[j].append(effective_num_every_state_ctl)
-        Epoch1_Effective_num_avg_ctl[j].append(effective_num_avg_ctl)
-        Epoch1_num_zero_rows_ctl[j].append(num_zero_row_ctl)
-        Epoch1_num_ones_ctl[j].append(num_one_item_ctl)
-        Epoch1_num_zeros_ctl[j].append(num_zero_item_ctl)
 
-        Epoch1_Entropies_score[j].append(entropy_score)
-        Epoch1_Effective_num_every_state_score[j].append(effective_num_every_state_score)
-        Epoch1_Effective_num_avg_score[j].append(effective_num_avg_score)
-        Epoch1_num_zero_rows_score[j].append(num_zero_row_score)
-        Epoch1_num_ones_score[j].append(num_one_item_score)
-        Epoch1_num_zeros_score[j].append(num_zero_item_score)
 
 
         # ==== Epoch 2 ====
         num_zero_row_2, num_one_item_2, num_zero_item_2 = count_zeros(epoch_2_transition_matrix[0])
-        num_zero_row_2_ctl, num_one_item_2_ctl, num_zero_item_2_ctl = count_zeros(epoch_2_transition_matrix_ctl[0])
-        num_zero_row_2_score, num_one_item_2_score, num_zero_item_2_score = count_zeros(
-            epoch_2_transition_matrix_score[0])
+
 
         entropy_2 = compute_l0_entropy(epoch_2_transition_matrix[0], epoch_2_label[-1])
-        entropy_2_ctl = compute_l0_entropy(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])
-        entropy_2_score = compute_l0_entropy(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])
+
 
         effective_num_every_state2, effective_num_avg2 = effective_num_states(epoch_2_transition_matrix[0])
-        effective_num_every_state_2ctl, effective_num_avg_2ctl = effective_num_states(epoch_2_transition_matrix_ctl[0])
-        effective_num_every_state_2score, effective_num_avg_2score = effective_num_states(epoch_2_transition_matrix_score[0])
+
 
         Epoch2_Entropies[j].append(entropy_2)
         Epoch2_Effective_num_every_state[j].append(effective_num_every_state2)
@@ -424,33 +500,18 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch2_num_ones[j].append(num_one_item_2)
         Epoch2_num_zeros[j].append(num_zero_item_2)
 
-        Epoch2_Entropies_ctl[j].append(entropy_2_ctl)
-        Epoch2_Effective_num_every_state_ctl[j].append(effective_num_every_state_2ctl)
-        Epoch2_Effective_num_avg_ctl[j].append(effective_num_avg_2ctl)
-        Epoch2_num_zero_rows_ctl[j].append(num_zero_row_2_ctl)
-        Epoch2_num_ones_ctl[j].append(num_one_item_2_ctl)
-        Epoch2_num_zeros_ctl[j].append(num_zero_item_2_ctl)
 
-        Epoch2_Entropies_score[j].append(entropy_2_score)
-        Epoch2_Effective_num_every_state_score[j].append(effective_num_every_state_2score)
-        Epoch2_Effective_num_avg_score[j].append(effective_num_avg_2score)
-        Epoch2_num_zero_rows_score[j].append(num_zero_row_2_score)
-        Epoch2_num_ones_score[j].append(num_one_item_2_score)
-        Epoch2_num_zeros_score[j].append(num_zero_item_2_score)
 
 
         # ==== Epoch 3 ====
         num_zero_row_3, num_one_item_3, num_zero_item_3 = count_zeros(epoch_3_transition_matrix[0])
-        num_zero_row_3_ctl, num_one_item_3_ctl, num_zero_item_3_ctl = count_zeros(epoch_3_transition_matrix_ctl[0])
-        num_zero_row_3_score, num_one_item_3_score, num_zero_item_3_score = count_zeros(epoch_3_transition_matrix_score[0])
+
 
         entropy_3 = compute_l0_entropy(epoch_3_transition_matrix[0], epoch_3_label[-1])
-        entropy_3_ctl = compute_l0_entropy(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
-        entropy_3_score = compute_l0_entropy(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])
+
 
         effective_num_every_state3, effective_num_avg3 = effective_num_states(epoch_3_transition_matrix[0])
-        effective_num_every_state_3ctl, effective_num_avg_3ctl = effective_num_states(epoch_3_transition_matrix_ctl[0])
-        effective_num_every_state_3score, effective_num_avg_3score = effective_num_states(epoch_3_transition_matrix_score[0])
+
 
         Epoch3_Entropies[j].append(entropy_3)
         Epoch3_Effective_num_every_state[j].append(effective_num_every_state3)
@@ -459,31 +520,21 @@ for j, videos in enumerate([control_videos, BD_videos]):
         Epoch3_num_ones[j].append(num_one_item_3)
         Epoch3_num_zeros[j].append(num_zero_item_3)
 
-        Epoch3_Entropies_ctl[j].append(entropy_3_ctl)
-        Epoch3_Effective_num_every_state_ctl[j].append(effective_num_every_state_3ctl)
-        Epoch3_Effective_num_avg_ctl[j].append(effective_num_avg_3ctl)
-        Epoch3_num_zero_rows_ctl[j].append(num_zero_row_3_ctl)
-        Epoch3_num_ones_ctl[j].append(num_one_item_3_ctl)
-        Epoch3_num_zeros_ctl[j].append(num_zero_item_3_ctl)
 
-        Epoch3_Entropies_score[j].append(entropy_3_score)
-        Epoch3_Effective_num_every_state_score[j].append(effective_num_every_state_3score)
-        Epoch3_Effective_num_avg_score[j].append(effective_num_avg_3score)
-        Epoch3_num_zero_rows_score[j].append(num_zero_row_3_score)
-        Epoch3_num_ones_score[j].append(num_one_item_3_score)
-        Epoch3_num_zeros_score[j].append(num_zero_item_3_score)
 
         if i == 0:
             l = label
-            l_ctl = control_label
-            l_score = score_label
+            if n_cluster == 0:
+                l_ctl = control_label
+                l_score = score_label
             # tm = transition
             # tm_ctl = control_transition
             # tm_score = score_transition
         else:
             l = np.concatenate([l,label])
-            l_ctl = np.concatenate([l_ctl, control_label])
-            l_score = np.concatenate([l_score, score_label])
+            if n_cluster == 0:
+                l_ctl = np.concatenate([l_ctl, control_label])
+                l_score = np.concatenate([l_score, score_label])
             # tm += transition
 
         num_points = label.shape[0]
@@ -493,14 +544,15 @@ for j, videos in enumerate([control_videos, BD_videos]):
     Labels[j] = l
     population_transition_matrix = compute_transition_matrices([titles[j]], [l], n_cluster)
     population_TM[j] = population_transition_matrix
-    population_transition_matrix_ctl = compute_transition_matrices([titles[j]], [l_ctl], n_cluster)
-    population_TM_ctl[j] = population_transition_matrix_ctl
-    population_transition_matrix_score = compute_transition_matrices([titles[j]], [l_score], n_cluster)
-    population_TM_score[j] = population_transition_matrix_score
+    if n_cluster == 0:
+        population_transition_matrix_ctl = compute_transition_matrices([titles[j]], [l_ctl], n_cluster)
+        population_TM_ctl[j] = population_transition_matrix_ctl
+        population_transition_matrix_score = compute_transition_matrices([titles[j]], [l_score], n_cluster)
+        population_TM_score[j] = population_transition_matrix_score
     # TM[j] = tm/n_subject_in_population
 
 #%%   Population-level plots
-
+from plotting.create_color_maps import  generate_distinct_colors
 #%% Plot transition matrix
 pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
 patient_names = control_videos + BD_videos
@@ -510,7 +562,7 @@ cividis_colors = cividis_cmap(np.linspace(0, 1, 20))
 for i in range(len(videos)*2):
     k = 0 if i < 25 else 1
     fig, axes = plt.subplots(3, 2, figsize=(10, 15))
-    for j in range(3):
+    for j in range(len(transition_group)):
         transition_matrix_to_plot = eval("transition_matrices{}".format(transition_group[j]))
         transition_matrix_to_plot = transition_matrix_to_plot[i]
         # plot transition matrix
@@ -536,12 +588,13 @@ for i in range(len(videos)*2):
         # pos = nx.circular_layout(G)
         # pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
         cmap = plt.get_cmap('tab20')
+        if n_cluster == 30:
+            cmap = generate_distinct_colors(num_colors=n_cluster*2)
         seed = 13648  # Seed random number generators for reproducibility
         pos = nx.circular_layout(G)
         node_sizes = [3 + 10 * i for i in range(len(G))]
-        motif_usage = eval('motif_usage_cat{}'.format(transition_group[j]))[0] + \
-                      eval('motif_usage_cat{}'.format(transition_group[j]))[1]
-        motif_usage = motif_usage[i][:10]
+        motif_usage = eval('motif_usage_cat{}'.format(transition_group[j])).reshape(len(videos)*2, n_cluster)
+        motif_usage = motif_usage[i,:]
 
         M = G.number_of_edges()
 
@@ -1021,13 +1074,15 @@ for k in range(len(transition_group)):
     print("BD: slope: {:.2f},  r: {:.2f}, p: {:.10f}, se: {:.2f}".format(slope, r, p, se))
     print("HC: slope: {:.2f},  r: {:.2f}, p: {:.10f}, se: {:.2f}".format(slope1, r1, p1, se1))
     ax[k].set_ylim([0, 0.4])
+    if n_cluster == 30:
+        ax[k].set_ylim([0, 0.12])
     ax[k].grid(False)
     ax[k].set_title(f"transition_frequency{transition_group[k]}")
 fig.show()
 pwd = r'{}\Behavior_VAE_data\{}\figure\adjacent'.format(onedrive_path, project_name)
 Path(pwd).mkdir(parents=True, exist_ok=True)
-fname = "adjacent-transition.png"
-fname_pdf = "adjacent-transition.pdf"
+fname = f"adjacent-transition_{n_cluster}.png"
+fname_pdf = f"adjacent-transition_{n_cluster}.pdf"
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
@@ -1155,12 +1210,14 @@ for i in range(n_subject_in_population * 2):
 
             nodelist = G.nodes()
             edgeList = G.edges()
-            motif_usage = eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[0]+ eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[1]
-            motif_usage = motif_usage[i][:10]
-            print(motif_usage)
+            motif_usage = np.asarray(eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[0]+ eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[1])
+            motif_usage = motif_usage[i,:]
+
             # pos = nx.circular_layout(G)
             # pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
             cmap = plt.get_cmap('tab20')
+            if n_cluster == 30:
+                cmap = generate_distinct_colors(n_cluster*2)
             seed = 13648  # Seed random number generators for reproducibility
             pos = nx.circular_layout(G)
             node_sizes = [3 + 10 * i for i in range(len(G))]
@@ -1292,9 +1349,9 @@ import os
 from pathlib import Path
 
 # Sample data (replace with your actual data)
-n_cluster = 10  # Example value, replace with actual number of clusters
+# n_cluster = 10  # Example value, replace with actual number of clusters
 n_subject_in_population = 25  # Example value, replace with actual number of subjects
-w = 12  # Example width for the figure
+w = 12 * n_cluster/10  # Example width for the figure
 
 # Concatenate data for all epochs
 concatenated_data = []
@@ -1339,7 +1396,7 @@ ax = sns.boxplot(y="effective number",
                  orient="v",
                  palette=new_color_map,
                  linewidth=0.5,
-                 gap=0.5)
+              )
 
 # Set legend labels
 plt.legend(['CP', 'BD'])
@@ -1349,6 +1406,9 @@ plt.title('Effective number over motifs')
 plt.xlabel('Motifs (States)')
 plt.ylabel('Effective number')
 plt.ylim([0, 8])
+if n_cluster == 30:
+    plt.ylim([0, 11])
+
 
 # Remove top and right spines
 sns.despine()
@@ -1356,7 +1416,7 @@ sns.despine()
 # Show the plot
 plt.show()
 pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
-fname = "effective_number-three_epochs_together.png"
-fname_pdf = "effective_number-three_epochs_together.pdf"
+fname = f"effective_number-three_epochs_together-{n_cluster}.png"
+fname_pdf = f"effective_number-three_epochs_together-{n_cluster}.pdf"
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
