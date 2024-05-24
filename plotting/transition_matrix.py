@@ -69,6 +69,7 @@ Epoch1_labels = [[], []]
 Epoch1_transition_matrix = [[], []]
 Epoch1_adjacent_matrix = [[], []]
 Epoch1_Entropies = [[],[]]
+Epoch1_Stationary_Entropies = [[],[]]
 Epoch1_Effective_num_every_state = [[], []]
 Epoch1_Effective_num_avg = [[], []]
 Epoch1_num_zero_rows = [[],[]]
@@ -78,6 +79,7 @@ Epoch1_labels_ctl = [[], []]
 Epoch1_transition_matrix_ctl = [[], []]
 Epoch1_adjacent_matrix_ctl = [[], []]
 Epoch1_Entropies_ctl = [[],[]]
+Epoch1_Stationary_Entropies_ctl = [[],[]]
 Epoch1_Effective_num_every_state_ctl = [[], []]
 Epoch1_Effective_num_avg_ctl = [[], []]
 Epoch1_num_zero_rows_ctl = [[],[]]
@@ -87,6 +89,7 @@ Epoch1_labels_score = [[], []]
 Epoch1_transition_matrix_score = [[], []]
 Epoch1_adjacent_matrix_score = [[], []]
 Epoch1_Entropies_score = [[],[]]
+Epoch1_Stationary_Entropies_score = [[],[]]
 Epoch1_Effective_num_every_state_score = [[], []]
 Epoch1_Effective_num_avg_score = [[], []]
 Epoch1_num_zero_rows_score = [[],[]]
@@ -97,6 +100,7 @@ Epoch2_labels = [[], []]
 Epoch2_transition_matrix = [[], []]
 Epoch2_adjacent_matrix = [[], []]
 Epoch2_Entropies = [[],[]]
+Epoch2_Stationary_Entropies = [[],[]]
 Epoch2_Effective_num_every_state = [[], []]
 Epoch2_Effective_num_avg = [[], []]
 Epoch2_num_zero_rows = [[],[]]
@@ -106,6 +110,7 @@ Epoch2_labels_ctl = [[], []]
 Epoch2_transition_matrix_ctl = [[], []]
 Epoch2_adjacent_matrix_ctl = [[], []]
 Epoch2_Entropies_ctl = [[],[]]
+Epoch2_Stationary_Entropies_ctl = [[],[]]
 Epoch2_Effective_num_every_state_ctl = [[], []]
 Epoch2_Effective_num_avg_ctl = [[], []]
 Epoch2_num_zero_rows_ctl = [[],[]]
@@ -115,6 +120,7 @@ Epoch2_labels_score = [[], []]
 Epoch2_transition_matrix_score = [[], []]
 Epoch2_adjacent_matrix_score = [[], []]
 Epoch2_Entropies_score = [[],[]]
+Epoch2_Stationary_Entropies_score = [[],[]]
 Epoch2_Effective_num_every_state_score = [[], []]
 Epoch2_Effective_num_avg_score = [[], []]
 Epoch2_num_zero_rows_score = [[],[]]
@@ -125,6 +131,7 @@ Epoch3_labels = [[], []]
 Epoch3_transition_matrix = [[], []]
 Epoch3_adjacent_matrix = [[], []]
 Epoch3_Entropies = [[],[]]
+Epoch3_Stationary_Entropies = [[],[]]
 Epoch3_Effective_num_every_state = [[], []]
 Epoch3_Effective_num_avg = [[], []]
 Epoch3_num_zero_rows = [[],[]]
@@ -134,6 +141,7 @@ Epoch3_labels_ctl = [[], []]
 Epoch3_transition_matrix_ctl = [[], []]
 Epoch3_adjacent_matrix_ctl = [[], []]
 Epoch3_Entropies_ctl = [[],[]]
+Epoch3_Stationary_Entropies_ctl = [[],[]]
 Epoch3_Effective_num_every_state_ctl = [[], []]
 Epoch3_Effective_num_avg_ctl = [[], []]
 Epoch3_num_zero_rows_ctl = [[],[]]
@@ -143,6 +151,7 @@ Epoch3_labels_score = [[], []]
 Epoch3_transition_matrix_score = [[], []]
 Epoch3_adjacent_matrix_score = [[], []]
 Epoch3_Entropies_score = [[],[]]
+Epoch3_Stationary_Entropies_score = [[],[]]
 Epoch3_Effective_num_every_state_score = [[], []]
 Epoch3_Effective_num_avg_score = [[], []]
 Epoch3_num_zero_rows_score = [[],[]]
@@ -150,6 +159,7 @@ Epoch3_num_zeros_score = [[],[]]
 Epoch3_num_ones_score = [[],[]]
 
 Entropies = [[],[]]
+Stationary_Entropy = [[],[]]
 Effective_num_states = [[],[]]
 Effective_num_states_list = [[],[]]
 num_zero_rows = [[],[]]
@@ -157,6 +167,7 @@ num_zeros = [[],[]]
 num_ones = [[],[]]
 
 Entropies_ctl = [[],[]]
+Stationary_Entropy_ctl = [[],[]]
 Effective_num_states_ctl = [[],[]]
 Effective_num_states_list_ctl = [[],[]]
 num_zero_rows_ctl = [[],[]]
@@ -164,12 +175,14 @@ num_zeros_ctl = [[],[]]
 num_ones_ctl = [[],[]]
 
 Entropies_score = [[],[]]
+Stationary_Entropy_score = [[],[]]
 Effective_num_states_score = [[],[]]
 Effective_num_states_list_score = [[],[]]
 num_zero_rows_score = [[],[]]
 num_zeros_score = [[],[]]
 num_ones_score = [[],[]]
 #%%
+
 def count_transition_frequency(adjacent_matrix):
     transition_frequency = np.count_nonzero(adjacent_matrix == 1)
     return transition_frequency
@@ -207,7 +220,22 @@ def add_self_transition(transition_m, last_state):
     # if len_reduced:
     #     transition[last_state - n_rows_removed][last_state - n_rows_removed] = 1
     return transition
+def compute_stationary_probability(transition_m, last_state):
+    # https://stackoverflow.com/questions/31791728/python-code-explanation-for-stationary-distribution-of-a-markov-chain
+    # http://reeves.ee.duke.edu/information_theory/lecture4-Entropy_Rates.pdf
+    invertible_T = add_self_transition(transition_m, last_state)
+    if len(invertible_T):
+        S, U = scipy.linalg.eig(invertible_T.T)
+        stationary = np.array(U[:, np.where(np.abs(S - 1.) < 1e-8)[0][0]].flat)
+        stationary = stationary / np.sum(stationary)
+        stationary = stationary.real
+    else:
+        stationary = [0]* len(transition_m)
+    entropy = scipy.stats.entropy(stationary, base=2)
+    if entropy < 0:
+        print("negative entropy")
 
+    return stationary, entropy
 def compute_entropy(transition_m, last_state):
     """
     Compute the entropy of a transition matrix.
@@ -223,10 +251,7 @@ def compute_entropy(transition_m, last_state):
     # http://reeves.ee.duke.edu/information_theory/lecture4-Entropy_Rates.pdf
     invertible_T = add_self_transition(transition_m, last_state)
     if len(invertible_T):
-        S, U = scipy.linalg.eig(invertible_T.T)
-        stationary = np.array(U[:, np.where(np.abs(S - 1.) < 1e-8)[0][0]].flat)
-        stationary = stationary / np.sum(stationary)
-        stationary = stationary.real
+        stationary = compute_stationary_probability(transition_m, last_state)
         H = scipy.stats.entropy(invertible_T, base=2, axis=1)
         entropy = stationary.dot(H)
     else:
@@ -266,8 +291,12 @@ def compute_Bayesian_entropy_estimation(transition_m, last_state):
     """
     invertible_T = add_self_transition(transition_m, last_state)
     if len(invertible_T):
-        H, std = ndd.entropy(count_probability(invertible_T.flatten()), return_std=True)
-        entropy = H
+        Hs = []
+        stationary = compute_stationary_probability(transition_m, last_state)[0]
+        for row in invertible_T:
+            H, std = ndd.entropy(count_probability(row.flatten()), return_std=True)
+            Hs.append(H)
+        entropy = stationary.dot(Hs)
     else:
         entropy = 0
         std = np.nan
@@ -328,6 +357,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         entropy = compute_Bayesian_entropy_estimation(transition_m, label[-1])
         effective_num_every_state, effective_num_avg = effective_num_states(transition_m)
         Entropies[j].append(entropy)
+        Stationary_Entropy[j].append(compute_stationary_probability(transition_m, label[-1])[1])
         Effective_num_states[j].append(effective_num_avg)
         Effective_num_states_list[j].append(effective_num_every_state)
 
@@ -336,6 +366,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             entropy_ctl = compute_Bayesian_entropy_estimation(control_transition, control_label[-1])
             effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
             Entropies_ctl[j].append(entropy_ctl)
+            Stationary_Entropy_ctl[j].append(compute_stationary_probability(control_transition, control_label[-1])[1])
             Effective_num_states_ctl[j].append(effective_num_avg_ctl)
             Effective_num_states_list_ctl[j].append(effective_num_every_state_ctl)
 
@@ -343,6 +374,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             entropy_score = compute_Bayesian_entropy_estimation(score_transition, control_label[-1])
             effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
             Entropies_score[j].append(entropy_score)
+            Stationary_Entropy_score[j].append(compute_stationary_probability(score_transition, score_label[-1])[1])
             Effective_num_states_score[j].append(effective_num_avg_score)
             Effective_num_states_list_score[j].append(effective_num_every_state_score)
 
@@ -398,6 +430,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             entropy_ctl = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
             entropy_score = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
 
+
             effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(
                 epoch_1_transition_matrix_ctl[0])
             effective_num_every_state_score, effective_num_avg_score = effective_num_states(
@@ -411,6 +444,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             num_zeros_score[j].append(num_zero_item_score)
 
             Epoch1_Entropies_ctl[j].append(entropy_ctl)
+            Epoch1_Stationary_Entropies_ctl[j].append(compute_stationary_probability(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])[1])
             Epoch1_Effective_num_every_state_ctl[j].append(effective_num_every_state_ctl)
             Epoch1_Effective_num_avg_ctl[j].append(effective_num_avg_ctl)
             Epoch1_num_zero_rows_ctl[j].append(num_zero_row_ctl)
@@ -418,6 +452,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch1_num_zeros_ctl[j].append(num_zero_item_ctl)
 
             Epoch1_Entropies_score[j].append(entropy_score)
+            Epoch1_Stationary_Entropies_score[j].append(compute_stationary_probability(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])[1])
             Epoch1_Effective_num_every_state_score[j].append(effective_num_every_state_score)
             Epoch1_Effective_num_avg_score[j].append(effective_num_avg_score)
             Epoch1_num_zero_rows_score[j].append(num_zero_row_score)
@@ -437,6 +472,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 epoch_2_transition_matrix_score[0])
 
             Epoch2_Entropies_ctl[j].append(entropy_2_ctl)
+            Epoch2_Stationary_Entropies_ctl[j].append(compute_stationary_probability(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])[1])
             Epoch2_Effective_num_every_state_ctl[j].append(effective_num_every_state_2ctl)
             Epoch2_Effective_num_avg_ctl[j].append(effective_num_avg_2ctl)
             Epoch2_num_zero_rows_ctl[j].append(num_zero_row_2_ctl)
@@ -444,6 +480,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch2_num_zeros_ctl[j].append(num_zero_item_2_ctl)
 
             Epoch2_Entropies_score[j].append(entropy_2_score)
+            Epoch2_Stationary_Entropies_score[j].append(compute_stationary_probability(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])[1])
             Epoch2_Effective_num_every_state_score[j].append(effective_num_every_state_2score)
             Epoch2_Effective_num_avg_score[j].append(effective_num_avg_2score)
             Epoch2_num_zero_rows_score[j].append(num_zero_row_2_score)
@@ -463,6 +500,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 epoch_3_transition_matrix_score[0])
 
             Epoch3_Entropies_ctl[j].append(entropy_3_ctl)
+            Epoch3_Stationary_Entropies_ctl[j].append(compute_stationary_probability(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])[1])
             Epoch3_Effective_num_every_state_ctl[j].append(effective_num_every_state_3ctl)
             Epoch3_Effective_num_avg_ctl[j].append(effective_num_avg_3ctl)
             Epoch3_num_zero_rows_ctl[j].append(num_zero_row_3_ctl)
@@ -470,6 +508,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch3_num_zeros_ctl[j].append(num_zero_item_3_ctl)
 
             Epoch3_Entropies_score[j].append(entropy_3_score)
+            Epoch3_Stationary_Entropies_score[j].append(compute_stationary_probability(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])[1])
             Epoch3_Effective_num_every_state_score[j].append(effective_num_every_state_3score)
             Epoch3_Effective_num_avg_score[j].append(effective_num_avg_3score)
             Epoch3_num_zero_rows_score[j].append(num_zero_row_3_score)
@@ -528,6 +567,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
 
         Epoch1_Entropies[j].append(entropy)
+        Epoch1_Stationary_Entropies[j].append(compute_stationary_probability(epoch_1_transition_matrix[0], epoch_1_label[-1])[1])
         Epoch1_Effective_num_every_state[j].append(effective_num_every_state)
         Epoch1_Effective_num_avg[j].append(effective_num_avg)
         Epoch1_num_zero_rows[j].append(num_zero_row)
@@ -539,15 +579,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         # ==== Epoch 2 ====
         num_zero_row_2, num_one_item_2, num_zero_item_2 = count_zeros(epoch_2_transition_matrix[0])
-
-
         entropy_2 = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix[0], epoch_2_label[-1])
-
-
         effective_num_every_state2, effective_num_avg2 = effective_num_states(epoch_2_transition_matrix[0])
-
-
         Epoch2_Entropies[j].append(entropy_2)
+        Epoch2_Stationary_Entropies[j].append(compute_stationary_probability(epoch_2_transition_matrix[0], epoch_2_label[-1])[1])
         Epoch2_Effective_num_every_state[j].append(effective_num_every_state2)
         Epoch2_Effective_num_avg[j].append(effective_num_avg2)
         Epoch2_num_zero_rows[j].append(num_zero_row_2)
@@ -559,15 +594,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         # ==== Epoch 3 ====
         num_zero_row_3, num_one_item_3, num_zero_item_3 = count_zeros(epoch_3_transition_matrix[0])
-
-
         entropy_3 = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix[0], epoch_3_label[-1])
-
-
         effective_num_every_state3, effective_num_avg3 = effective_num_states(epoch_3_transition_matrix[0])
-
-
         Epoch3_Entropies[j].append(entropy_3)
+        Epoch3_Stationary_Entropies[j].append(compute_stationary_probability(epoch_3_transition_matrix[0], epoch_3_label[-1])[1])
         Epoch3_Effective_num_every_state[j].append(effective_num_every_state3)
         Epoch3_Effective_num_avg[j].append(effective_num_avg3)
         Epoch3_num_zero_rows[j].append(num_zero_row_3)
@@ -716,27 +746,31 @@ for i in range(len(videos)*2):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Plot L0 measures: spasity, entropy, number of 1s, number of 0s
-num_metrics = 4
+
 metric_names = ['dist of entropy',
+                'dist of stationary entropy',
                 'dist of #empty state',
                 'dist of #p(state) = 1',
                 'dist of #p(state) = 0',
                 'is_BD']
-lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
+num_metrics = len(metric_names)-1
+lims = [[-2, 4], [-2, 4], [-5, 15], [-4, 8], [30, 120]]
 
 sns.set_style("white")
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
-fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(15, 15))
+fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(10, 15))
 for j in range(len(transition_group)):
     print(f"{transition_group[j]}\n")
     Entropies_to_plot = eval("Entropies{}".format(transition_group[j]))
+    Stationary_entropy_to_plot = eval("Stationary_Entropy{}".format(transition_group[j]))
     num_zero_rows_to_plot = eval("num_zero_rows{}".format(transition_group[j]))
     num_ones_to_plot = eval("num_ones{}".format(transition_group[j]))
     num_zeros_to_plot = eval("num_zeros{}".format(transition_group[j]))
 
     latent_ds = pd.DataFrame(np.concatenate((
-        np.concatenate((Entropies_to_plot[0],Entropies_to_plot[1]),0).reshape(-1, 1),     # 2 x 12 list
+        np.concatenate((Entropies_to_plot[0],Entropies_to_plot[1]),0).reshape(-1, 1),     # 2 x 25 list
+        np.concatenate((Stationary_entropy_to_plot[0],Stationary_entropy_to_plot[1]),0).reshape(-1, 1),
         np.concatenate((num_zero_rows_to_plot[0],num_zero_rows_to_plot[1]),0).reshape(-1, 1),
         np.concatenate((num_ones_to_plot[0],num_ones_to_plot[1]),0).reshape(-1, 1),
         np.concatenate((num_zeros_to_plot[0],num_zeros_to_plot[1]),0).reshape(-1, 1),
@@ -748,8 +782,14 @@ for j in range(len(transition_group)):
                     data=latent_ds, palette="muted", ax=axes[i][j])
         sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
                       color="white", edgecolor="gray", ax=axes[i][j])
-        CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
-        BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
+        HC = latent_ds[metric_names[i]][:n_subject_in_population]
+        BD = latent_ds[metric_names[i]][n_subject_in_population:]
+        HC.replace(-np.inf, np.nan, inplace=True)
+        BD.replace(-np.inf, np.nan, inplace=True)
+        HC.dropna(inplace=True)
+        BD.dropna(inplace=True)
+        CP = np.asarray(HC)
+        BD = np.asarray(BD)
         corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
         corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
         print("          YMARS-all: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
@@ -768,18 +808,18 @@ for j in range(len(transition_group)):
         # print("corr_YMRS_score:", corr_YMRS_score)
         s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
         print("          t-stat: {:.2f}, p-val: {:.3f}".format(s.statistic, s.pvalue))
-        axes[i][j].set_xticklabels(['CP','BD'])
-        axes[i][j].set_title('{}\n p-val: {:.3f}'.format(metric_names[i], s.pvalue))
+
+        axes[i][j].set_title('p-val: {:.3f}'.format(s.pvalue))
         axes[i][j].set_ylim(lims[i])
 
 plt.tight_layout
 plt.suptitle("15-min-{}, vame, ctrl, score".format(transition_group[j]))
 plt.show()
-pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices_Bayesian_entropy'.format(onedrive_path, project_name)
 Path(pwd).mkdir(parents=True, exist_ok=True)
 fname = "L0-measures.png"
 fname_pdf = "L0-measures.pdf"
-
+#
 # fig.savefig(os.path.join(pwd, fname), transparent=True)
 # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%%
@@ -910,56 +950,67 @@ for i in idx:
 #%% Epoch level plots
 
 #%% violin plot
-num_metrics = 4
+
 metric_names = ['distribution of entropy',
+                'distribution of stationary entropy',
                 'distribution of #empty state',
                 'distribution of #p(state) = 1',
                 'distribution of #p(state) = 0',
                 'is_BD']
-lims = [[-2, 4], [-5, 15], [-4, 8], [30, 120]]
+num_metrics = len(metric_names)-1
+lims = [[-2, 4], [-2, 4],[-5, 15], [-4, 8], [30, 120]]
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 
 for epoch in range(1,4):
-    fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(10, 10))
-    sns.set_style('darkgrid')
+    fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(10, 15))
+    sns.set_style("white")
     for k in range(len(transition_group)):
         print("\nEpoch {}-{}\n".format(epoch, transition_group[k]))
         entropy = eval("Epoch{}_Entropies{}".format(epoch, transition_group[k]))
+        stationary_entropy = eval("Epoch{}_Stationary_Entropies{}".format(epoch, transition_group[k]))
         num_zero_rows = eval("Epoch{}_num_zero_rows{}".format(epoch, transition_group[k]))
         num_ones = eval("Epoch{}_num_ones{}".format(epoch, transition_group[k]))
         num_zeros = eval("Epoch{}_num_zeros{}".format(epoch, transition_group[k]))
         latent_ds = pd.DataFrame(np.concatenate((
             np.concatenate((entropy[0], entropy[1]), 0).reshape(-1, 1),
+            np.concatenate((stationary_entropy[0], stationary_entropy[1]), 0).reshape(-1, 1),
             np.concatenate((num_zero_rows[0], num_zero_rows[1]), 0).reshape(-1, 1),
             np.concatenate((num_ones[0], num_ones[1]), 0).reshape(-1, 1),
             np.concatenate((num_zeros[0], num_zeros[1]), 0).reshape(-1, 1),
             np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1)), 1),
             columns=metric_names)
+        latent_ds.replace([np.inf, -np.inf], np.nan, inplace=True)
+        for col in metric_names:
+            latent_ds.dropna(subset=[col], inplace=True)
+
         for i in range(num_metrics):
             sns.violinplot(x=metric_names[-1], y=metric_names[i],
                            data=latent_ds, palette="muted", ax=axes[i][k])
             sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
                           color="white", edgecolor="gray", ax=axes[i][k])
-            CP = np.asarray(latent_ds[metric_names[i]][:n_subject_in_population])
-            BD = np.asarray(latent_ds[metric_names[i]][n_subject_in_population:])
 
-            corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
-            corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
-            print("          YMARS-all: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
-            print("          HAM_D-all: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
+            HC = latent_ds[metric_names[i]][:n_subject_in_population]
+            BD = latent_ds[metric_names[i]][n_subject_in_population:]
 
-            corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
-            corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
-            corr_HAM_D_score_CP = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
-            corr_YMRS_score_CP = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
-            print("          YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_CP[0], corr_YMRS_score_CP[1]))
-            print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_CP[0], corr_HAM_D_score_CP[1]))
-            print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
-            print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
+            CP = np.asarray(HC)
+            BD = np.asarray(BD)
+            # corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
+            # corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
+            # print("          YMARS-all: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
+            # print("          HAM_D-all: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
+            #
+            # corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
+            # corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
+            # corr_HAM_D_score_CP = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
+            # corr_YMRS_score_CP = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
+            # print("          YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_CP[0], corr_YMRS_score_CP[1]))
+            # print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_CP[0], corr_HAM_D_score_CP[1]))
+            # print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
+            # print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
             s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
             print("{} , t-stat: {:.2f}, p-val: {:.3f}".format(metric_names[i], s.statistic, s.pvalue))
-            axes[i][k].set_xticklabels(['CP', 'BD'])
+
             axes[i][k].set_title('{}, p-val: {:.3f}'.format(metric_names[i], s.pvalue))
             axes[i][k].set_ylim(lims[i])
             # axes[i].set_xlabel('population')
