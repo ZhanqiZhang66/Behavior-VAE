@@ -4,7 +4,8 @@
 # Scenario:
 # Usage
 #%%
-import umap
+import random
+
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
@@ -13,22 +14,27 @@ from matplotlib.lines import Line2D
 import matplotlib.cm as cm
 import matplotlib.pylab as pl
 import os
-from vame.analysis.community_analysis import  read_config, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
+
 import tqdm
 from pathlib import Path
-import torch
+
 from sklearn.cluster import KMeans
-from vame.util.auxiliary import read_config
-from vame.analysis.pose_segmentation import get_motif_usage, same_parameterization
+
 import pandas as pd
 import glob
 import datetime
-import cv2
+
 from pathlib import Path
 import pathlib
 from data.load_data import load_pt_data
 from analysis.Classifiers.Generation.utils import my_colormap
 from plotting.get_paths import get_my_path
+from itertools import combinations
+import seaborn as sns
+import pandas as pd
+import pymannkendall as mk
+import random
+from scipy import stats
 #%%
 myPath = get_my_path()
 onedrive_path = myPath['onedrive_path']
@@ -39,11 +45,10 @@ data_path = myPath['data_path']
 project_name = 'BD25-HC25-final-May17-2023'
 project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
-cfg = read_config(config)
 dlc_path = os.path.join(project_path,"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 model_name = 'VAME'
-path_to_file = cfg['project_path']
+
 
 data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
@@ -57,10 +62,10 @@ dlc_labels = ['label', 'l-eyex','l-eyey','r-eyex','r-eyey','l_earx','l_eary','r_
               ]
 n_subject_in_population = len(control_videos)
 
-csv_path = os.path.join(cfg['project_path'],"videos","pose_estimation")
+csv_path = os.path.join(project_path,"videos","pose_estimation")
 confidence = 0.9
 group = ['HC','BD']
-temp_win = cfg['time_window']
+temp_win = 60
 #%% Plot latent trajactory overlapping motif segmentations [three approaches]
 from sklearn.decomposition import PCA
 from sklearn.neighbors import KernelDensity
@@ -177,9 +182,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
         v = videos[i]
         print(v)
 
-        data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+        data = np.load(os.path.join(project_path, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
 
-        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        folder = os.path.join(project_path, "results", v, model_name, 'kmeans-' + str(n_cluster), "")
 # L x 30
         labels = []
         vame_label = np.load(
@@ -221,9 +226,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
     for i in range(len(videos)):
         v = videos[i]
         print(v)
-        data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+        data = np.load(os.path.join(project_path, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
 
-        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        folder = os.path.join(project_path, "results", v, model_name, 'kmeans-' + str(n_cluster), "")
         latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy'))  # L x 30
         labels = []
         vame_label = np.load(
@@ -251,17 +256,19 @@ for j, videos in enumerate([control_videos, BD_videos]):
 #%% estimated intensity function
 titles = ["vame"]
 intensity_estimates_list = [[],[]]
+event_array_list = [[],[]]
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     intensity_estimates_j = []
+    event_array_j = []
     for i in range(len(videos)):
 
         v = videos[i]
         print(v)
 
-        data = np.load(os.path.join(path_to_file, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
+        data = np.load(os.path.join(project_path, 'data', 'pose_sequence', v + '-90pct_seq.npy'))
 
-        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        folder = os.path.join(project_path, "results", v, model_name, 'kmeans-' + str(n_cluster), "")
 # L x 30
         labels = []
         vame_label = np.load(
@@ -275,7 +282,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
         vame_label = vame_label[:27000]
 
         event_array, time_steps, intensity_estimates = intensity_estimation(vame_label, bandwidth=900)
+
         intensity_estimates_j.append(intensity_estimates)
+        event_array_j.append(event_array)
         # fig, axs = plt.subplots(1, 1, figsize=(15, 5))
         # ax1 = axs
         # plot_ethogram(vame_label, data, ax1, alpha=1, show_event=False)
@@ -294,6 +303,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
         # plt.tight_layout()
         # plt.show()
     intensity_estimates_list[j] = intensity_estimates_j
+    event_array_list[j] = event_array_j
+#%% plot the mean of intensity_estimation
 
 fig, ax = plt.subplots(1, 1, figsize=(15, 5))
 b_o_colors = ['#1f77b4', '#ff7f0e']
@@ -311,8 +322,191 @@ for j in range(2):
 plt.xlim([0, 27000])
 plt.title(f'BD vs control(blue)')
 plt.show()
+#%%  plot mean of sum of event_array_list
+fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+b_o_colors = ['#1f77b4', '#ff7f0e']
+for j in range(2):
+    event_array_list_ = np.array(event_array_list[j])
+    avg_event = event_array_list_.mean(axis=0)
+    std_intensity = event_array_list_.std(axis=0)
+    y = avg_event
+    error_y = std_intensity
+
+    x = np.arange(27000)
+    ax.fill_between(x, y - error_y, y + error_y, norm=plt.Normalize(vmin=0, vmax=9),
+                    alpha=0.2, facecolor=b_o_colors[j])
+    ax.plot(x, y, color=b_o_colors[j], zorder=1)
+plt.xlim([0, 27000])
+plt.title(f'BD vs control(blue)')
+plt.show()
+#%% bootstrap the intensity_estimates
+from tsbootstrap import MovingBlockBootstrap
+rng = random.seed(9)
+for j in range(2):
+    X_bootstrapped = []
+    for sample in range(25):
+        intensity_estimates_ = np.array(intensity_estimates_list[j][sample]).transpose()
+        # Instantiate the bootstrap object
+
+        block_length = 27000
+        rng = 42
+        mbb = MovingBlockBootstrap(n_bootstraps=100, rng=rng, block_length=block_length)
+
+        # Generate bootstrapped samples
+        bootstrapped_samples = mbb.bootstrap(intensity_estimates_, return_indices=False)
+
+        # Collect bootstrap samples
+
+        for data in bootstrapped_samples:
+            X_bootstrapped.append(data)
+
+    X_bootstrapped = np.array(X_bootstrapped)
+
+    # plot the bootstrapped intensity_estimates
+    fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+
+    for i in range(250):
+        y = X_bootstrapped[i]
+        ax.plot(np.arange(27000), y, color='blue', alpha=0.1)
+    for ii in range(25):
+        ax.plot(np.arange(27000), np.array(intensity_estimates_list[j][ii]), color='red', alpha=0.1)
+
+    ax.plot(np.arange(27000), np.mean(X_bootstrapped, axis=0), color='blue', zorder=1)
+    ax.plot(np.arange(27000), np.array(intensity_estimates_list[j]).mean(axis=0), color='red', zorder=1)
+    plt.show()
 
 
+#%%
+
+def compute_row_differences(A, B):
+
+    num_rows = A.shape[0]
+
+    # Initialize a list to store the differences
+    differences = []
+
+    # Compute differences between each row in A and each row in B
+    for i, j in combinations(range(num_rows), 2):
+        # Compute the difference for the pair (i, j)
+        diff_ij = A[i] - B[j]
+        differences.append(diff_ij)
+
+        # Compute the difference for the pair (j, i)
+        diff_ji = A[j] - B[i]
+        differences.append(diff_ji)
+
+    # Convert the list of differences to a numpy array for easier manipulation
+    differences = np.array(differences)
+
+    return differences
+def compute_auc(y):
+    return np.trapz(y, x=np.arange(len(y)))
+# plot the difference between the two groups
+
+
+auc_epoch = []
+auc_shuffle_epoch = []
+diff_epoch = []
+diff_shuffle_epoch = []
+
+for epoch in range(1, 4):
+    # split the data evenly in three epochs
+    HC_intensity_estimates_ = np.array(intensity_estimates_list[0])
+    BD_intensity_estimates_ = np.array(intensity_estimates_list[1])
+    HC_intensity_estimates_ = HC_intensity_estimates_[:, (epoch-1)*9000:epoch*9000]
+    BD_intensity_estimates_ = BD_intensity_estimates_[:, (epoch-1)*9000:epoch*9000]
+
+    difference = compute_row_differences(HC_intensity_estimates_, BD_intensity_estimates_)
+    diff_epoch.append(difference)
+    # shuffled
+    intensity_estimates_list_all = np.concatenate((HC_intensity_estimates_, BD_intensity_estimates_), axis=0).tolist()
+    random.shuffle(intensity_estimates_list_all)
+    HC_intensity_estimates_random = np.array(intensity_estimates_list_all[:25])
+    BD_intensity_estimates_random = np.array(intensity_estimates_list_all[25:])
+    difference_shuffle = compute_row_differences(HC_intensity_estimates_random, BD_intensity_estimates_random)
+    diff_shuffle_epoch.append(difference_shuffle)
+    aucs = []
+    aucs_shuffle = []
+    for i in range(difference.shape[0]):
+        y = difference[i]
+        y_shuffled = difference_shuffle[i]
+        x = np.arange(9000)
+        auc = np.trapz(y, x)
+        auc_shuffle = np.trapz(y_shuffled, x)
+        aucs.append(auc)
+        aucs_shuffle.append(auc_shuffle)
+    auc_epoch.append(aucs)
+    auc_shuffle_epoch.append(aucs_shuffle)
+
+# do t-test on diff_epoch and diff_shuffle_epoch
+difference_overall = compute_row_differences(np.array(intensity_estimates_list[0]), np.array(intensity_estimates_list[1]))
+stats.ttest_1samp(np.array(difference_overall).mean(axis=1), popmean=0)
+stats.ttest_ind(np.array(intensity_estimates_list[0]).flatten(), np.array(intensity_estimates_list[1]).flatten())
+
+# make a histogram for intensity_estimates_list[0] and intensity_estimates_list[1]
+fig, ax = plt.subplots(1, 1, figsize=(15, 5))
+sns.histplot(np.array(intensity_estimates_list[0]).flatten(), color='blue', ax=ax)
+sns.histplot(np.array(intensity_estimates_list[1]).flatten(), color='red', ax=ax)
+# do not show 0
+plt.xlim([0.0011, 0.2])
+plt.show()
+
+
+
+auc_epoch_ = np.array(auc_epoch).flatten()
+auc_shuffle_epoch_ = np.array(auc_shuffle_epoch).flatten()
+# for each epoch, plot the auc of the difference between two groups
+df = pd.DataFrame(auc_epoch_.T, columns=['Data'])
+df['Epoch'] = np.concatenate([np.ones(600)*1, np.ones(600)*2, np.ones(600)*3])
+df['Type'] = 'Data'
+
+df_shuffle = pd.DataFrame(auc_shuffle_epoch_.T, columns=['Data'])
+df_shuffle['Epoch'] = np.concatenate([np.ones(600)*1, np.ones(600)*2, np.ones(600)*3])
+df_shuffle['Type'] = 'Shuffled'
+# plot shuffled violin next to data violin
+df_all = pd.concat([df, df_shuffle])
+sns.violinplot(x='Epoch', y='Data', hue='Type', data=df_all)
+plt.show()
+
+x_data = np.mean(np.array(auc_epoch), axis=1)
+x_shuffle = np.mean(np.array(auc_shuffle_epoch), axis=1)
+# fit linear regression to x_data and x_shuffle
+x = np.arange(3)
+slope, b1, r, p, se = stats.linregress(x, x_data)
+slope2, b2, r2, p2, se2 = stats.linregress(x, x_shuffle)
+t = (slope - slope2) / np.sqrt(abs(se - se2))
+p = stats.t.sf(abs(t), df=len(x)+len(x)-4)
+print(p)
+
+#%% Statistical test
+
+#
+# HC_intensity_estimates_ = np.array(intensity_estimates_list[0])
+# BD_intensity_estimates_ = np.array(intensity_estimates_list[1])
+# HC_avg_intensity = HC_intensity_estimates_.mean(axis=0)
+# BD_avg_intensity = BD_intensity_estimates_.mean(axis=0)
+# print(mk.original_test(HC_avg_intensity))
+# print(mk.original_test(BD_avg_intensity))
+# x = np.arange(27000)
+# slope, b1, r, p, se = stats.linregress(x, HC_avg_intensity)
+# slope2, b2, r2, p2, se2 = stats.linregress(x, BD_avg_intensity)
+# t = (slope - slope2) / np.sqrt(se - se2)
+# p = stats.t.sf(abs(t), df=len(x)+len(x)-4)
+# print(p)
+#
+# intensity_estimates_list_all = np.concatenate((HC_intensity_estimates_, BD_intensity_estimates_), axis=0).tolist()
+# random.shuffle(intensity_estimates_list_all)
+# HC_intensity_estimates_random = np.array(intensity_estimates_list_all[:25])
+# BD_intensity_estimates_random = np.array(intensity_estimates_list_all[25:])
+# HC_avg_intensity_random = HC_intensity_estimates_random.mean(axis=0)
+# BD_avg_intensity_random = BD_intensity_estimates_random.mean(axis=0)
+# print(mk.original_test(HC_avg_intensity_random))
+# print(mk.original_test(BD_avg_intensity_random))
+# slope3, b3, r3, p3, se3 = stats.linregress(x, HC_avg_intensity_random)
+# slope4, b4, r2, p4, se4 = stats.linregress(x, BD_avg_intensity_random)
+# t2 = (slope3 - slope4) / np.sqrt(se3 - se4)
+# p2 = stats.t.sf(abs(t2), df=len(x)+len(x)-4)
+# print(p2)
 #%% moving average on transition
 #%% estimated intensity function
 

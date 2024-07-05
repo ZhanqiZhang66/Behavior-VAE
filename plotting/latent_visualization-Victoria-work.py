@@ -1085,7 +1085,7 @@ for epoch in range(1, 4):
 
 #%%
 '''
-between trajectories of each subject
+ between trajectories of each subject
 '''
 import itertools
 # Initialize an empty DataFrame
@@ -1120,93 +1120,51 @@ with open(f'{project_path}/data/latent_vectors.pkl', 'wb') as f:
     pickle.dump(df, f)
 
 
-#%% Stop! A DTW computation that needs to run in parallel (to speed up)
+#%% Stop! A Wasserstein computation that needs to run in parallel (to speed up)
 
-# Initialize a DataFrame to store the distances
-distances_BD_HC = []
-distances_HC_HC = []
-distances_BD_BD = []
-for epoch in range(1, 4):
-    for motif in range(n_cluster):
-        # Select the rows corresponding to J == 0 and J == 1 for the current epoch and motif
-        df_epoch_motif_HC = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 0)]
-        df_epoch_motif_BD = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 1)]
+import subprocess
 
-        # Iterate over each pair of latent vectors and compute the distance
-        print(f"motif{motif} epoch {epoch}")
-        for i in range(len(df_epoch_motif_HC)):
-            for j in range(len(df_epoch_motif_BD)):
-                latent_vector_HC = df_epoch_motif_HC.iloc[i]['Latent_Vector']
-                latent_vector_BD = df_epoch_motif_BD.iloc[j]['Latent_Vector']
-
-                # Compute distance between the latent vectors
-                BD_HC_distance = dtw_ndim.distance(latent_vector_BD, latent_vector_HC)
-
-                # Add the distance to the distances DataFrame
-                distances_BD_HC.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_HC_distance}
-                                                   )
-                print(f"  person{i} vs person {j}")
-        # Iterate over each pair of latent vectors and compute the distance
-        for i, j in itertools.combinations(range(len(df_epoch_motif_BD)), 2):
-            latent_vector_HC = df_epoch_motif_HC.iloc[i]['Latent_Vector']
-            latent_vector_HC2 = df_epoch_motif_HC.iloc[j]['Latent_Vector']
-
-            # Compute distance between the latent vectors
-            HC_HC_distance = dtw_ndim.distance(latent_vector_HC, latent_vector_HC2)
-
-            # Add the distance to the distances DataFrame
-            distances_HC_HC.append({'Epoch': epoch, 'Motif': motif, 'Distance': HC_HC_distance}
-                                               )
-
-        # Iterate over each pair of latent vectors and compute the distance
-        for i, j in itertools.combinations(range(len(df_epoch_motif_BD)), 2):
-            latent_vector_BD = df_epoch_motif_BD.iloc[i]['Latent_Vector']
-            latent_vector_BD2 = df_epoch_motif_BD.iloc[j]['Latent_Vector']
-
-            # Compute distance between the latent vectors
-            BD_BD_distance = dtw_ndim.distance(latent_vector_BD, latent_vector_BD2)
-
-            # Add the distance to the distances DataFrame
-            distances_BD_BD.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_BD_distance}
-                                               )
-distances_BD_BD_df = pd.DataFrame(distances_BD_BD)
-distances_BD_BD_df.to_csv('distances_BD_BD_df.csv', index=False)
-distances_HC_HC_df = pd.DataFrame(distances_HC_HC)
-distances_HC_HC_df.to_csv('distances_HC_HC_df.csv', index=False)
-
+subprocess.call("compute_Wasserstein_distances.py", shell=True)
 #%%
 '''
-add missing diagonal distances
+loading Wasserstein distances add missing diagonal distances
 '''
+import pickle
 with open(f'{project_path}/data/Wasserstein_distances_BD_HC.pkl', 'rb') as f:
     distances_BD_HC_df = pd.DataFrame(pickle.load(f))
 with open(f'{project_path}/data/Wasserstein_distances_HC_HC.pkl', 'rb') as f:
-    distances_HC_HC_df = pd.DataFrame(pickle.load(distances_HC_HC, f))
+    distances_HC_HC_df = pd.DataFrame(pickle.load(f))
 with open(f'{project_path}/data/Wasserstein_distances_BD_BD.pkl', 'rb') as f:
-    distances_BD_BD_df = pd.DataFrame(pickle.load(distances_BD_BD, f))
-distances_BD_HC_diagnal = []
-for epoch in range(1, 4):
-    for motif in range(n_cluster):
-        # Select the rows corresponding to J == 0 and J == 1 for the current epoch and motif
-        df_epoch_motif_HC = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 0)]
-        df_epoch_motif_BD = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 1)]
+    distances_BD_BD_df = pd.DataFrame(pickle.load(f))
+with open(f'{project_path}/data/latent_vectors.pkl', 'rb') as f:
+    df = pd.DataFrame(pickle.load(f))
+distances_HC_BD_df = distances_BD_HC_df
+print("Finished Loading")
+#%%
+# distances_BD_HC_diagnal = []
+# for epoch in range(1, 4):
+#     for motif in range(n_cluster):
+#         # Select the rows corresponding to J == 0 and J == 1 for the current epoch and motif
+#         df_epoch_motif_HC = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 0)]
+#         df_epoch_motif_BD = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 1)]
+#
+#         latent_vector_HC = df_epoch_motif_HC.iloc[motif]['Latent_Vector']
+#         latent_vector_BD = df_epoch_motif_BD.iloc[motif]['Latent_Vector']
+#         BD_HC_distance = dtw_ndim.distance(latent_vector_BD, latent_vector_HC)
+#
+#     # Add the distance to the distances DataFrame
+#     distances_BD_HC_diagnal.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_HC_distance})
+#
+# new_df = pd.DataFrame(distances_BD_HC_diagnal)
+# df = pd.concat([new_df, distances_BD_HC_df], ignore_index=True)
+# distances_HC_BD_df = df
 
-        latent_vector_HC = df_epoch_motif_HC.iloc[motif]['Latent_Vector']
-        latent_vector_BD = df_epoch_motif_BD.iloc[motif]['Latent_Vector']
-        BD_HC_distance = dtw_ndim.distance(latent_vector_BD, latent_vector_HC)
-
-    # Add the distance to the distances DataFrame
-    distances_BD_HC_diagnal.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_HC_distance})
-
-new_df = pd.DataFrame(distances_BD_HC_diagnal)
-df = pd.concat([new_df, distances_BD_HC_df], ignore_index=True)
-distances_HC_BD_df = df
-
-distances_HC_BD_df.to_csv('distances_BD_HC_df.csv', index=False)
+# distances_HC_BD_df.to_csv('distances_BD_HC_df.csv', index=False)
 #%%
 '''
-Plot the pairwise DTW distances
+Plot the pairwise Wasserstein distances
 '''
+
 distances_HC_BD_df.replace([np.inf, -np.inf], 0, inplace=True)
 distances_HC_HC_df.replace([np.inf, -np.inf], 0, inplace=True)
 distances_BD_BD_df.replace([np.inf, -np.inf], 0, inplace=True)
@@ -1245,15 +1203,15 @@ for motif in range(n_cluster):
     ax.set_ylabel('Mean Distance')
     ax.legend()
 
-    ax.set_ylim([0, 2100])
+    ax.set_ylim([30, 80])
     plt.show()
 
     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_trajectory_distance'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "Motif{}-pairwise-dtw.png".format(motif)
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
     fname_pdf = "Motif{}-pairwise-dtw.pdf".format(motif)
-    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
     for epoch in range(1, 4):
 
         all_data_motif = distances_HC_BD_df[(distances_HC_BD_df['Motif'] == motif) & (distances_HC_BD_df['Epoch'] == epoch)]
@@ -1267,6 +1225,9 @@ for motif in range(n_cluster):
         s_score = stats.ttest_ind(all_data_motif['Distance'], all_data_motif3['Distance'], nan_policy='omit')
         print("Motif{} Epoch{} BD-HC, BD-BD, 2 sample t-stat: {:.2f}, p<0.05 {}, p-val: {}\n".format(motif, epoch, s_score.statistic,s_score.pvalue<0.05,
                                                                                           s_score.pvalue))
+#%% Below not used
+
+
 
 #%% Plot the centroids in PC space in each epoch, in each motif.
 labels_pop = list(label_all_)

@@ -182,6 +182,11 @@ num_zero_rows_score = [[],[]]
 num_zeros_score = [[],[]]
 num_ones_score = [[],[]]
 #%%
+def sum_columns(transition_m):
+    return np.sum(transition_m , axis=0)
+def count_one_in_columns(transition_m):
+    for j in range(np.shape(transition_m)[0]):
+         col = transition_m[j, :]
 
 def count_transition_frequency(adjacent_matrix):
     transition_frequency = np.count_nonzero(adjacent_matrix == 1)

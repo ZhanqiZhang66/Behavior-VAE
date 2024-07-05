@@ -14,6 +14,10 @@ def get_my_path():
         github_path = r'D:\OneDrive - UC San Diego\GitHub'
         onedrive_path = r'D:\OneDrive - UC San Diego'
         data_path = rf"D:\OneDrive - UC San Diego\SURF"
+    elif os.environ['COMPUTERNAME'] == 'VICTORIA-DELL':
+        github_path = r'D:\OneDrive - UC San Diego\GitHub'
+        onedrive_path = r'D:\OneDrive - UC San Diego'
+        data_path = rf"D:\OneDrive - UC San Diego\SURF"
     else:
         onedrive_path = r'C:\Users\kiet\OneDrive - UC San Diego'
         github_path = r'C:\Users\kiet\OneDrive - UC San Diego\GitHub'
