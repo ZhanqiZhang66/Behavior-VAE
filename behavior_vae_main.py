@@ -5,6 +5,7 @@
 from analysis import bound_n_rotate, scoring_analysis
 from plotting import analyze_dlc, dwell_time, latent_visualization, transition_matrix, sliding_window
 from analysis.Classifiers import classifier2
+from analysis.Classifiers.Generation import motif_usage
 from analysis import compute_Wasserstein_distances, plot_Wasserstein_distance
 from model import run_vame
 
@@ -19,6 +20,7 @@ def main():
     run_latent_visualization = True
     run_continuous_metric = True
     run_classificaction = True
+    run_cv_motif_usage = True
 
     # PREPROCESS DLC markers, skeletons
     if run_dlc_preprocessing:
@@ -48,19 +50,20 @@ def main():
     if run_transition_matrix_analysis:
         print("Running transition matrix analysis...")
         # Fig. 3a, b, c, e
+        # Supplementary Fig. 3a, b, c, d
         transition_matrix()
 
     # Latent representation (dynamics) ANALYSIS
     if run_latent_visualization:
         print("Running latent visualization...")
-        # Fig.4 a, b
+        # Fig.4 a, b,
+        # Supplementary Fig. 4a,b
         latent_visualization()
 
         # Fig.4 c
+        # Supplementary Fig. 4c
         compute_Wasserstein_distances()
         plot_Wasserstein_distance()
-
-
 
     if run_continuous_metric:
         print("Running continous analysis for metrics...")
@@ -71,8 +74,13 @@ def main():
     if run_classificaction:
         print("Running classification...")
         # Table 2
+        # Supplementary Fig. 2c
         classifier2()
 
+    if run_cv_motif_usage:
+        print("Plotting CV model motif usage...")
+        # Supplementary Fig. 2a, b
+        motif_usage()
 
 if __name__ == "__main__":
     main()
