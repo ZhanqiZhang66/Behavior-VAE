@@ -105,4 +105,4 @@ for j, videos in enumerate([control_videos, BD_videos]):
         pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\heatmap'
         fname = "{}-population-{}-{}half-trajectory-heatmap.png".format(pop[j], n_cluster, k)
         fig.savefig(os.path.join(pwd, fname))
-#%% Plot heatmap of each participant,
+

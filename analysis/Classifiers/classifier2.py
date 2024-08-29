@@ -3,7 +3,7 @@ import csv
 import numpy as np
 import pandas as pd
 import os
-import seaborn as sns 
+
 import matplotlib.pyplot as plt
 import random
 import copy
@@ -21,7 +21,7 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import GridSearchCV, KFold
 
 import statsmodels.api as sm
-from scipy.stats import f_oneway, tukey_hsd
+# from scipy.stats import f_oneway, tukey_hsd
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from sklearn import linear_model
 from sklearn.feature_selection import SequentialFeatureSelector
@@ -34,7 +34,7 @@ if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
     github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
     data_path = rf"C:\Users\zhanq\OneDrive - UC San Diego\SURF"
-elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
+elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC' or 'Victoria-Dell':
     github_path = r'D:\OneDrive - UC San Diego\GitHub'
     onedrive_path = r'D:\OneDrive - UC San Diego'
     data_path = rf"D:\OneDrive - UC San Diego\SURF"
@@ -230,7 +230,7 @@ vame_volume_per_motif_df.rename(columns=lambda x: f'vol_epoch{int(x[0])+1}_motif
 vame_df = pd.merge(bd_df, vame_motif_df, on='video')
 vame_df = pd.merge(vame_df, vame_ens_df, on='video')
 vame_df = pd.merge(vame_df, vame_ensm_df, on='video')
-vame_df = pd.merge(vame_df, vame_entropy_df, on='video')
+# vame_df = pd.merge(vame_df, vame_entropy_df, on='video')
 
 #%%
 vame_df = pd.merge(vame_df, vame_count_df, on='video')
@@ -241,7 +241,7 @@ vame_df = pd.merge(vame_df, vame_volume_per_motif_df, on='video')
 vame_df.drop('video', axis=1, inplace=True)
 
 vame_df['ens_diff'] = vame_df['ens_epoch3'] - vame_df['ens_epoch1']
-vame_df['entropy_diff'] = vame_df['entropy_epoch3'] - vame_df['entropy_epoch1']
+# vame_df['entropy_diff'] = vame_df['entropy_epoch3'] - vame_df['entropy_epoch1']
 vame_df['vol_diff_2_1'] = vame_df['vol_epoch3'] - vame_df['vol_epoch2']
 vame_df['vol_diff_1_0'] = vame_df['vol_epoch2'] - vame_df['vol_epoch1']
 vame_df['vol_diff_2_0'] = vame_df['vol_epoch3'] - vame_df['vol_epoch1']
@@ -269,17 +269,17 @@ dlc_ensm_df = pd.read_csv(dlc_ensm_path)
 dlc_ensm_df.rename(columns=lambda x: f'ens_epoch{int(x[0])+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
 # Entropy
-dlc_entropy_df = pd.read_csv(dlc_entropy_path)
-dlc_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
+# dlc_entropy_df = pd.read_csv(dlc_entropy_path)
+# dlc_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 dlc_df = pd.merge(bd_df, dlc_motif_df, on='video')
 dlc_df = pd.merge(dlc_df, dlc_ens_df, on='video')
 dlc_df = pd.merge(dlc_df, dlc_ensm_df, on='video')
-dlc_df = pd.merge(dlc_df, dlc_entropy_df, on='video')
+# dlc_df = pd.merge(dlc_df, dlc_entropy_df, on='video')
 dlc_df.drop('video', axis=1, inplace=True)
 
 dlc_df['ens_diff'] = dlc_df['ens_epoch3'] - dlc_df['ens_epoch1']
-dlc_df['entropy_diff'] = dlc_df['entropy_epoch3'] - dlc_df['entropy_epoch1']
+# dlc_df['entropy_diff'] = dlc_df['entropy_epoch3'] - dlc_df['entropy_epoch1']
 
 for i,v in enumerate(ensm_diff):
     dlc_df[v] = dlc_df[ensm_epoch3[i]] - dlc_df[ensm_epoch1[i]]
@@ -310,17 +310,17 @@ hbpm_ensm_df = pd.read_csv(hbpm_ensm_path)
 hbpm_ensm_df.rename(columns=lambda x: f'ens_epoch{int(x[0])+1}_m{x[6:]}' if 'motif' in x else x, inplace=True)
 
 # Entropy
-hbpm_entropy_df = pd.read_csv(hbpm_entropy_path)
-hbpm_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
+# hbpm_entropy_df = pd.read_csv(hbpm_entropy_path)
+# hbpm_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 hbpm_df = pd.merge(bd_df, hbpm_motif_df, on='video')
 hbpm_df = pd.merge(hbpm_df, hbpm_ens_df, on='video')
 hbpm_df = pd.merge(hbpm_df, hbpm_ensm_df, on='video')
-hbpm_df = pd.merge(hbpm_df, hbpm_entropy_df, on='video')
+# hbpm_df = pd.merge(hbpm_df, hbpm_entropy_df, on='video')
 hbpm_df.drop('video', axis=1, inplace=True)
 
 hbpm_df['ens_diff'] = hbpm_df['ens_epoch3'] - hbpm_df['ens_epoch1']
-hbpm_df['entropy_diff'] = hbpm_df['entropy_epoch3'] - hbpm_df['entropy_epoch1']
+# hbpm_df['entropy_diff'] = hbpm_df['entropy_epoch3'] - hbpm_df['entropy_epoch1']
 
 hbpm_ensm_epoch3 = []
 hbpm_ensm_epoch1 = []
@@ -371,17 +371,17 @@ for column in s3d_ensm_df:
         if column_motif not in top_10_motifs:
             s3d_ensm_df.drop(column, axis=1, inplace=True)
 # Entropy
-s3d_entropy_df = pd.read_csv(s3d_entropy_path)
-s3d_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
+# s3d_entropy_df = pd.read_csv(s3d_entropy_path)
+# s3d_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 s3d_df = pd.merge(bd_df, s3d_motif_df, on='video')
 s3d_df = pd.merge(s3d_df, s3d_ens_df, on='video')
 s3d_df = pd.merge(s3d_df, s3d_ensm_df, on='video')
-s3d_df = pd.merge(s3d_df, s3d_entropy_df, on='video')
+# s3d_df = pd.merge(s3d_df, s3d_entropy_df, on='video')
 s3d_df.drop('video', axis=1, inplace=True)
 
 s3d_df['ens_diff'] = s3d_df['ens_epoch3'] - s3d_df['ens_epoch1']
-s3d_df['entropy_diff'] = s3d_df['entropy_epoch3'] - s3d_df['entropy_epoch1']
+# s3d_df['entropy_diff'] = s3d_df['entropy_epoch3'] - s3d_df['entropy_epoch1']
 
 s3d_ensm_epoch3 = []
 s3d_ensm_epoch1 = []
@@ -401,6 +401,7 @@ HC_motif_usage = s3d_motif_df[bd_df['BD']==0]
 HC_motif_usage.drop('video', axis=1, inplace=True)
 BD_motif_usage = s3d_motif_df[bd_df['BD']==1]
 BD_motif_usage.drop('video', axis=1, inplace=True)
+#%%
 for motif_i_usage in HC_motif_usage.columns:
     s = stats.ttest_ind(HC_motif_usage[motif_i_usage], BD_motif_usage[motif_i_usage])
     print(f"{motif_i_usage}")
@@ -444,17 +445,17 @@ for column in mmaction_ensm_df:
         if column_motif not in top_10_motifs:
             mmaction_ensm_df.drop(column, axis=1, inplace=True)
 
-mmaction_entropy_df = pd.read_csv(mmaction_entropy_path)
-mmaction_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
+# mmaction_entropy_df = pd.read_csv(mmaction_entropy_path)
+# mmaction_entropy_df.rename(columns=lambda x: f'entropy_epoch{int(x[5])+1}' if 'split' in x else x, inplace=True)
 
 mmaction_df = pd.merge(bd_df, mmaction_motif_df, on='video')
 mmaction_df = pd.merge(mmaction_df, mmaction_ens_df, on='video')
 mmaction_df = pd.merge(mmaction_df, mmaction_ensm_df, on='video')
-mmaction_df = pd.merge(mmaction_df, mmaction_entropy_df, on='video')
+# mmaction_df = pd.merge(mmaction_df, mmaction_entropy_df, on='video')
 mmaction_df.drop('video', axis=1, inplace=True)
 
 mmaction_df['ens_diff'] = mmaction_df['ens_epoch3'] - mmaction_df['ens_epoch1']
-mmaction_df['entropy_diff'] = mmaction_df['entropy_epoch3'] - mmaction_df['entropy_epoch1']
+# mmaction_df['entropy_diff'] = mmaction_df['entropy_epoch3'] - mmaction_df['entropy_epoch1']
 
 mmaction_ensm_epoch3 = []
 mmaction_ensm_epoch1 = []
@@ -474,6 +475,7 @@ HC_motif_usage = mmaction_motif_df[bd_df['BD']==0]
 HC_motif_usage.drop('video', axis=1, inplace=True)
 BD_motif_usage = mmaction_motif_df[bd_df['BD']==1]
 BD_motif_usage.drop('video', axis=1, inplace=True)
+#%%
 for motif_i_usage in HC_motif_usage.columns:
     s = stats.ttest_ind(HC_motif_usage[motif_i_usage], BD_motif_usage[motif_i_usage])
     print(f"{motif_i_usage}")
@@ -579,8 +581,8 @@ print(f"Classify selected features in assessment ")
 results.append(classify(df, assessment_top_features, 100, random_seed)[0])
 
 #%%
-score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}"
-features_path = rf"{data_path}\all_approaches_15features_seed_{random_seed}"
+score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}_rm_entropy"
+features_path = rf"{data_path}\all_approaches_15features_seed_{random_seed}_rm_entropy"
 np.save(score_path, np.array(results))
 np.save(features_path, np.array(features, dtype=object))
 
@@ -590,7 +592,7 @@ np.save(features_path, np.array(features, dtype=object))
 Significant Tests
 '''
 
-score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}.npy"
+score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}_rm_entropy.npy"
 results = np.load(score_path)
 samples = list(itertools.chain.from_iterable(results))
 labels = ['vame'] * 400 + ['mmaction'] * 400 +  ['s3d'] * 400 + ['dlc'] * 400 + ['hbpm'] * 400 +  ['assessment'] * 400
@@ -604,79 +606,20 @@ print(result.pvalues[11])
 print(result.pvalues[13])
 print(result.pvalues[14])
 
-#%%
-res = tukey_hsd(results[0], results[1], results[2], results[3], results[4], results[5])
-
-#%%
-print(res)
-#%%
-print(res.pvalue)
-
-#%%
-pvalue_indices = [4, 8, 11, 13, 14]
-
-for idx in pvalue_indices:
-    # Get the p-value at the specified index and format it
-    pvalue = result.pvalues[idx]
-    formatted_pvalue = f"{pvalue:.500f}"  # Adjust the number of decimal places as needed
-    print(f"Formatted p-value at index {idx}: {formatted_pvalue}")
-
-# # %%
-#
-# """
-# Future Developement
-# """
-# # %%
-# """
-# Feature Selection
-# """
-#
-# # %% Correlation coef
-# correlation_matrix = vame_df.corr()
-# plt.figure(figsize=(20, 20))
-# sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
-# plt.show()
-#
-# # %% Lasso Regression
-# # https://medium.com/@agrawalsam1997/feature-selection-using-lasso-regression-10f49c973f08
-# X = vame_df.drop('BD', axis=1).values
-# y = vame_df['BD'].values
-# X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.24, random_state=42, stratify=y)
-#
-# # %%
-# # parameters to be tested on GridSearchCV
-# params = {"alpha":np.arange(0.00001, 10, 500)}
-#
-# # Number of Folds and adding the random state for replication
-# kf=KFold(n_splits=5,shuffle=True, random_state=42)
-#
-# # Initializing the Model
-# lasso = Lasso()
-#
-# # GridSearchCV with model, params and folds.
-# lasso_cv=GridSearchCV(lasso, param_grid=params, cv=kf)
-# lasso_cv.fit(X, y)
-# print("Best Params {}".format(lasso_cv.best_params_))
-#
-# names=vame_df.drop("BD", axis=1).columns
-# print("Column Names: {}".format(names.values))
+# #%%
+# res = tukey_hsd(results[0], results[1], results[2], results[3], results[4], results[5])
 #
 # #%%
-# # calling the model with the best parameter
-# lasso1 = Lasso(alpha=0.00001)
-# lasso1.fit(X_train, y_train)
+# print(res)
+# #%%
+# print(res.pvalue)
 #
-# # Using np.abs() to make coefficients positive.
-# lasso1_coef = np.abs(lasso1.coef_)
+# #%%
+# pvalue_indices = [4, 8, 11, 13, 14]
 #
-# # plotting the Column Names and Importance of Columns.
-# plt.figure(figsize=(30, 10))
-# plt.bar(names, lasso1_coef)
-# plt.xticks(rotation=45)
-# plt.grid()
-# plt.title("Feature Selection Based on Lasso")
-# plt.xlabel("Features")
-# plt.ylabel("Importance")
-# plt.show()
-
-# %%
+# for idx in pvalue_indices:
+#     # Get the p-value at the specified index and format it
+#     pvalue = result.pvalues[idx]
+#     formatted_pvalue = f"{pvalue:.500f}"  # Adjust the number of decimal places as needed
+#     print(f"Formatted p-value at index {idx}: {formatted_pvalue}")
+#

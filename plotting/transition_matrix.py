@@ -643,6 +643,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 #%%   Population-level plots
 from plotting.create_color_maps import  generate_distinct_colors
 #%% Plot transition matrix
+
 pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
 patient_names = control_videos + BD_videos
 # plot score, vame, and dlc transition matrices
@@ -1055,6 +1056,7 @@ for epoch in range(1, 4):
 
 
 #%% Effective number box
+
 for epoch in range(1, 4):
 
 
@@ -1100,6 +1102,7 @@ for epoch in range(1, 4):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 #%% Plot Box of effective numbers three bars
+# Fig. 3e
 w = n_cluster/10 * 6
 titles = ['HC', 'BD']
 for j in range(2):
@@ -1153,6 +1156,7 @@ for j in range(2):
 #%% Epoch-wise transition plot
 
 #%% adjacent matrix transiton frequency
+# Fig. 3c
 from scipy import stats
 transition_frequency = np.zeros((2, 25,3, len(transition_group)))
 for j, videos in enumerate([control_videos, BD_videos]):
@@ -1290,7 +1294,8 @@ for k in range(len(transition_group)):
         fname_pdf = f"epoch{epoch}-TM-similarity-{transition_group[k]}.pdf"
         fig.savefig(os.path.join(pwd, fname), transparent=True)
         fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%%
+#%% transition matrix and graphs
+# Fig. 3a,b
 pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices\epoch-dwell'.format(onedrive_path, project_name)
 Path(pwd).mkdir(exist_ok=True)
 for i in range(n_subject_in_population * 2):

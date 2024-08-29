@@ -49,7 +49,7 @@ data_path = myPath['data_path']
 #%% plot deeplabcut with motif usage, and deeplabcut trajectory in room
 load_filtered_DLC = 1 # 0: remove markers under 90% confidence, otherwise, 1: just loaded the filtered DLC
 compute_significance = 1
-
+# Fig. 1c
 show_DLC_in_room_over_time = 1 # show DLC trajectory in room
 
 #%% Define Project
@@ -79,41 +79,41 @@ confidence = 0.9
 group = ['CP','BD']
 temp_win = cfg['time_window']
 #%% Read DLC readings
-# if not load_filtered_DLC:
-#     for nf, filename in enumerate(os.listdir(csv_path)):
-#         v = filename[:-4]
-#         v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
-#         f_start_frame = start_frame.loc[v_index, 'door_close']
-#
-#
-#         data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', filename), skiprows=2)
-#         data_mat0 = pd.DataFrame.to_numpy(data)
-#         data_mat = data_mat0[f_start_frame:, 1:]
-#         data_mat_ori = data_mat0[:, 1:]
-#         # get the coordinates for alignment from data table
-#
-#         for i in range(int(data_mat.shape[1] / 3)):
-#             temp = data_mat[:, i * 3:(i + 1) * 3]
-#             temp_org = data_mat_ori[:, i * 3:(i + 1) * 3]
-#             for j in temp:
-#                 if j[2] <= confidence:
-#                     j[0], j[1] = np.nan, np.nan
-#             pose_list = temp[:,0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]],axis=1)
-#             for idx, k in enumerate(temp_org):
-#                 lower_bound = min(0, idx - 60)
-#                 upper_bound = min(len(data_mat_ori), idx + 60)
-#                 if k[2] <= confidence:
-#                     k[0], k[1] = np.nanmean(temp_org[lower_bound:upper_bound, 0]), np.nanmean(temp_org[lower_bound:upper_bound, 1])
-#             pose_list_org = temp_org[:,0:2] if i == 0 else np.concatenate([pose_list_org, temp_org[:, :2]],axis=1)
-#         print(f"Saving %{confidence*100} {v} pose estimation data...\n")
-#         pose_list1 = pose_list - np.nan_to_num(pose_list[0,:], nan=0)
-#         #np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq.npy'), pose_list)
-#         np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_original_smoothed.npy'), pose_list_org)
-#         # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_normalized.npy'), pose_list1)
-#         time_seq_cat = pose_list if nf == 0 else np.concatenate((time_seq_cat, pose_list),axis=0)
-#         # time_seq_normalize_cat = pose_list1 if nf == 0 else np.concatenate((time_seq_normalize_cat, pose_list1), axis=0)
-#     # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'cat-90pct_seq.npy'), time_seq_cat)
-# # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm-90pct_seq_normalized.npy'), time_seq_normalize_cat)
+if not load_filtered_DLC:
+    for nf, filename in enumerate(os.listdir(csv_path)):
+        v = filename[:-4]
+        v_index = start_frame.loc[start_frame['video_name'] == v].index.values[0]
+        f_start_frame = start_frame.loc[v_index, 'door_close']
+
+
+        data = pd.read_csv(os.path.join(path_to_file, 'videos', 'pose_estimation', filename), skiprows=2)
+        data_mat0 = pd.DataFrame.to_numpy(data)
+        data_mat = data_mat0[f_start_frame:, 1:]
+        data_mat_ori = data_mat0[:, 1:]
+        # get the coordinates for alignment from data table
+
+        for i in range(int(data_mat.shape[1] / 3)):
+            temp = data_mat[:, i * 3:(i + 1) * 3]
+            temp_org = data_mat_ori[:, i * 3:(i + 1) * 3]
+            for j in temp:
+                if j[2] <= confidence:
+                    j[0], j[1] = np.nan, np.nan
+            pose_list = temp[:,0:2] if i == 0 else np.concatenate([pose_list, temp[:, :2]],axis=1)
+            for idx, k in enumerate(temp_org):
+                lower_bound = min(0, idx - 60)
+                upper_bound = min(len(data_mat_ori), idx + 60)
+                if k[2] <= confidence:
+                    k[0], k[1] = np.nanmean(temp_org[lower_bound:upper_bound, 0]), np.nanmean(temp_org[lower_bound:upper_bound, 1])
+            pose_list_org = temp_org[:,0:2] if i == 0 else np.concatenate([pose_list_org, temp_org[:, :2]],axis=1)
+        print(f"Saving %{confidence*100} {v} pose estimation data...\n")
+        pose_list1 = pose_list - np.nan_to_num(pose_list[0,:], nan=0)
+        #np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq.npy'), pose_list)
+        np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_original_smoothed.npy'), pose_list_org)
+        # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', filename[:-4] + '-90pct_seq_normalized.npy'), pose_list1)
+        time_seq_cat = pose_list if nf == 0 else np.concatenate((time_seq_cat, pose_list),axis=0)
+        # time_seq_normalize_cat = pose_list1 if nf == 0 else np.concatenate((time_seq_normalize_cat, pose_list1), axis=0)
+    # np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'cat-90pct_seq.npy'), time_seq_cat)
+# np.save(os.path.join(path_to_file, 'data', 'pose_sequence', 'catnorm-90pct_seq_normalized.npy'), time_seq_normalize_cat)
 
 
 #%%
@@ -593,6 +593,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 #%% Plot latent trajactory overlapping motif segmentations [three approaches]
+# Fig. 1d, Fig. 2b, c is here
 from sklearn.decomposition import PCA
 def map_to_range(lst):
     unique_values = sorted(set(lst))  # Get unique values from the list and sort them
@@ -819,7 +820,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         plt.suptitle('{}-{}'.format(group[j], v))
         plt.show()
-        fadsfa
 
         pwd = r'{}\Behavior_VAE_data\{}\figure\dwell_time_n_latent'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)

@@ -63,3 +63,4 @@ with open(outFile, 'w') as csvfile:
             for j in range(len(motif)):
                 row.append(motif[j][i])
         csvwriter.writerow(row)
+#%%

@@ -11,14 +11,13 @@ import numpy as np
 import vame
 import pandas as pd
 from vame.analysis.community_analysis import  read_config
+from plotting.get_paths import get_my_path
+#%%
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
-#%% Home Path
-sys.path.append(r"D:\OneDrive - UC San Diego\GitHub\VAME")   #Victoria local
-sys.path.append(r"D:\OneDrive - UC San Diego\GitHub\markov-chain")
-#%% Work Path
-vame_pth = r"D:\OneDrive - UC San Diego\GitHub\VAME"
-sys.path.append(r"C:\Users\zhanq\OneDrive - UC San Diego\GitHub\VAME")   #Victoria work
-sys.path.append(r"C:\Users\zhanq\OneDrive - UC San Diego\GitHub\markov-chain")
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
 
 #%% 1.0 video files & directories
 #video_dir = r'G:\hBPM_BD_Control_Iter2\hBPM_BD_Control_Iter2'

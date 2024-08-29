@@ -428,7 +428,7 @@ for i, motif_behavior in enumerate(score_bahavior_names):
                                                                                corr_HAM_D_score_BD_score[1]))
 
 
-#%% Plot Box
+#%% Plot Box plot for benchmark approaches
 bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear"]
 states = []
 for i in range(n_cluster):
@@ -472,6 +472,7 @@ for k in range(3):
     # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 #%% merge state for human labels
+# Plot Box plot Fig. 2e right
 bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear"]
 merged_states = []
 for i in range(6):
@@ -547,6 +548,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         fname = "{}_{}_motif_freq.png".format(n_cluster, v)
         fig.savefig(os.path.join(pwd, fname))
 #%% Plot histogram of averaged dwell frequency
+# # Plot Box plot Fig. 2e right
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 from scipy import stats
 from scipy.stats import ks_2samp

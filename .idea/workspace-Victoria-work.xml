@@ -1,0 +1,411 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="af4c97f6-9d81-475f-b88b-5d4809d99f6f" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/distances_BD_HC_df.csv" beforeDir="false" afterPath="$PROJECT_DIR$/distances_BD_HC_df.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plotting/latent_visualization.py" beforeDir="false" afterPath="$PROJECT_DIR$/plotting/latent_visualization.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plotting/plot_ethogram_rasters.py" beforeDir="false" afterPath="$PROJECT_DIR$/plotting/plot_ethogram_rasters.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plotting/transition_matrix.py" beforeDir="false" afterPath="$PROJECT_DIR$/plotting/transition_matrix.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys&#10;sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo&#10;locals().update(ScriptInfo(create_app=None).load_app().make_shell_context())&#10;print(&quot;Python %s on %s\nApp: %s [%s]\nInstance: %s&quot; % (sys.version, sys.platform, app.import_name, app.env, app.instance_path))" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitToolBoxStore">
+    <option name="projectConfigVersion" value="5" />
+  </component>
+  <component name="JupyterTrust" id="952bc881-1614-4003-a077-45bfb6ea4918" />
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2E8didEwkGgnyzxjsVDuIbfLqCP" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/zhanq/OneDrive - UC San Diego/GitHub/Behavior-VAE&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File&quot;: [
+      &quot;Python&quot;
+    ]
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\zhanq\OneDrive - UC San Diego\GitHub\Behavior-VAE" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\zhanq\OneDrive - UC San Diego\GitHub\Behavior-VAE\model" />
+      <recent name="C:\Users\zhanq\OneDrive - UC San Diego\GitHub\Behavior-VAE\analysis" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.run3">
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="Behavior-VAE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="run3" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Behavior-VAE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/run3.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="scratch_2" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Behavior-VAE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_2.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="scratch_4" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Behavior-VAE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_4.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="scratch_6" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Behavior-VAE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_6.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="scratch_7" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="Behavior-VAE" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$APPLICATION_CONFIG_DIR$/scratches" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$APPLICATION_CONFIG_DIR$/scratches/scratch_7.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.run3" />
+        <item itemvalue="Python.scratch_7" />
+        <item itemvalue="Python.scratch_6" />
+        <item itemvalue="Python.scratch_4" />
+        <item itemvalue="Python.scratch_2" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="af4c97f6-9d81-475f-b88b-5d4809d99f6f" name="Default Changelist" comment="" />
+      <created>1661981287600</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1661981287600</updated>
+      <workItem from="1661981292302" duration="2979000" />
+      <workItem from="1661986004871" duration="14427000" />
+      <workItem from="1662016575913" duration="11234000" />
+      <workItem from="1662406287055" duration="50000" />
+      <workItem from="1662578333604" duration="23811000" />
+      <workItem from="1663112399967" duration="595000" />
+      <workItem from="1663290332351" duration="5720000" />
+      <workItem from="1663609320368" duration="133000" />
+      <workItem from="1663899690441" duration="14539000" />
+      <workItem from="1664211842730" duration="1445000" />
+      <workItem from="1664474664162" duration="11848000" />
+      <workItem from="1664585317291" duration="2578000" />
+      <workItem from="1664946991318" duration="7225000" />
+      <workItem from="1664954651925" duration="22484000" />
+      <workItem from="1665510219181" duration="4370000" />
+      <workItem from="1665603456647" duration="647000" />
+      <workItem from="1666070902272" duration="26115000" />
+      <workItem from="1666287798866" duration="5600000" />
+      <workItem from="1666297084082" duration="18375000" />
+      <workItem from="1666850280087" duration="1725000" />
+      <workItem from="1666914406941" duration="11934000" />
+      <workItem from="1667254906089" duration="53000" />
+      <workItem from="1667536982243" duration="11126000" />
+      <workItem from="1667951437710" duration="18071000" />
+      <workItem from="1668016870007" duration="8416000" />
+      <workItem from="1668279806382" duration="232000" />
+      <workItem from="1668458266286" duration="7998000" />
+      <workItem from="1668540379116" duration="6240000" />
+      <workItem from="1668576993624" duration="3287000" />
+      <workItem from="1669844330070" duration="1822000" />
+      <workItem from="1669938101412" duration="1080000" />
+      <workItem from="1671170392372" duration="1977000" />
+      <workItem from="1673725103420" duration="1175000" />
+      <workItem from="1673727341118" duration="143000" />
+      <workItem from="1673727525523" duration="1792000" />
+      <workItem from="1674068457848" duration="670000" />
+      <workItem from="1674069142700" duration="2130000" />
+      <workItem from="1674072299623" duration="3139000" />
+      <workItem from="1675274390413" duration="36000" />
+      <workItem from="1675713910336" duration="96000" />
+      <workItem from="1677371573641" duration="1112000" />
+      <workItem from="1677378965985" duration="5838000" />
+      <workItem from="1677399016105" duration="41760000" />
+      <workItem from="1678143506048" duration="5214000" />
+      <workItem from="1679088134347" duration="12968000" />
+      <workItem from="1680543276779" duration="8050000" />
+      <workItem from="1681385045917" duration="54000" />
+      <workItem from="1684299877917" duration="36462000" />
+      <workItem from="1696352699000" duration="1459000" />
+      <workItem from="1696371019151" duration="6336000" />
+      <workItem from="1696463817035" duration="8233000" />
+      <workItem from="1696622496075" duration="1750000" />
+      <workItem from="1696624270372" duration="18692000" />
+      <workItem from="1696882877568" duration="4124000" />
+      <workItem from="1697044108223" duration="16641000" />
+      <workItem from="1697153617545" duration="158000" />
+      <workItem from="1697153784348" duration="8728000" />
+      <workItem from="1697471301769" duration="11378000" />
+      <workItem from="1697760624759" duration="36995000" />
+      <workItem from="1698090333875" duration="75526000" />
+      <workItem from="1698878700279" duration="81092000" />
+      <workItem from="1699741566031" duration="2065000" />
+      <workItem from="1701277791110" duration="8301000" />
+      <workItem from="1702326784226" duration="18524000" />
+      <workItem from="1703184334666" duration="4719000" />
+      <workItem from="1705094682551" duration="3679000" />
+      <workItem from="1705443381193" duration="8650000" />
+      <workItem from="1705627991228" duration="15213000" />
+      <workItem from="1708474497127" duration="1657000" />
+      <workItem from="1708639070143" duration="724000" />
+      <workItem from="1708671793221" duration="575000" />
+      <workItem from="1708730062999" duration="3348000" />
+      <workItem from="1708848568014" duration="2000" />
+      <workItem from="1708892854436" duration="14403000" />
+      <workItem from="1708973075950" duration="149000" />
+      <workItem from="1708973233547" duration="1633000" />
+      <workItem from="1710370055775" duration="409000" />
+      <workItem from="1711081683538" duration="4547000" />
+      <workItem from="1711401627497" duration="1696000" />
+      <workItem from="1711412690357" duration="8948000" />
+      <workItem from="1711479786062" duration="2217000" />
+      <workItem from="1711935737559" duration="2582000" />
+      <workItem from="1712191599749" duration="6643000" />
+      <workItem from="1712615251596" duration="12602000" />
+      <workItem from="1713307056978" duration="4322000" />
+      <workItem from="1713331929766" duration="35262000" />
+      <workItem from="1713563734199" duration="5562000" />
+      <workItem from="1713569374884" duration="9140000" />
+      <workItem from="1713738313665" duration="20353000" />
+      <workItem from="1713994941310" duration="21517000" />
+      <workItem from="1714169987364" duration="32690000" />
+      <workItem from="1714622443638" duration="10128000" />
+      <workItem from="1714689647848" duration="2746000" />
+      <workItem from="1714769897571" duration="7221000" />
+      <workItem from="1714777730370" duration="5812000" />
+      <workItem from="1714948541761" duration="2716000" />
+      <workItem from="1715372704118" duration="1414000" />
+      <workItem from="1715805123370" duration="1551000" />
+      <workItem from="1715820851911" duration="9047000" />
+      <workItem from="1715993309319" duration="5517000" />
+      <workItem from="1716240120844" duration="10381000" />
+      <workItem from="1716356544018" duration="1686000" />
+      <workItem from="1716360547162" duration="56651000" />
+      <workItem from="1720131720876" duration="266000" />
+      <workItem from="1720131996884" duration="2487000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/VAME/Lib/site-packages/vame/model/create_training.py</url>
+          <line>47</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/VAME/Lib/site-packages/vame/util/align_egocentrical.py</url>
+          <line>270</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/VAME/Lib/site-packages/vame/analysis/videowriter.py</url>
+          <line>37</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/VAME/Lib/site-packages/vame/analysis/videowriter.py</url>
+          <line>55</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/VAME/Lib/site-packages/vame/analysis/videowriter.py</url>
+          <line>87</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/VAME/Lib/site-packages/vame/analysis/videowriter.py</url>
+          <line>78</line>
+          <option name="timeStamp" value="9" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$USER_HOME$/anaconda3/envs/VAME/Lib/site-packages/vame/analysis/videowriter.py</url>
+          <line>71</line>
+          <option name="timeStamp" value="10" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/plotting/latent_visualization.py</url>
+          <line>1680</line>
+          <option name="timeStamp" value="11" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/Behavior_VAE$classifier2.coverage" NAME="classifier2 Coverage Results" MODIFIED="1713572717338" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis/Classifiers" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$analyze_dlc.coverage" NAME="analyze_dlc Coverage Results" MODIFIED="1679953491327" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$run3.coverage" NAME="run3 Coverage Results" MODIFIED="1716242672653" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$scratch_15.coverage" NAME="scratch_15 Coverage Results" MODIFIED="1665034558693" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$scratch_4.coverage" NAME="scratch_4 Coverage Results" MODIFIED="1705628443194" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$dwell_time.coverage" NAME="dwell_time Coverage Results" MODIFIED="1684850239730" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/plotting" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$scoring_analysis.coverage" NAME="scoring_analysis Coverage Results" MODIFIED="1696634904277" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/analysis" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$save_motif_example_clips.coverage" NAME="save_motif_example_clips Coverage Results" MODIFIED="1668578449791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+    <SUITE FILE_PATH="coverage/Behavior_VAE$scratch_1.coverage" NAME="scratch_1 Coverage Results" MODIFIED="1684394772199" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$APPLICATION_CONFIG_DIR$/scratches" />
+  </component>
+</project>
