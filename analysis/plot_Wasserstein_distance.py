@@ -22,10 +22,10 @@ b_o_colors = ['#1f77b4', '#ff7f0e']
 Load
 '''
 project_name = 'BD25-HC25-final-May17-2023'
-project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
-config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+project_path = fr'{data_path}\{project_name}'
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name)
 # cfg = read_config(config)
-dlc_path = os.path.join(project_path,"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
+dlc_path = os.path.join(project_path,"videos","\pose_estimation")
 n_cluster = 10
 zdim = 10
 model_name = 'VAME'

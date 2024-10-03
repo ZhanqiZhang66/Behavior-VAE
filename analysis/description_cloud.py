@@ -19,8 +19,62 @@ import glob2 as glob
 project_name = 'BD20-Jun5-2022'
 n_cluster = 10
 model_name = 'VAME'
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
+control_videos = [
+    "subject1",
+    "subject3",
+    "subject4",
+    "subject5",
+    "subject6",
+    "subject7",
+    "subject8",
+    "subject9",
+    "subject10",
+    "subject11",
+    "subject13",
+    "subject14",
+    "subject15",
+    "subject17",
+    "subject18",
+    "subject19",
+    "subject21",
+    "subject22",
+    "subject23",
+    "subject24",
+    "subject25",
+    "subject27",
+    "subject28",
+    "subject41",
+    "subject42"
+]
+
+BD_videos      = [
+'subject26',
+'subject33',
+'subject35',
+'subject36',
+'subject37',
+'subject39',
+'subject44',
+'subject2',
+'subject12',
+'subject16',
+'subject20',
+'subject29',
+'subject30',
+'subject32',
+'subject34',
+'subject38',
+'subject45',
+'subject46',
+'subject47',
+'subject48',
+'subject49',
+'subject50',
+'subject31',
+'subject43',
+'subject40'
+]
+
 #%%
 pwd = ''
 for k in range(n_cluster):

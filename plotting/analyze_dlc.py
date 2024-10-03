@@ -854,8 +854,15 @@ ax.legend()
 plt.show()
 
 #%% Read scoring of video
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
+from plotting.get_paths import get_my_path
+#%%
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 video_path = r'G:\hBPM_Videos'
 scoring_path = r'D:\OneDrive - UC San Diego\GitHub\hBPMskeleton\Scoring\video_score_vz'
 bahavior_names =["sit_obj", "sit", "stand_obj", "stand", "walk_obj", "walk", "lie_obj", "lie", "interact", "wear", "exercise"]

@@ -21,19 +21,15 @@ from data.load_data import load_pt_data
 import networkx as nx
 from networkx.drawing.nx_agraph import graphviz_layout
 import ndd
+from plotting.get_paths import get_my_path
 #%%
-if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
-    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
-elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
-    github_path = r'D:\OneDrive - UC San Diego\GitHub'
-    onedrive_path = r'D:\OneDrive - UC San Diego'
-else:
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
 #%%
 b_o_colors = ['#1f77b4', '#ff7f0e']
 #%%
-project_name = 'BD25-HC25-final-May17-2023'
 project_name = 'BD25-HC25-final-May17-2023'
 project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)

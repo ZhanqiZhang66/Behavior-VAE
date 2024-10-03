@@ -14,15 +14,12 @@ from vame.analysis.community_analysis import read_config, compute_transition_mat
 from vame.analysis.pose_segmentation import get_motif_usage
 from data.load_data import load_pt_data
 import pathlib
+from plotting.get_paths import get_my_path
 #%% Paths
-if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
-    onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
-elif os.environ['COMPUTERNAME'] == 'VICTORIA-PC':
-    github_path = r'D:\OneDrive - UC San Diego\GitHub'
-else:
-    github_path = r'C:\Users\zhanq\OneDrive - UC San Diego\GitHub'
-
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
 #%%
 project_name = 'BD25-HC25-final-May17-2023'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name)
@@ -35,7 +32,7 @@ control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 
 #%% Read door close time from scoring (only need to run for the first time)
-scoring_pth = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final'
+scoring_pth = fr'{data_path}\Scoring\BD25-HC25-final'
 
 for j, videos in enumerate([control_videos, BD_videos]):
     for i in range(len(videos)):
@@ -63,7 +60,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 #%% Read scoring of video
 from openpyxl import load_workbook
 
-scoring_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final-time'
+scoring_path = fr'{data_path}\Scoring\BD25-HC25-final-time'
 bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
 total_usage = np.zeros([2,6])
 motif_usage_cat = [[],[]]
@@ -133,14 +130,14 @@ for nf, filename in enumerate(os.listdir(scoring_path)):
     start_frames_df.columns = bahavior_names
     end_frames_df = pd.DataFrame(end_frames)
     end_frames_df.columns = bahavior_names
-    scoring_frames_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final-frames'
+    scoring_frames_path = fr'{data_path}\Scoring\BD25-HC25-final-frames'
     output_csv = os.path.join(scoring_frames_path, video_name + 'frames.xlsx')
     with pd.ExcelWriter(output_csv) as writer:
         start_frames_df.to_excel(writer, sheet_name='start')
         end_frames_df.to_excel(writer, sheet_name='end')
 
 #%%  Get scoring of the videos in the same format as VAME output
-scoring_frames_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\Scoring\BD25-HC25-final-frames'
+scoring_frames_path = fr'{data_path}\Scoring\BD25-HC25-final-frames'
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):

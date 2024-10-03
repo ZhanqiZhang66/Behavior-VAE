@@ -10,21 +10,28 @@ import os
 import seaborn as sns
 from pylab import imread,subplot,imshow,show
 import cv2
+from plotting.get_paths import get_my_path
 #%% Define Project
-project_name = 'BD20-Jun5-2022'
+project_name = 'BD25-HC25-final-May17-2023'
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
+
 n_cluster = 10
-path_to_file= 'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}'.format(project_name)
+path_to_file= '{}\{}'.format(data_path, project_name)
 start_frame = pd.read_csv('G:\start_frame.csv')
 start_frame = start_frame.set_index('video_name').T.to_dict('list')
 model_name = 'VAME'
-control_videos = ['BC1ANGA','BC1ANHE','BC1AASA','BC1ALKA','BC1ALPA','BC1ALRO','BC1ANBU','BC1ANWI','BC1ASKA','BC1ATKU','BC1MOKI','BC1NITA']
-BD_videos      = ['BC1LOKE','BC1MAMA','BC1ADPI','BC1CISI','BC1DOBO','BC1JUST','BC1KEMA','BC1LABO','BC1LACA','BC1BRBU','BC1MISE','BC1OKBA']
+data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
 pop = ['CP','BD']
 #%%
-background = imread(r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\background.png')
+background = imread(fr'{data_path}\{project_name}\figure\background.png')
 background = cv2.flip(background, 0)
 #%% Read DLC readings
-csv_path = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\{}\videos\pose_estimation'.format(project_name)
+csv_path = r'{}\{}\videos\pose_estimation'.format(data_path, project_name)
 confidence = 0.9
 
 for j, videos in enumerate([control_videos, BD_videos]):
@@ -60,7 +67,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         plt.ylabel('center of hip y')
         plt.title("{}-{}-trajectory-heatmap".format(pop[j], v))
         plt.show()
-        pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\heatmap'
+        pwd = fr'{data_path}\{project_name}\figure\heatmap'
         fname = "{}-{}-{}-trajectory-heatmap.png".format(pop[j], v,n_cluster)
         fig.savefig(os.path.join(pwd, fname))
 
@@ -73,7 +80,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             plt.ylabel('center of hip y')
             plt.title("{}-{}-{}half-trajectory-heatmap".format(pop[j], v, k+1))
             plt.show()
-            pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\heatmap'
+            pwd = rf'{data_path}\{project_name}\figure\heatmap'
             fname = "{}-{}-{}-{}half-trajectory-heatmap.png".format(pop[j], v, n_cluster, k+1)
             fig.savefig(os.path.join(pwd, fname))
 
@@ -88,7 +95,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
     plt.ylabel('center of hip y')
     plt.title("{}-population-trajectory-heatmap".format(pop[j]))
     plt.show()
-    pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\heatmap'
+    pwd = fr'{data_path}\{project_name}\figure\heatmap'
     fname = "{}-population-{}-trajectory-heatmap.png".format(pop[j], n_cluster)
     fig.savefig(os.path.join(pwd, fname))
 
@@ -102,7 +109,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         plt.ylabel('center of hip y')
         plt.title("{}-population-{}half-trajectory-heatmap".format(pop[j], k))
         plt.show()
-        pwd = r'D:\OneDrive - UC San Diego\Bahavior_VAE_data\BD20-Jun5-2022\figure\heatmap'
+        pwd = fr'{data_path}\{project_name}\figure\heatmap'
         fname = "{}-population-{}-{}half-trajectory-heatmap.png".format(pop[j], n_cluster, k)
         fig.savefig(os.path.join(pwd, fname))
 
