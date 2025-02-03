@@ -1,20 +1,24 @@
-#%% 
+# %%
 import csv
 import os
-import numpy as np
-from collections import Counter
-from analysis.Classifiers.Generation.utils import load_motif_labels
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+
+from analysis.Classifiers.Generation.utils import load_motif_labels
+from data.load_data import load_pt_data
 from plotting.get_paths import get_my_path
-#%%
+
+# %%
 myPath = get_my_path()
 onedrive_path = myPath['onedrive_path']
 github_path = myPath['github_path']
 data_path = myPath['data_path']
-#%%
+
+
+# %%
 def generateMotifUsage(labels, split, motifSize, scaled, missing):
     frames = len(labels[next(iter(labels))])
     motifUsage = {}
@@ -24,7 +28,7 @@ def generateMotifUsage(labels, split, motifSize, scaled, missing):
             currUsage = [0] * motifSize
             for j in range(i * frames // split, (i + 1) * frames // split):
                 if missing and labels[v][j] < 0:
-                    currUsage[motifSize-1] += 1
+                    currUsage[motifSize - 1] += 1
                 elif labels[v][j] < 0:
                     continue
                 else:
@@ -33,6 +37,7 @@ def generateMotifUsage(labels, split, motifSize, scaled, missing):
                 currUsage = [x / (frames // split) for x in currUsage]
             motifUsage[v].append(currUsage)
     return motifUsage
+
 
 def saveMotifUsage(path, motifUsage, split, motifSize, missing=False):
     with open(path, 'w') as csvfile:
@@ -54,19 +59,19 @@ def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6, lab
     population = ["BD" if v in BD else "HC" for v in videos]
     population = [item for item in population for _ in range(motifSize)]
 
-    motif = [f'Motif {i}' for i in range(motifSize)] * 50
+    motif = [f'Motif {i}' for i in range(motifSize)] * len(BD) * 2
     if labelMap:
-        motif = [f'{labelMap[i]}' for i in range(motifSize)] * 50
+        motif = [f'{labelMap[i]}' for i in range(motifSize)] * len(BD) * 2
     # print(motif)
     value = [motifUsage[v][0] for v in videos]
     value = [motif for v in value for motif in v]
-    #value = [motif / 27000 for motif in value]
+    # value = [motif / 27000 for motif in value]
 
     # print(len(population), len(motif), len(value))
 
     df = pd.DataFrame({'Population': population,
-                    'Motif': motif,
-                    'Values': value})
+                       'Motif': motif,
+                       'Values': value})
 
     if top > 0:
         mean = df.groupby('Motif')['Values'].mean()
@@ -75,13 +80,13 @@ def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6, lab
         df = df[df['Motif'].isin(top_motifs.index)]
         motifSize = top
 
-    w = motifSize/10 * wmulti
+    w = motifSize / 10 * wmulti
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
     violin = sns.boxplot(x='Motif', y='Values', hue='Population', data=df, palette=sns.color_palette("tab10"))
     violin.legend_.remove()
-    #handles = violin.legend_.legendHandles
+    # handles = violin.legend_.legendHandles
     # ax.legend(handles, labels)
-    plt.ylim([0,1])
+    plt.ylim([0, 1])
     plt.xlabel('Motif')
     plt.ylabel('Values')
     ax.set_title(title)
@@ -91,6 +96,7 @@ def graphMotifUsage(path, motifUsage, BD, motifSize, title, top=0, wmulti=6, lab
     fname_pdf = "motif_usage_{}.pdf".format(title)
     fig.savefig(os.path.join(path, fname), transparent=True)
     fig.savefig(os.path.join(path, fname_pdf), transparent=True)
+
 
 def loadKineticsMap(path):
     map = {0: "none"}
@@ -102,6 +108,7 @@ def loadKineticsMap(path):
             i += 1
     map[i] = "none"
     return map
+
 
 def loadAvaMap(path):
     map = {0: "none"}
@@ -116,47 +123,42 @@ def loadAvaMap(path):
     return map
 
 
+# %%
 
-#%%
-videos = ["BC1AASA", "BC1ADPI", "BC1ALKA", "BC1ALPA", "BC1ALRO", "BC1ANBU", "BC1ANGA", "BC1ANHE", 
-                  "BC1ANWI", "BC1ASKA", "BC1ATKU", "BC1BRBU", "BC1BRPO", "BC1BRSC", "BC1CERO", "BC1CISI", 
-                  "BC1COGR", "BC1DAAR", "BC1DEBR", "BC1DOBO", "BC1FEMO", "BC1GESA", "BC1GRLE", "BC1HAKO", 
-                  "BC1HETR", "BC1JACL", "BC1JECO", "BC1JUPA", "BC1JUST", "BC1KEMA", "BC1LABO", "BC1LACA", 
-                  "BC1LESA", "BC1LOKE", "BC1LOMI", "BC1LUOR", "BC1LUSE", "BC1MAMA", "BC1MEMA", "BC1MISE", 
-                  "BC1MOKI", "BC1NITA", "BC1OKBA", "BC1REFU", "CASH1", "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
-BD = ["BC1ADPI", "BC1BRBU", "BC1CISI", "BC1DOBO", "BC1JACL",
-    "BC1JUST", "BC1KEMA", "BC1LABO", "BC1LACA", "BC1LESA", 
-    "BC1LOKE", "BC1LOMI", "BC1LUOR", "BC1LUSE", "BC1MAMA", 
-    "BC1MEMA", "BC1MISE", "BC1OKBA", "BC1REFU", "CASH1",
-    "GRJO1", "HESN1", "JEPT1", "JETH1", "MIRU1"]
- 
+data, YMRS, HAM_D, start_frame, condition, isBD = load_pt_data(
+    video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
+BD = [k for k, v in isBD.items() if v[0] == 'Euthymic']
+videos = control_videos + BD
+# %%
 
-#%%
-
-#%%
-vLabelPath = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\\10_km_label_{}.npy'.format(onedrive_path, "{}", "{}")
-vMotifPath = r"{}\SURF\VAME\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
-v3MotifPath = r"{}\SURF\VAME\motif_usage_3_split.csv".format(onedrive_path, "{}", "{}")
+# %%
+vLabelPath = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\\10_km_label_{}.npy'.format(
+    onedrive_path, "{}", "{}")
+vMotifPath = r"{}\VAME\motif_usage_overall.csv".format(data_path, "{}", "{}")
+v3MotifPath = r"{}\VAME\motif_usage_3_split.csv".format(data_path, "{}", "{}")
 vFigPath = r"{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification".format(onedrive_path, "{}", "{}")
 
-#%%
-hLabelPath  = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\score_labels_{}.npy'.format(onedrive_path, "{}", "{}")
-hMotifPath = r"{}\SURF\hBPM\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+# %%
+hLabelPath = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\score_labels_{}.npy'.format(
+    onedrive_path, "{}", "{}")
+hMotifPath = r"{}\hBPM\motif_usage_overall.csv".format(data_path, "{}", "{}")
 hFigPath = r"{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification".format(onedrive_path, "{}", "{}")
 
-#%%
-sLabelPath  = r'{}\S3D\s3d_labels\s3d_labels_{}.npy'.format(data_path, "{}", "{}")
-sMotifPath = r"{}\SURF\S3D\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+# %%
+sLabelPath = r'{}\S3D\s3d_labels\s3d_labels_{}.npy'.format(data_path, "{}", "{}")
+sMotifPath = r"{}\S3D\motif_usage_overall.csv".format(data_path, "{}", "{}")
 sFigPath = r"{}\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage".format(onedrive_path, "{}", "{}")
 
-#%%
-mLabelPath  = r'{}\MMAction\mmaction_labels\mmaction_labels_{}.npy'.format(data_path, "{}", "{}")
-mMotifPath = r"{}\SURF\MMAction\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+# %%
+mLabelPath = r'{}\MMAction\mmaction_labels\mmaction_labels_{}.npy'.format(data_path, "{}", "{}")
+mMotifPath = r"{}\MMAction\motif_usage_overall.csv".format(data_path, "{}", "{}")
 mFigPath = r"{}\Behavior_VAE_data\Figures\Figure 5 - classification\motif usage".format(onedrive_path, "{}", "{}")
 
-#%%
-dLabelPath = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\DLC_10_km_label_{}.npy'.format(onedrive_path, "{}", "{}")
-dMotifPath = r"{}\SURF\DLC\motif_usage_overall.csv".format(onedrive_path, "{}", "{}")
+# %%
+dLabelPath = r'{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\results\{}\VAME\kmeans-10\DLC_10_km_label_{}.npy'.format(
+    onedrive_path, "{}", "{}")
+dMotifPath = r"{}\DLC\motif_usage_overall.csv".format(data_path, "{}", "{}")
 dFigPath = r"{}\Behavior_VAE_data\BD25-HC25-final-May17-2023\figure\classification".format(onedrive_path, "{}", "{}")
 
 # %%
@@ -177,7 +179,7 @@ dMotifUsage = generateMotifUsage(dLabels, 1, 10, scaled=True, missing=False)
 # %% path, motifUsage, split, motifSize, missing=False
 saveMotifUsage(dMotifPath, dMotifUsage, 1, 10)
 # %%
-graphMotifUsage(path=vFigPath, motifUsage=vMotifUsage, BD=BD, 
+graphMotifUsage(path=vFigPath, motifUsage=vMotifUsage, BD=BD,
                 motifSize=10, title='VAME', top=0, wmulti=7, labelMap=None)
 
 # %%
@@ -187,31 +189,18 @@ sMotifUsage = generateMotifUsage(sLabels, 1, 401, scaled=True, missing=True)
 graphMotifUsage(path=sFigPath, motifUsage=sMotifUsage, BD=BD,
                 motifSize=401, title='S3D', top=10, wmulti=20, labelMap=k400Map)
 
-
-#%%
+# %%
 mLabels = load_motif_labels(mLabelPath, videos, 27000)
 mMotifUsage = generateMotifUsage(mLabels, 1, 81, scaled=True, missing=True)
 # %%
-graphMotifUsage(path=mFigPath, motifUsage=mMotifUsage, BD=BD, 
+graphMotifUsage(path=mFigPath, motifUsage=mMotifUsage, BD=BD,
                 motifSize=81, title='MMAction', top=10, wmulti=20, labelMap=avaMap)
 
-
-
-
-
-
-
-
-
-
-
-
-
-#%%
+# %%
 mLabels = load_motif_labels(mLabelPath, videos, 27000)
 mMotifUsage = generateMotifUsage(mLabels, 1, 81, scaled=True, missing=True)
 # %%
-graphMotifUsage(path=mFigPath, motifUsage=mMotifUsage, BD=BD, 
+graphMotifUsage(path=mFigPath, motifUsage=mMotifUsage, BD=BD,
                 motifSize=81, title='MMAction', top=10, wmulti=20, labelMap=avaMap)
 
 # %%
@@ -232,12 +221,10 @@ top_indices, top_values = zip(*top_indices_values)
 print("Indices of top 3 highest values:", top_indices)
 print("Values of top 3 highest values:", top_values)
 
-
 # %%
 HP = [key for key in videos if key not in BD]
 
-
-#%%HP
+# %%HP
 # Extract arrays from the dictionary values
 arrays = [np.array(sMotifUsage[key][0]) for key in HP]
 
@@ -245,7 +232,7 @@ arrays = [np.array(sMotifUsage[key][0]) for key in HP]
 median_array = np.median(arrays, axis=0)
 
 # Calculate the interquartile range (IQR)
-q75, q25 = np.percentile(arrays, [75 ,25], axis=0)
+q75, q25 = np.percentile(arrays, [75, 25], axis=0)
 iqr = q75 - q25
 
 # %%

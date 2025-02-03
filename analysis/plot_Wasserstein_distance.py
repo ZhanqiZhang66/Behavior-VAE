@@ -1,18 +1,17 @@
-import pandas as pd
-import numpy as np
-from pathlib import Path
-import os
-from scipy import stats
-from data.load_data import load_pt_data
-from numpy import *
-from matplotlib import pyplot as plt
-from plotting.get_paths import get_my_path
 import pickle
-#%%
-myPath = get_my_path()
-onedrive_path = myPath['onedrive_path']
-github_path = myPath['github_path']
-data_path = myPath['data_path']
+from pathlib import Path
+
+import pandas as pd
+from matplotlib import pyplot as plt
+from numpy import *
+from scipy import stats
+
+from data.load_data import load_pt_data
+
+# %%
+github_path = r'D:\OneDrive - UC San Diego\GitHub'
+onedrive_path = r'D:\OneDrive - UC San Diego\Data'
+data_path = rf"D:\OneDrive - UC San Diego\SURF"
 '''
 Colors
 '''
@@ -22,25 +21,27 @@ b_o_colors = ['#1f77b4', '#ff7f0e']
 Load
 '''
 project_name = 'BD25-HC25-final-May17-2023'
-project_path = fr'{data_path}\{project_name}'
+project_path = fr'{onedrive_path}\Behavior_VAE_data\{project_name}'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name)
 # cfg = read_config(config)
-dlc_path = os.path.join(project_path,"videos","\pose_estimation")
+dlc_path = os.path.join(project_path, "videos", "\pose_estimation")
 n_cluster = 10
 zdim = 10
 model_name = 'VAME'
 five_min_frame_no = int(5 * 60 * 30)
-data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=
-                                                                       r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+data, YMRS, HAM_D, start_frame, condition, isBD = load_pt_data(video_information_pth=
+r'{}\Behavior-VAE\data\video-information.csv'.format(
+    github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
-score_bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
+                        "wear", "exercise"]
 n_subject_in_population = len(control_videos)
-#%% Wasserstein computation can be run in parallel (to speed up)
+# %% Wasserstein computation can be run in parallel (to speed up)
 '''
 Run compute_latent_wasserstein_distance.py
 '''
-#%%
+# %%
 '''
 Load Wasserstein distances
 '''
@@ -51,7 +52,7 @@ with open(f'{project_path}/data/Wasserstein_distances_HC_HC.pkl', 'rb') as f:
 with open(f'{project_path}/data/Wasserstein_distances_BD_BD.pkl', 'rb') as f:
     distances_BD_BD_df = pd.DataFrame(pickle.load(f))
 distances_HC_BD_df = distances_BD_HC_df.copy()
-#%%
+# %%
 '''
 Plot the pairwise Wasserterin distances
 '''
@@ -103,15 +104,19 @@ for motif in range(n_cluster):
     fname_pdf = "Motif{}-pairwise-dtw.pdf".format(motif)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
     for epoch in range(1, 4):
-
-        all_data_motif = distances_HC_BD_df[(distances_HC_BD_df['Motif'] == motif) & (distances_HC_BD_df['Epoch'] == epoch)]
+        all_data_motif = distances_HC_BD_df[
+            (distances_HC_BD_df['Motif'] == motif) & (distances_HC_BD_df['Epoch'] == epoch)]
         all_data_motif2 = distances_HC_HC_df[
             (distances_HC_BD_df['Motif'] == motif) & (distances_HC_BD_df['Epoch'] == epoch)]
         all_data_motif3 = distances_BD_BD_df[
             (distances_HC_BD_df['Motif'] == motif) & (distances_HC_BD_df['Epoch'] == epoch)]
         s_score = stats.ttest_ind(all_data_motif['Distance'], all_data_motif2['Distance'], nan_policy='omit')
-        print("Motif{} Epoch{} BD-HC, HP-HP, 2 sample t-stat: {:.2f}, p<0.05 {}, p-val: {}\n".format(motif, epoch, s_score.statistic,s_score.pvalue<0.05,
-                                                                                            s_score.pvalue))
+        print("Motif{} Epoch{} BD-HC, HP-HP, 2 sample t-stat: {:.2f}, p<0.05 {}, p-val: {}\n".format(motif, epoch,
+                                                                                                     s_score.statistic,
+                                                                                                     s_score.pvalue < 0.05,
+                                                                                                     s_score.pvalue))
         s_score = stats.ttest_ind(all_data_motif['Distance'], all_data_motif3['Distance'], nan_policy='omit')
-        print("Motif{} Epoch{} BD-HC, BD-BD, 2 sample t-stat: {:.2f}, p<0.05 {}, p-val: {}\n".format(motif, epoch, s_score.statistic,s_score.pvalue<0.05,
-                                                                                          s_score.pvalue))
+        print("Motif{} Epoch{} BD-HC, BD-BD, 2 sample t-stat: {:.2f}, p<0.05 {}, p-val: {}\n".format(motif, epoch,
+                                                                                                     s_score.statistic,
+                                                                                                     s_score.pvalue < 0.05,
+                                                                                                     s_score.pvalue))

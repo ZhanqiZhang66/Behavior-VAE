@@ -3,32 +3,22 @@
 # Description: visualize latent variable from latent space VAME
 # Scenario:
 # Usage:
-#%%
-import pandas as pd
-import numpy as np
+# %%
 from pathlib import Path
-import matplotlib.pyplot as plt
-import os
-from sklearn.decomposition import PCA
-import scipy
-import seaborn as sns
-from scipy import stats
-from vame.analysis.community_analysis import read_config, compute_transition_matrices
-#, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
-from vame.analysis.pose_segmentation import get_motif_usage
-from data.load_data import load_pt_data
-from numpy import *
-import matplotlib
+
+import pandas as pd
 from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
-from scipy.spatial import distance
-from dtaidistance import dtw
+from numpy import *
+from sklearn.decomposition import PCA
+
+# , get_labels, compute_transition_matrices, get_community_labels, create_community_bag
+from data.load_data import load_pt_data
 from plotting.get_paths import get_my_path
-from dtaidistance import dtw_ndim
+
 # matplotlib.use('Qt5Agg')
-#%%
+# %%
 myPath = get_my_path()
 onedrive_path = myPath['onedrive_path']
 github_path = myPath['github_path']
@@ -43,62 +33,63 @@ Load
 '''
 project_name = 'BD25-HC25-final-May17-2023'
 project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
-config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
+                                                       project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 # cfg = read_config(config)
-dlc_path = os.path.join(project_path,"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
+dlc_path = os.path.join(project_path, "videos",
+                        "\pose_estimation")  # dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 zdim = 10
 model_name = 'VAME'
 five_min_frame_no = int(5 * 60 * 30)
-data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=
-                                                                       r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+data, YMRS, HAM_D, start_frame, condition, isBD = load_pt_data(video_information_pth=
+r'{}\Behavior-VAE\data\video-information.csv'.format(
+    github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
-score_bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
+                        "wear", "exercise"]
 n_subject_in_population = len(control_videos)
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
 pca = PCA(n_components=3)
-#%%
+# %%
 '''
 Define Variables of interests
 '''
 titles = ["CP", "BD"]
 N = [0, 0]
 
-
 Motif_usages = [[], []]
 Motif_usage_pct = [[], []]
 motif_usage_cat = [[], []]
 Latent_vectors = [[], []]
 Latent_centroids = []  # this is the mean of the latent, on d-dimension
-Latent_len = [[],[]]
-Latent_len_epoch = [[[],[]], [[],[]], [[],[]]]
+Latent_len = [[], []]
+Latent_len_epoch = [[[], []], [[], []], [[], []]]
 Labels = [[], []]
 TM = [[], []]
 population_TM = [[], []]
 Cluster_center = []
 transition_matrices = []
 
-Latent_vectors_per_state = [[],[]] # mean and variance of state 0,1,...9 of every person's latent vector
-State_vectors_per_latent_d = [[],[]] # mean and variance of latent d = 0,1,...9 of every person's state
-volume_per_person = [[],[]] # trace of cov(latent vector of this person)
-Stats_per_latent_per_state = [[],[]]
-
+Latent_vectors_per_state = [[], []]  # mean and variance of state 0,1,...9 of every person's latent vector
+State_vectors_per_latent_d = [[], []]  # mean and variance of latent d = 0,1,...9 of every person's state
+volume_per_person = [[], []]  # trace of cov(latent vector of this person)
+Stats_per_latent_per_state = [[], []]
 
 Epoch1_labels = [[], []]
 Epoch1_latent_vector = [[], []]
-Epoch1_volume_per_person = [[],[]] # trace of cov(latent vector of this person)
-
+Epoch1_volume_per_person = [[], []]  # trace of cov(latent vector of this person)
 
 Epoch2_labels = [[], []]
 Epoch2_latent_vector = [[], []]
-Epoch2_volume_per_person = [[],[]] # trace of cov(latent vector of this person)
+Epoch2_volume_per_person = [[], []]  # trace of cov(latent vector of this person)
 
 Epoch3_labels = [[], []]
 Epoch3_latent_vector = [[], []]
-Epoch3_volume_per_person = [[],[]] # trace of cov(latent vector of this person)
-#%%
+Epoch3_volume_per_person = [[], []]  # trace of cov(latent vector of this person)
+# %%
 '''
 Step 1: Mean-centered the population-latent vectors for computing
 '''
@@ -110,18 +101,20 @@ for j, videos in enumerate([control_videos, BD_videos]):
         v = videos[i]
         print("Loading {} data...".format(v))
 
-        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+        label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name,
+                                                                                           v, n_cluster, n_cluster, v))
 
         folder = os.path.join(project_path, "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # T x d = {10, 30}
-        latent_vector = latent_vector[: five_min_frame_no*3]
-        label = label[: five_min_frame_no*3]
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy'))  # T x d = {10, 30}
+        latent_vector = latent_vector[: five_min_frame_no * 3]
+        label = label[: five_min_frame_no * 3]
         if i == 0:
             l = label
             latent = latent_vector
         else:
             latent = np.concatenate([latent, latent_vector])
-            l = np.concatenate([l,label])
+            l = np.concatenate([l, label])
     Latent_len[j].append(len(latent_vector))
     Latent_vectors[j] = latent
     Labels[j] = l
@@ -131,7 +124,7 @@ population_latent_vector = np.vstack(Latent_vectors)
 population_latent_vector_centroid = np.mean(population_latent_vector, axis=0)
 Latent_centroids = population_latent_vector_centroid
 
-#%%
+# %%
 '''
 Step 2: compute overall latent motif-volume, and epoch latent motif-volume
 '''
@@ -140,11 +133,18 @@ for j, videos in enumerate([control_videos, BD_videos]):
     for i in range(len(videos)):
         v = videos[i]
         print("Mean-Centering {} data...".format(v))
-        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
-        cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
-        motif_usage = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
+        label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name,
+                                                                                           v, n_cluster, n_cluster, v))
+        cluster_center = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,
+                                                                                              project_name, v,
+                                                                                              n_cluster, v))
+        motif_usage = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\motif_usage_{}.npy'.format(onedrive_path, project_name,
+                                                                                           v, n_cluster, v))
         folder = os.path.join(project_path, "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # T x d = {10, 30}
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy'))  # T x d = {10, 30}
         Latent_len[j].append(len(latent_vector))
 
         # variance of each person
@@ -155,7 +155,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         door_close_time = start_frame[v]
         start_time = door_close_time
 
-        offset = 0 #int(start_time - door_close_time)
+        offset = 0  # int(start_time - door_close_time)
 
         epoch_1_label = label[:five_min_frame_no + offset]
         epoch_2_label = label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
@@ -170,9 +170,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         # mean-centered epoch latent vector
         epoch_1_latent_vector = latent_vector[:five_min_frame_no + offset] - Latent_centroids
-        epoch_2_latent_vector = latent_vector[five_min_frame_no + offset: five_min_frame_no * 2 + offset] - Latent_centroids
-        epoch_3_latent_vector = latent_vector[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset] - Latent_centroids
-
+        epoch_2_latent_vector = latent_vector[
+                                five_min_frame_no + offset: five_min_frame_no * 2 + offset] - Latent_centroids
+        epoch_3_latent_vector = latent_vector[
+                                five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset] - Latent_centroids
 
         Epoch1_volume_per_person[j].append(np.trace(np.cov(epoch_1_latent_vector.T)))
         Epoch2_volume_per_person[j].append(np.trace(np.cov(epoch_2_latent_vector.T)))
@@ -221,8 +222,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
     # Latent_vectors[j] = latent
     # Labels[j] = l
     #
-#%%
-jack_path = r'C:\Users\zhanq\OneDrive - UC San Diego\Behavior_VAE_data\jack_temp'
+# %%
+jack_path = rf'{onedrive_path}\Behavior_VAE_data\jack_temp'
 
 np.save(jack_path + '\Epoch1_labels', np.array(Epoch1_labels, dtype=object))
 np.save(jack_path + '\Epoch1_latent_vector', np.array(Epoch1_latent_vector, dtype=object))
@@ -230,25 +231,30 @@ np.save(jack_path + '\Epoch2_labels', np.array(Epoch2_labels, dtype=object))
 np.save(jack_path + '\Epoch2_latent_vector', np.array(Epoch2_latent_vector, dtype=object))
 np.save(jack_path + '\Epoch3_labels', np.array(Epoch3_labels, dtype=object))
 np.save(jack_path + '\Epoch3_latent_vector', np.array(Epoch3_latent_vector, dtype=object))
-#%%
+# %%
 '''
 Population-wise plot
 '''
-#%% plot PCA embedding for each video, all states
+# %% plot PCA embedding for each video, all states
 
 import numpy as np
 import matplotlib.ticker as ticker
-import matplotlib
+
 titles = ["CP", "BD"]
 for j, videos in enumerate([control_videos, BD_videos]):
     n = 0
     for i in range(len(videos)):
         v = videos[i]
         print("Computing {} ...".format(v))
-        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
-        cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path, project_name, v,n_cluster, v))
-        folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
+        label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name,
+                                                                                           v, n_cluster, n_cluster, v))
+        cluster_center = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,
+                                                                                              project_name, v,
+                                                                                              n_cluster, v))
+        folder = os.path.join(project_path, "results", v, model_name, 'kmeans-' + str(n_cluster), "")
+        latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy'))  # L x 30
 
         # 3D PCA
         pca = PCA(n_components=3)
@@ -257,8 +263,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         total_var = pca.explained_variance_ratio_.sum() * 100
         principalDf = pd.DataFrame(data=components)
         finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
-        finalDf.columns = ['pc 1', 'pc 2', 'pc 3','target']
-
+        finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
 
         fig = plt.figure(figsize=(5, 10))
 
@@ -290,7 +295,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax.zaxis.set_major_locator(ticker.NullLocator())
         ax.grid(False)
 
-
         # plot trajectory on latent
         ax1 = fig.add_subplot(1, 2, 2, projection='3d')
         t = np.arange(10)
@@ -301,8 +305,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             # r, g, b = matplotlib.colors.to_rgb(cmap(g * 2 + j))
             # color = [(r, g, b, alpha) for alpha in alpha_arr]
             ax1.scatter(components[i, 0], components[i, 1], components[i, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                       color=cmap(g * 2 + 0),s=10, label='%d' % g, alpha=0.3)
-        leg =  ax1.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
+                        color=cmap(g * 2 + 0), s=10, label='%d' % g, alpha=0.3)
+        leg = ax1.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
         # make simple, bare axis lines through space:
         # xAxisLine = ((np.min(components[:, 0]), np.max(components[:, 0])), (0, 0), (0, 0))
         # ax1.plot(xAxisLine[0], xAxisLine[1], xAxisLine[2], 'k--')
@@ -314,7 +318,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
             lh.set_alpha(1)
         ax1.set_title("PCs of {}-{}\n Exp_Var:{:.2f}".format(titles[j], v, total_var))
 
-
         ax1.set_xlim(-55, 55)
         ax1.set_ylim(-30, 55)
         ax1.set_zlim(-55, 55)
@@ -322,9 +325,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
         ax1.xaxis.set_major_locator(ticker.NullLocator())
         ax1.yaxis.set_major_locator(ticker.NullLocator())
         ax1.zaxis.set_major_locator(ticker.NullLocator())
-
-
-
 
         fig.show()
 
@@ -334,7 +334,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         fname_pdf = "PCs of {}-{}-3d.pdf".format(titles[j], v)
         fig.savefig(os.path.join(pwd, fname), transparent=True)
         fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-        #fig.savefig(os.path.join(pwd, fname), tranparent=True)
+        # fig.savefig(os.path.join(pwd, fname), tranparent=True)
 
         # # 2D PCA
         # fig, ax = plt.subplots(1, 1, figsize=(6, 6))
@@ -355,11 +355,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
         # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
         # fname = "PCs of {}-{}-2d.png".format(titles[j], v)
         # fig.savefig(os.path.join(pwd, fname))
-#%% Plot PCA of BD and CP population, for all state
+# %% Plot PCA of BD and CP population, for all state
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
-fig_pca = plt.figure(figsize=(5,10))
-fig_latent = plt.figure(figsize=(30,30))
+fig_pca = plt.figure(figsize=(5, 10))
+fig_latent = plt.figure(figsize=(30, 30))
 
 pca = PCA(n_components=3)
 K_var = np.zeros((10, 2))
@@ -373,7 +373,7 @@ components = pca.fit_transform(latent_vector_stack)
 for g in range(n_cluster):
     idx = np.where(labels_stack == g)[0]
     latent_this_state = latent_vector_stack[idx, :]
-    K = np.cov(latent_this_state.T) # 10 x
+    K = np.cov(latent_this_state.T)  # 10 x
     volume_of_group = np.trace(K)
     state_volume.append(volume_of_group)
 
@@ -398,7 +398,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
     for lh in leg.legendHandles:
         lh.set_alpha(1)
-    ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j],  total_var))
+    ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j], total_var))
     ax.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
     ax.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
     ax.set_zlabel('PC 3 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[2]))
@@ -426,16 +426,15 @@ fname_pdf = "PCs-of-BD-CP-3d.pdf"
 fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
 fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-
 # fname = "PCs-of-BD-CP.png"
 # fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
 # fname1 = "PCs-of-BD-CP.pdf"
 # fig_pca.savefig(os.path.join(pwd, fname1), transparent=True)
-#%% Plot PCA of BD and CP population, for all state 2d
+# %% Plot PCA of BD and CP population, for all state 2d
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
-fig_pca = plt.figure(figsize=(10,20))
-fig_latent = plt.figure(figsize=(30,30))
+fig_pca = plt.figure(figsize=(10, 20))
+fig_latent = plt.figure(figsize=(30, 30))
 
 pca = PCA(n_components=2)
 K_var = np.zeros((10, 2))
@@ -449,7 +448,7 @@ components = pca.fit_transform(latent_vector_stack)
 for g in range(n_cluster):
     idx = np.where(labels_stack == g)[0]
     latent_this_state = latent_vector_stack[idx, :]
-    K = np.cov(latent_this_state.T) # 10 x
+    K = np.cov(latent_this_state.T)  # 10 x
     volume_of_group = np.trace(K)
     state_volume.append(volume_of_group)
 
@@ -474,10 +473,9 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
     for lh in leg.legendHandles:
         lh.set_alpha(1)
-    ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j],  total_var))
+    ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j], total_var))
     ax.set_xlabel('PC 1 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[0]))
     ax.set_ylabel('PC 2 Exp_Var:{:.2f}'.format(pca.explained_variance_ratio_[1]))
-
 
     ax.set_xlim(-70, 80)
     ax.set_ylim(-70, 80)
@@ -501,7 +499,7 @@ fname_pdf = "PCs-of-BD-CP-2d.pdf"
 fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
 fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-#%% Plot PCA of BD and CP population, for each state
+# %% Plot PCA of BD and CP population, for each state
 cmap = plt.get_cmap('tab20')
 titles = ["HP", "BD"]
 
@@ -515,7 +513,6 @@ for g in np.unique(label):
     ax = fig_pca.add_subplot(1, 1, 1, projection='3d')
     latent_this_state = []
     for j, videos in enumerate([control_videos, BD_videos]):
-
         n = N[j]
         latent_vec = Latent_vectors[j]
 
@@ -529,12 +526,12 @@ for g in np.unique(label):
         ii = i[0] + len_latent[j]
         cmap = plt.get_cmap('tab20')
         ax.scatter3D(components[ii, 0], components[ii, 1], components[ii, 2], norm=plt.Normalize(vmin=0, vmax=9),
-                   color=cmap(g * 2 + j),
-                   s=30, alpha=0.05,  label=titles[j])
+                     color=cmap(g * 2 + j),
+                     s=30, alpha=0.05, label=titles[j])
     leg = ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
     for lh in leg.legendHandles:
         lh.set_alpha(1)
-    ax.set_title("PCs of state-{}-\n Exp_Var:{:.2f}".format(g,  total_var))
+    ax.set_title("PCs of state-{}-\n Exp_Var:{:.2f}".format(g, total_var))
     ax.set_xlabel('PC 1')
     ax.set_ylabel('PC 2')
     ax.set_zlabel('PC 3')
@@ -555,16 +552,17 @@ for g in np.unique(label):
     ax.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
     fig_pca.show()
 
-
-    pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Population-{}-motifs'.format(onedrive_path, project_name, n_cluster)
+    pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Population-{}-motifs'.format(onedrive_path, project_name,
+                                                                                   n_cluster)
     Path(pwd).mkdir(exist_ok=True)
     fname = "PCs-of-BD-CP-STATE-{}.png".format(g)
     fname_pdf = "PCs-of-BD-CP-STATE-{}.pdf".format(g)
     fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
     fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-
-#%% Plot PCA of BD and CP population, for each state, and each subject
+# %% Plot PCA of BD and CP population, for each state, and each subject
+latent_vector_stack = np.vstack(Latent_vectors)
+K_var = np.zeros((10, 2))
 K_var_all_subjects = np.zeros((n_subject_in_population, 10, 2))
 len_latent = [0, len(Latent_vectors[0])]
 components = pca.fit_transform(latent_vector_stack)
@@ -588,9 +586,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
         if sub > 0:
             previous_subject_latent_end += Latent_len[j][sub - 1]
         this_subject_latent_len = Latent_len[j][sub]
-        latent_vec_sub = latent_vec_this_population[previous_subject_latent_end: previous_subject_latent_end + this_subject_latent_len]
+        latent_vec_sub = latent_vec_this_population[
+                         previous_subject_latent_end: previous_subject_latent_end + this_subject_latent_len]
 
-        label_sub = label_this_population[previous_subject_latent_end: previous_subject_latent_end + this_subject_latent_len]
+        label_sub = label_this_population[
+                    previous_subject_latent_end: previous_subject_latent_end + this_subject_latent_len]
         sub_name = videos[sub]
         for g in np.unique(label):
             #  state-population-subject
@@ -610,7 +610,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 K_var_all_subjects[sub][g][j] = volume_of_group_sub
             fig_pca_per_state = plt.figure(figsize=(10, 10))
             ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
-            ax2.scatter(components[i_sub, 0], components[i_sub, 1], components[i_sub, 2], norm=plt.Normalize(vmin=0, vmax=9),
+            ax2.scatter(components[i_sub, 0], components[i_sub, 1], components[i_sub, 2],
+                        norm=plt.Normalize(vmin=0, vmax=9),
                         color=cmap(g * 2 + j), s=30, alpha=0.1, label='%d' % g)
 
             # make simple, bare axis lines through space:
@@ -620,6 +621,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             ax2.plot(yAxisLine[0], yAxisLine[1], yAxisLine[2], 'k--')
             zAxisLine = ((0, 0), (0, 0), (np.min(components[:, 2]), np.max(components[:, 2])))
             ax2.plot(zAxisLine[0], zAxisLine[1], zAxisLine[2], 'k--')
+            leg = ax2.legend(bbox_to_anchor=(1.04, 1), loc="upper left")
             for lh in leg.legendHandles:
                 lh.set_alpha(1)
             ax2.set_title("PCs of {}-{}-State- {}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, total_var))
@@ -631,7 +633,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             ax2.set_zlim(-50, 50)
             fig_pca_per_state.show()
 
-            pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Subject-{}-Motifs'.format(onedrive_path, project_name, n_cluster)
+            pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\Subject-{}-Motifs'.format(onedrive_path, project_name,
+                                                                                        n_cluster)
             Path(pwd).mkdir(exist_ok=True)
             fname = "PCs of {}-{} State {}.png".format(titles[j], sub_name, g)
             fname_pdf = "PCs of {}-{} State {}.pdf".format(titles[j], sub_name, g)
@@ -639,20 +642,17 @@ for j, videos in enumerate([control_videos, BD_videos]):
             fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
             plt.close('all')
 
-
-
-
             #  state-population wise
-            # i = np.where(label == g)
-            # latent_g = latent_vec[i]
+            i = np.where(label == g)
+            latent_g = latent_vec[i]
             # components = pca.fit_transform(latent_g)
             # total_var = pca.explained_variance_ratio_.sum() * 100
             # principalDf = pd.DataFrame(data=components)
             # finalDf = pd.concat([principalDf, pd.DataFrame(label[:n])], axis=1)
             # finalDf.columns = ['pc 1', 'pc 2', 'pc 3', 'target']
-            # K = np.cov(latent_g.T)
-            # volume_of_group = np.trace(K)
-            # K_var[g][j] = volume_of_group
+            K = np.cov(latent_g.T)
+            volume_of_group = np.trace(K)
+            K_var[g][j] = volume_of_group
             # fig_pca_per_state = plt.figure(figsize=(10, 10))
             # ax2 = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
             #
@@ -670,7 +670,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
             # fig_pca_per_state.show()
             # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
             # fname = "PCs of {} State {}.png".format(titles[j], g)
-            #fig_pca_per_state.savefig(os.path.join(pwd, fname))
+            # fig_pca_per_state.savefig(os.path.join(pwd, fname))
 
     # ax.set_title("PCs of {}-\n Exp_Var:{:.2f}".format(titles[j], total_var))
     # ax.set_xlabel('PC 1')
@@ -683,15 +683,15 @@ for j, videos in enumerate([control_videos, BD_videos]):
     # fig_pca.show()
     # pwd = r'D:\OneDrive - UC San Diego\GitHub\Behavior-VAE\BD20-Jun5-2022\figure\PCA_visual'
     # fname = "PCs of BD-CP.png"
-    #fig_pca.savefig(os.path.join(pwd, fname))
-    #plt.close('all')
+    # fig_pca.savefig(os.path.join(pwd, fname))
+    # plt.close('all')
 #
-#%% Plot volume of latent variable each epoch
+# %% Plot volume of latent variable each epoch
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 x = np.arange(10)
-ax.plot(x, K_var[:,0], '-o')
-ax.plot(x, K_var[:, 1],'-o')
+ax.plot(x, K_var[:, 0], '-o')
+ax.plot(x, K_var[:, 1], '-o')
 ax.set_title('Volume of motif')
 ax.set_xticks(x)
 ax.set_xlabel('motif')
@@ -705,32 +705,35 @@ fname = "Volume of state {}.png".format(g)
 fig.savefig(os.path.join(pwd, fname))
 fname_pdf = "Volume of state {}.pdf".format(g)
 fig.savefig(os.path.join(pwd, fname))
-#%%
+# %%
 from matplotlib.animation import FuncAnimation
+
 fig, ax = plt.subplots(figsize=(10, 10))
 s = ax.scatter([], [])
 x = np.arange(10)
-ax.set_xlim(0,10)
+ax.set_xlim(0, 10)
 ax.set_ylim(400, 1500)
 ax.set_xticks(x)
 ax.set_xlabel('State')
 ax.set_ylabel('volume of state')
+
+
 def animation(i):
     x = np.arange(10)
     for j, videos in enumerate([control_videos, BD_videos]):
         color = 'C{}'.format(j)
         for sub in range(12):
-            y = K_var_all_subjects[sub,:,j]
+            y = K_var_all_subjects[sub, :, j]
             sub_name = videos[sub]
-            s.set_offsets(np.column_stack(x[i]+j*0.2, y[i]))
+            s.set_offsets(np.column_stack(x[i] + j * 0.2, y[i]))
             s.set_facecolor(color)
             ax.set_title('{}-{} Volume of state'.format(titles[j], sub_name))
 
 
-ani = FuncAnimation(fig, animation, frames=240, interval = 500, blit = True)
+ani = FuncAnimation(fig, animation, frames=240, interval=500, blit=True)
 
 plt.show()
-#%%
+# %%
 cmap = plt.get_cmap('tab20')
 for j, videos in enumerate([control_videos, BD_videos]):
     color = 'C{}'.format(j)
@@ -738,7 +741,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         sub_name = videos[sub]
         fig, ax = plt.subplots(1, 1, figsize=(6, 4))
         x = np.arange(10)
-        ax.scatter(x, K_var_all_subjects[sub,:,j], norm=plt.Normalize(vmin=0, vmax=9), c=cmap(list(range(j,20,2))))
+        ax.scatter(x, K_var_all_subjects[sub, :, j], norm=plt.Normalize(vmin=0, vmax=9), c=cmap(list(range(j, 20, 2))))
         ax.set_title('{} Volume of state'.format(sub_name))
         ax.set_xticks(x)
         ax.set_xlabel('State')
@@ -750,40 +753,62 @@ for j, videos in enumerate([control_videos, BD_videos]):
 
         Path(pwd).mkdir(exist_ok=True, parents=True)
         fname = "{}_{}_volume.png".format(sub_name, n_cluster)
-        fig.savefig(os.path.join(pwd, fname),transparent=True)
+        fig.savefig(os.path.join(pwd, fname), transparent=True)
         fname_pdf = "{}_{}_volume.pdf".format(sub_name, n_cluster)
-        fig.savefig(os.path.join(pwd, fname_pdf),transparent=True)
+        fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
 x = np.arange(10)
-for sub in range(12):
-    ax.scatter(x, K_var_all_subjects[sub, :, 0], c=b_o_colors[0], alpha=0.5)
-    ax.scatter(x+0.2, K_var_all_subjects[sub, :, 1], c=b_o_colors[1], alpha=0.5)
-    x = np.arange(10)
+# Creating violin plot
+# Extract values for 10 states across all 24 subjects
+data_group1 = [K_var_all_subjects[:, i, 0] for i in range(10)]
+data_group2 = [K_var_all_subjects[:, i, 1] for i in range(10)]
 
-ax.plot(x, np.mean(K_var_all_subjects[:, :, 0],axis=0), '-^', color=b_o_colors[0])
-ax.plot(x, np.mean(K_var_all_subjects[:, :, 1],axis=0),'-^', color=b_o_colors[1])
+fig, ax = plt.subplots(figsize=(10, 5))
+
+# Create violin plot
+parts1 = ax.violinplot(data_group1, positions=x - 0.15, showmeans=True, widths=0.3)
+parts2 = ax.violinplot(data_group2, positions=x + 0.15, showmeans=True, widths=0.3)
+
+# Assign colors from b_o_colors
+for pc in parts1['bodies']:
+    pc.set_facecolor(b_o_colors[0])
+    pc.set_alpha(0.6)
+
+for pc in parts2['bodies']:
+    pc.set_facecolor(b_o_colors[1])
+    pc.set_alpha(0.6)
+
+# Set properties for mean, median, and other parts of the violin
+for part in ['cmeans', 'cbars', 'cmins', 'cmaxes']:
+    parts1[part].set_edgecolor('black')
+    parts2[part].set_edgecolor('black')
+
 ax.set_title('Volume of state')
 ax.set_xticks(x)
+ax.set_xticklabels([f'State {i + 1}' for i in x])
 ax.set_xlabel('State')
-ax.set_ylabel('volume of state')
+ax.set_ylabel('Volume of state')
+
+# Legend
 ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
 fig.show()
 pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\volume'.format(onedrive_path, project_name)
 fname = "{}_volume-mean.png".format(n_cluster)
 fname_pdf = "{}_volume-mean.pdf".format(n_cluster)
-fig.savefig(os.path.join(pwd, fname),transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf),transparent=True)
-#%%
+fig.savefig(os.path.join(pwd, fname), transparent=True)
+fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+# %%
 '''
 Epoch-wise plot
 '''
 
-#%% Helper function
+
+# %% Helper function
 # https://stackoverflow.com/questions/22867620/putting-arrowheads-on-vectors-in-a-3d-plot
 class Arrow3D(FancyArrowPatch):
     def __init__(self, xs, ys, zs, *args, **kwargs):
-        FancyArrowPatch.__init__(self, (0,0), (0,0), *args, **kwargs)
+        FancyArrowPatch.__init__(self, (0, 0), (0, 0), *args, **kwargs)
         self._verts3d = xs, ys, zs
 
     def do_3d_projection(self, renderer=None):
@@ -792,7 +817,9 @@ class Arrow3D(FancyArrowPatch):
         self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
 
         return np.min(zs)
-#%%   PCs of each epoch, showing distance between epochs
+
+
+# %%   PCs of each epoch, showing distance between epochs
 cmap = plt.get_cmap('tab20')
 # First, Get the centroids of each epoch of each population
 centroids = []
@@ -804,7 +831,7 @@ centroids = []
 # epoch 1 bd state 1, ...idx = 11
 # epoch x pop j state g, ...idx = n_cluster * (j + (epoch-1)*2) + g
 centroids_se = []
-latent_all = [] # epoch 1 control, epoch 1 hp, epoch 2 control, epoch 2 bd, ...
+latent_all = []  # epoch 1 control, epoch 1 hp, epoch 2 control, epoch 2 bd, ...
 label_all = []
 counter = 0
 for epoch in range(1, 4):
@@ -816,8 +843,8 @@ for epoch in range(1, 4):
         # 225000 x 1
         label_epoch_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
 
-        latent_all.append(latent_vec_epoch_pop) # (6, 225000, 10)
-        label_all.append(label_epoch_pop) # (6, 225000)
+        latent_all.append(latent_vec_epoch_pop)  # (6, 225000, 10)
+        label_all.append(label_epoch_pop)  # (6, 225000)
 
         for g in range(n_cluster):
             idx_g = np.where(label_epoch_pop == g)[0]
@@ -825,44 +852,44 @@ for epoch in range(1, 4):
             centroids.append(centroid)
         counter += 1
 
-subject_end = [[0],[0]]
-subject_latent_len = [[],[]]
+subject_end = [[0], [0]]
+subject_latent_len = [[], []]
 
-latent_all_ = np.vstack(latent_all) # (1350000, 10)
-label_all_ = np.hstack(label_all) # (1350000, 1)
-centroids = np.squeeze(np.array(centroids)) # (60 x 10)  (3 epoch x 2 pop x 10 motif) x d
+latent_all_ = np.vstack(latent_all)  # (1350000, 10)
+label_all_ = np.hstack(label_all)  # (1350000, 1)
+centroids = np.squeeze(np.array(centroids))  # (60 x 10)  (3 epoch x 2 pop x 10 motif) x d
 
 # Next, I need to get the embedding of all latent in all three epochs
 
 components = pca.fit_transform(latent_all_)
-components_pop = pca.transform(centroids)# (60, 3)
+components_pop = pca.transform(centroids)  # (60, 3)
 labels_pop = list(label_all_)
 
-
-
 colors = b_o_colors
-#%% for each of the 10 motifs/states, we plot the centroids of all epochs, within and between populations
+# %% for each of the 10 motifs/states, we plot the centroids of all epochs, within and between populations
 
 state_epoch_centroids = []
 state_epoch_volume = []
-len_latent_epoch = [0, 5*30*60, 10*30*60, 15*30*60]
+len_latent_epoch = [0, 5 * 30 * 60, 10 * 30 * 60, 15 * 30 * 60]
 len_latent = [0, len(Latent_vectors[0])]
 count_centroid = 0
 # for each motif
+count = 0
 for g in range(10):
     fig_pca_per_state = plt.figure(figsize=(6, 4))
     ax = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
-    epoch_centroids = [[],[]] # 2 x 3
+    epoch_centroids = [[], []]  # 2 x 3
     epoch_volume = [[], []]
     markers = ['o', '^', 'D']
     alphas = [0.4, 0.7, 1]
-    count = 0
+    counter = 0
     for epoch in range(1, 4):
         # for each population, get the centroid of each epoch
         for j, videos in enumerate([control_videos, BD_videos]):
-            latent_vec = latent_all[count]  # (1, 225000, 10)
-            label_vec = label_all[count] # (1, 225000)
+            latent_vec = latent_all[counter]  # (1, 225000, 10)
+            label_vec = label_all[counter]  # (1, 225000)
             latent_vec_this_population = latent_vec
+            counter += 1
 
             # Then, I need to get the index of state g in label_vec
             # this is the latent vector of this population, in this motif, of this epoch
@@ -871,6 +898,7 @@ for g in range(10):
             print('latent_vec_g shape: {}'.format(latent_vec_g.shape))
 
             transformed_centroid = components_pop[count, :]
+            print(transformed_centroid)
             epoch_centroids[j].append(transformed_centroid)
             count += 1
             # centroid of motif 1 epoch 1 HC,
@@ -886,25 +914,25 @@ for g in range(10):
                 volume_of_group = np.trace(KK)
                 epoch_volume[j].append(volume_of_group)
                 # Plot latent swarms
-                ax.plot3D(components[idx_g, 0], components[idx_g, 1], components[idx_g, 2],
+                ax.plot3D(components[idx, 0], components[idx, 1], components[idx, 2],
                           # norm=plt.Normalize(vmin=0, vmax=9),
-                           color=cmap(g * 2 + j),
-                            # s=5,
-                             alpha=0.9,
-                             label='%d' % g,linewidth=10, zorder=-1)
+                          color=cmap(g * 2 + j),
+                          # s=5,
+                          alpha=0.9,
+                          label='%d' % g, linewidth=10, zorder=-1)
             # plot centroid
             ax.scatter3D(transformed_centroid[0], transformed_centroid[1], transformed_centroid[2],
-                       norm=plt.Normalize(vmin=0, vmax=9),
-                       color=colors[j],
-                       marker='.',
-                       s=200,
-                       label='{} epoch{} centroid'.format(titles[j], epoch),zorder=1)
+                         norm=plt.Normalize(vmin=0, vmax=9),
+                         color=colors[j],
+                         marker='.',
+                         s=200,
+                         label='{} epoch{} centroid'.format(titles[j], epoch), zorder=1)
         # plot distance between centroids between groups in same epoch in PC space
         xs = [epoch_centroids[0][epoch - 1][0], epoch_centroids[1][epoch - 1][0]]
         ys = [epoch_centroids[0][epoch - 1][1], epoch_centroids[1][epoch - 1][1]]
         zs = [epoch_centroids[0][epoch - 1][2], epoch_centroids[1][epoch - 1][2]]
         ax.plot3D(xs, ys, zs, linewidth=3, linestyle='--',
-                color='m', label='epoch{}centroid between BD-HP'.format(epoch),zorder=1)
+                  color='m', label='epoch{}centroid between BD-HP'.format(epoch), zorder=1)
 
     state_epoch_centroids.append(epoch_centroids)
     state_epoch_volume.append(epoch_volume)
@@ -963,15 +991,13 @@ for g in range(10):
                    labelbottom=False, bottom=False)
     fig_pca_per_state.show()
 
-
-
     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "PCs of {} State {}-centroid.png".format(titles[j], g)
     fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
     fname_pdf = "PCs of {} State {}-centroid.pdf".format(titles[j], g)
     fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%% We also need the centroid of each subject, for error bars
+# %% We also need the centroid of each subject, for error bars
 '''
 latent per subject
 '''
@@ -1012,8 +1038,8 @@ for epoch in range(1, 4):
         len_latent_each_epoch_each_population = len(latent_vec_epoch_pop)
         label_epoch_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
         for sub in range(n_subject_in_population):
-            latent_this_sub = latent_vec_epoch_pop[9000*sub: 9000*(sub +1)] #9000 x 10
-            label_this_sub = label_epoch_pop[9000*sub : 9000*(sub +1)]
+            latent_this_sub = latent_vec_epoch_pop[9000 * sub: 9000 * (sub + 1)]  # 9000 x 10
+            label_this_sub = label_epoch_pop[9000 * sub: 9000 * (sub + 1)]
             for g in range(n_cluster):
                 idx_g = np.where(label_this_sub == g)[0]
                 latent_this_state_g_this_sub = latent_this_sub[idx_g, :]
@@ -1023,14 +1049,12 @@ for epoch in range(1, 4):
                 else:
                     print(f"a empty latent volume for {videos[sub]} in motif{g} epoch{epoch}")
                     latent_volume_this_state_g_this_sub = 0
-                    centroid_sub = np.full([zdim,], 0)
+                    centroid_sub = np.full([zdim, ], 0)
 
                 centroids_subjects.append(centroid_sub)
                 volume_subjects.append(latent_volume_this_state_g_this_sub)
 
-
-
-#%% Here, we are getting the PC space coordinates centroid of each subject's latent vector, per motif, per epoch
+# %% Here, we are getting the PC space coordinates centroid of each subject's latent vector, per motif, per epoch
 '''
 latent per subject
 '''
@@ -1046,16 +1070,18 @@ pca = PCA(n_components=3)
 # Next, I need to get the embedding of all latent in all three epochs,
 # This is the PC embedding of latents, appended by embedding of the centroids
 components = pca.fit_transform(latent_all_)
-components_centroids = pca.transform(centroids)# (60, 3)
-
+components_centroids = pca.transform(centroids)  # (60, 3)
 
 # This is the PC embedding of latents, appended by embedding of the centroids of each sub each latent
-centroids_subjects = np.squeeze(np.array(centroids_subjects))  # (1500 x 10) (3 epoch x 2 pop x 25 sub/pop x 10 motif) x 10
-components_sub = pca.transform(centroids_subjects) # (1500, 3)
+centroids_subjects = np.squeeze(
+    np.array(centroids_subjects))  # (1500 x 10) (3 epoch x 2 pop x 25 sub/pop x 10 motif) x 10
+components_sub = pca.transform(centroids_subjects)  # (1500, 3)
 
 # reorganizing the datastructure
-state_epoch_sub_centroids_PC = np.zeros((3, 2, n_subject_in_population, n_cluster, 3)) # 3 epoch x 2 pop x 25 sub/pop x 10 motif x 3pc
-state_epoch_sub_centroids = np.zeros((3, 2, n_subject_in_population, n_cluster, zdim)) # 3 epoch x 2 pop x 25 sub/pop x 10 motif x zdim
+state_epoch_sub_centroids_PC = np.zeros(
+    (3, 2, n_subject_in_population, n_cluster, 3))  # 3 epoch x 2 pop x 25 sub/pop x 10 motif x 3pc
+state_epoch_sub_centroids = np.zeros(
+    (3, 2, n_subject_in_population, n_cluster, zdim))  # 3 epoch x 2 pop x 25 sub/pop x 10 motif x zdim
 state_epoch_sub_volume = np.zeros((3, 2, n_subject_in_population, n_cluster))
 count1 = 0
 count = 0
@@ -1071,21 +1097,17 @@ for epoch in range(1, 4):
                     state_epoch_sub_centroids[epoch - 1, j, sub, g, :] = [np.nan] * 10
                     state_epoch_sub_volume[epoch - 1, j, sub, g] = 0
                 else:
-                    state_epoch_sub_centroids_PC[epoch-1, j, sub, g, :] = components_sub[count1]
-                    state_epoch_sub_centroids[epoch-1, j, sub, g, :] = centroids_subjects[count1]
+                    state_epoch_sub_centroids_PC[epoch - 1, j, sub, g, :] = components_sub[count1]
+                    state_epoch_sub_centroids[epoch - 1, j, sub, g, :] = centroids_subjects[count1]
                     state_epoch_sub_volume[epoch - 1, j, sub, g] = volume_subjects[count1]
                 count1 += 1
-            this_population_this_epoch_centroid_2 = np.nanmean(state_epoch_sub_centroids[epoch - 1, j, :, g,:], axis=0)
+            this_population_this_epoch_centroid_2 = np.nanmean(state_epoch_sub_centroids[epoch - 1, j, :, g, :], axis=0)
 
-
-
-
-
-#%%
+# %%
 '''
 between trajectories of each subject
 '''
-import itertools
+
 # Initialize an empty DataFrame
 data_list = []
 
@@ -1095,10 +1117,12 @@ for epoch in range(1, 4):
         label_this_epoch_this_pop = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
         for g in range(n_cluster):
             for sub_i in range(n_subject_in_population):
-                latent_vec_this_epoch_this_pop_this_person = latent_vec_this_epoch_this_pop[9000 * sub_i: 9000 * (sub_i + 1)]
+                latent_vec_this_epoch_this_pop_this_person = latent_vec_this_epoch_this_pop[
+                                                             9000 * sub_i: 9000 * (sub_i + 1)]
                 label_this_epoch_this_pop_this_person = label_this_epoch_this_pop[9000 * sub_i: 9000 * (sub_i + 1)]
                 idx_g = np.where(label_this_epoch_this_pop_this_person == g)[0]
-                latent_vec_this_epoch_this_pop_this_person_this_motif = latent_vec_this_epoch_this_pop_this_person[idx_g]
+                latent_vec_this_epoch_this_pop_this_person_this_motif = latent_vec_this_epoch_this_pop_this_person[
+                    idx_g]
                 # Convert latent vector array to string
                 # Create a dictionary to store the data
                 data = {
@@ -1114,11 +1138,11 @@ for epoch in range(1, 4):
 # Create DataFrame from the list of dictionaries
 df = pd.DataFrame(data_list)
 import pickle
+
 with open(f'{project_path}/data/latent_vectors.pkl', 'wb') as f:
     pickle.dump(df, f)
 
-
-#%% Plot the centroids in PC space in each epoch, in each motif.
+# %% Plot the centroids in PC space in each epoch, in each motif.
 # Fig.4 a
 labels_pop = list(label_all_)
 
@@ -1127,10 +1151,10 @@ state_epoch_volume = []
 state_volume_ = []
 len_latent_epoch = [0, 5 * 30 * 60, 10 * 30 * 60, 15 * 30 * 60]
 len_latent = [0, len(Latent_vectors[0])]
-count = 0
+
 count_centroid = 0
-for g in range(n_cluster):#10):
-    epoch_centroids_per_subject = np.zeros((2, n_subject_in_population, 3)) # 2 pop x 25 subject each pop x 3 epoch
+for g in range(n_cluster):  # 10):
+    epoch_centroids_per_subject = np.zeros((2, n_subject_in_population, 3))  # 2 pop x 25 subject each pop x 3 epoch
     epoch_centroids = [[], []]  # 2 x 10
     epoch_centroids_in_PC = [[], []]  # 2 x 3
     epoch_volume = [[], []]
@@ -1144,7 +1168,7 @@ for g in range(n_cluster):#10):
     # volume_of_group = np.trace(nK_g)
     volume_of_group = np.trace(np.cov(latent_vec_all_epoch.T))
     state_volume_.append(volume_of_group)
-
+    count = 0
     for epoch in range(1, 4):
         fig_pca_per_state = plt.figure(figsize=(6, 4))
         ax = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
@@ -1152,8 +1176,6 @@ for g in range(n_cluster):#10):
         data_to_plot = []
         label_to_plot = []
         for j, videos in enumerate([control_videos, BD_videos]):
-
-
             latent_vec = latent_all[count]  # (1, 225000, 10)
             label_vec = label_all[count]  # (1, 225000)
 
@@ -1181,29 +1203,29 @@ for g in range(n_cluster):#10):
         indices = list(range(len(label_to_plot)))
         # Shuffle the indices, and subsample for visualization
         random.shuffle(indices)
-        data_to_plot_shuffled = np.asarray([data_to_plot[i,:] for i in indices[::10]])
+        data_to_plot_shuffled = np.asarray([data_to_plot[i, :] for i in indices[::10]])
 
         label_to_plot_shuffled = [label_to_plot[i] for i in indices[::10]]
 
-        colors = [cmap(g*2 + label) for label in label_to_plot_shuffled]
-        ax.scatter3D(data_to_plot_shuffled[:,0], data_to_plot_shuffled[:,1], data_to_plot_shuffled[:,2],
+        colors = [cmap(g * 2 + label) for label in label_to_plot_shuffled]
+        ax.scatter3D(data_to_plot_shuffled[:, 0], data_to_plot_shuffled[:, 1], data_to_plot_shuffled[:, 2],
                      # norm=plt.Normalize(vmin=0, vmax=9),
                      color=colors,
                      s=5,
                      alpha=0.5,
                      label='%d' % g, zorder=-1)
 
-            # if len(latent_vec_g):
-            #     #ng_K1 = latent_vec_g.T @ latent_vec_g volume_of_group_epoch = np.trace(ng_K1)
-            #     volume_of_group_epoch = np.trace(np.cov(latent_vec_g.T))
-            #     epoch_volume[j].append(volume_of_group_epoch)
-            #     # Plot latent swarms
-            #     ax.scatter3D(components[idx_g, 0], components[idx_g, 1], components[idx_g, 2],
-            #               # norm=plt.Normalize(vmin=0, vmax=9),
-            #               color=cmap(g * 2 + j),
-            #               s=5,
-            #               alpha=0.3,
-            #               label='%d' % g, linewidth=2, zorder=-1)
+        # if len(latent_vec_g):
+        #     #ng_K1 = latent_vec_g.T @ latent_vec_g volume_of_group_epoch = np.trace(ng_K1)
+        #     volume_of_group_epoch = np.trace(np.cov(latent_vec_g.T))
+        #     epoch_volume[j].append(volume_of_group_epoch)
+        #     # Plot latent swarms
+        #     ax.scatter3D(components[idx_g, 0], components[idx_g, 1], components[idx_g, 2],
+        #               # norm=plt.Normalize(vmin=0, vmax=9),
+        #               color=cmap(g * 2 + j),
+        #               s=5,
+        #               alpha=0.3,
+        #               label='%d' % g, linewidth=2, zorder=-1)
 
         #     # plot centroid
         #     ax.scatter3D(transformed_centroid[0], transformed_centroid[1], transformed_centroid[2],
@@ -1254,9 +1276,6 @@ for g in range(n_cluster):#10):
                        labelbottom=False, bottom=False)
         fig_pca_per_state.show()
 
-
-
-
         pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "PCs of State {}-epoch{}_mean_centered.png".format(g, epoch)
@@ -1265,20 +1284,23 @@ for g in range(n_cluster):#10):
         fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
     # state_epoch_centroids.append(epoch_centroids)
     # state_epoch_volume.append(epoch_volume)
-#%% Plot measures latent-volume for each motif
+# %% Plot measures latent-volume for each motif
+# Statistical tests
 # Fig. 4b
 # inverse of the covariance matrix of the entire latent vector Z
+import scipy.stats as stats
+
 iv = np.linalg.inv(np.cov(latent_all_.T))
 
 for i in range(n_cluster):
     fig, axes = plt.subplots(3, 1, figsize=(5, 15))
-    #epoch_volume = state_epoch_volume[i]
+    # epoch_volume = state_epoch_volume[i]
 
-    epoch_volume_list = [[],[]]
-    epoch_volume_se_list = [[],[]]
+    epoch_volume_list = [[], []]
+    epoch_volume_se_list = [[], []]
     epoch_volume_normalize_list = [[], []]
 
-    d_zit_t_minus_BD = [] # distance of motif i between time t (epoch 2), and time t-1 (epoch 1) in BD
+    d_zit_t_minus_BD = []  # distance of motif i between time t (epoch 2), and time t-1 (epoch 1) in BD
     d_zit_t_minus_HP = []
     d_zit_t_minus_BD_new = []
     d_zit_t_minus_HP_new = []
@@ -1289,12 +1311,24 @@ for i in range(n_cluster):
     d_zit_HP_HP_ = np.empty((n_cluster, 3, n_subject_in_population * n_subject_in_population))
     d_zit_BD_BD_ = np.empty((n_cluster, 3, n_subject_in_population * n_subject_in_population))
     # first, compute the distance between every BD subject to every HP subject in each epoch, in each motif
-    for epoch in range(1,4):
-        epoch_volume_BD = np.nanmean(state_epoch_sub_volume[epoch - 1, 1, :, i])# person_volumes[epoch - 1, 1, :, i])  # state_epoch_volume[i] # 10 x 2 x 3
-        epoch_volume_HP = np.nanmean(state_epoch_sub_volume[epoch - 1, 0, :, i])#person_volumes[epoch - 1, 0, :, i])
-        s_score = stats.ttest_ind(state_epoch_sub_volume[epoch - 1, 1, :, i], state_epoch_sub_volume[epoch - 1, 0, :, i], nan_policy='omit')
+    for epoch in range(1, 4):
+        epoch_volume_BD = np.nanmean(state_epoch_sub_volume[epoch - 1, 1, :,
+                                     i])  # person_volumes[epoch - 1, 1, :, i])  # state_epoch_volume[i] # 10 x 2 x 3
+        epoch_volume_HP = np.nanmean(state_epoch_sub_volume[epoch - 1, 0, :, i])  # person_volumes[epoch - 1, 0, :, i])
+        s_score = stats.ttest_ind(state_epoch_sub_volume[epoch - 1, 1, :, i],
+                                  state_epoch_sub_volume[epoch - 1, 0, :, i], nan_policy='omit')
+        print(
+            f"Motif{i} Epoch{epoch} latent volume median±SE : BD {np.nanmean(state_epoch_sub_volume[epoch - 1, 1, :, i]):.2f}±{stats.sem(state_epoch_sub_volume[epoch - 1, 1, :, i], nan_policy='omit'):.2f} "
+            f"HC: {np.nanmean(state_epoch_sub_volume[epoch - 1, 0, :, i]):.2f}±{stats.sem(state_epoch_sub_volume[epoch - 1, 0, :, i], nan_policy='omit'):.2f}\n"
+        )
+        print(
+            "Motif{} Epoch{} latent volume, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i, epoch, s_score.statistic,
+                                                                                           s_score.pvalue))
 
-        # print("Motif{} Epoch{} latent volume, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i, epoch, s_score.statistic, s_score.pvalue))
+        # print(
+        #     "Motif{} Epoch{} latent volume median+-SE :{}+-{}, 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i, epoch,
+        #                                                                                                       s_score.statistic,
+        #                                                                                                       s_score.pvalue))
 
         epoch_volume_BD_se = np.nanstd(state_epoch_sub_volume[epoch - 1, 1, :, i]) / np.sqrt(
             n_subject_in_population)  # state_epoch_volume[i] # 10 x 2 x 3
@@ -1376,7 +1410,6 @@ for i in range(n_cluster):
         #     se_d_zit_t_minus_BD.append(d_zit_t_plus_BD_se)
         #     se_d_zit_t_minus_HP.append(d_zit_t_plus_HP_se)
 
-
         epoch_volume_list[0].append(epoch_volume_HP)
         epoch_volume_list[1].append(epoch_volume_BD)
         epoch_volume_se_list[0].append(epoch_volume_HP_se)
@@ -1384,7 +1417,6 @@ for i in range(n_cluster):
 
         # epoch_volume_normalize_list[0].append(epoch_volume[0][epoch-1]/state_volume_[i])
         # epoch_volume_normalize_list[1].append(epoch_volume[1][epoch - 1]/state_volume_[i])
-
 
     #
     # d_this_epoch_zit_BD_HP = np.nanmean(d_zit_BD_HP_[i, :, : ], axis=1)
@@ -1414,8 +1446,10 @@ for i in range(n_cluster):
     # axes[1].grid(False)
     # axes[1].set_title("distance between centroids within population")
 
-    axes[0].errorbar(x1, epoch_volume_list[0], yerr=epoch_volume_se_list[0], fmt='--o', label='HP', color=b_o_colors[0], markersize=10)
-    axes[0].errorbar(x, epoch_volume_list[1], yerr=epoch_volume_se_list[1], fmt='-o', label='BD', color=b_o_colors[1], markersize=10)
+    axes[0].errorbar(x1, epoch_volume_list[0], yerr=epoch_volume_se_list[0], fmt='--o', label='HP', color=b_o_colors[0],
+                     markersize=10)
+    axes[0].errorbar(x, epoch_volume_list[1], yerr=epoch_volume_se_list[1], fmt='-o', label='BD', color=b_o_colors[1],
+                     markersize=10)
     axes[0].set_ylim(0, 800)
     axes[0].set_xticks(x)
     axes[0].set_title("volume of BD and HP")
@@ -1429,10 +1463,6 @@ for i in range(n_cluster):
 
     fig.show()
 
-
-
-
-
     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "State {}-centroid-distance-v2.png".format(i)
@@ -1440,14 +1470,14 @@ for i in range(n_cluster):
     fname_pdf = "State {}-centroid-distance-v2.pdf".format(i)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-#%% Statistical tests
+# %% Statistical tests
 
-#%%  PCs of {}-State-{}-Epoch-{}
+# %%  PCs of {}-State-{}-Epoch-{}
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
 pca = PCA(n_components=3)
 K_var = [np.zeros((10, 3)), np.zeros((10, 3))]
-K_var_all_subjects = [np.zeros((n_subject_in_population,10, 3)), np.zeros((n_subject_in_population, 10, 3))]
+K_var_all_subjects = [np.zeros((n_subject_in_population, 10, 3)), np.zeros((n_subject_in_population, 10, 3))]
 for j, videos in enumerate([control_videos, BD_videos]):
     alphas = [0.4, 0.7, 1]
     for epoch in range(1, 4):
@@ -1477,8 +1507,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                     ax2 = fig_pca_per_sub_per_state.add_subplot(1, 1, 1, projection='3d')
                     ax2.plot3D(components[:, 0], components[:, 1], components[:, 2],
                                linewidth=10,
-                                #norm=plt.Normalize(vmin=0, vmax=9),s=5,
-                                color=cmap(g * 2 + j),  alpha=alphas[epoch-1], label='%d' % g)
+                               # norm=plt.Normalize(vmin=0, vmax=9),s=5,
+                               color=cmap(g * 2 + j), alpha=alphas[epoch - 1], label='%d' % g)
                     ax2.set_title(
                         "PCs of {}-{}-State-{}-epoch-{}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, epoch,
                                                                                  total_var))
@@ -1511,12 +1541,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 K_temp[sub][g][epoch - 1] = volume_of_epoch_sub_this_state
                 K_var_all_subjects[j] = K_temp
 
-
-
                 # Plot this population, this epoch, this state
                 components_pop = pca.fit_transform(latent_vec_epoch_pop_this_state)
-
-
 
                 components_pop = pca.fit_transform(np.vstack((latent_vec_epoch_pop_this_state, centroid)))
 
@@ -1533,16 +1559,14 @@ for j, videos in enumerate([control_videos, BD_videos]):
                     # ax.scatter(components[:, 0], components[:, 1], components[:, 2], norm=plt.Normalize(vmin=0, vmax=9),
                     #            color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
                     ax.plot3D(components_pop[:, 0], components_pop[:, 1], components_pop[:, 2],
-                               linewidth=10,
-                               # norm=plt.Normalize(vmin=0, vmax=9),s=5,
-                               color=cmap(g * 2 + j), alpha=alphas[epoch - 1], label='%d' % g)
-
-
+                              linewidth=10,
+                              # norm=plt.Normalize(vmin=0, vmax=9),s=5,
+                              color=cmap(g * 2 + j), alpha=alphas[epoch - 1], label='%d' % g)
 
                     ax.set_title(
                         "PCs of {}-State-{}-Epoch-{} \n volume:{:.2f}".format(titles[j], g, epoch, volume_of_group))
                     ax.tick_params(left=False, right=False, labelleft=False,
-                                    labelbottom=False, bottom=False)
+                                   labelbottom=False, bottom=False)
                     ax.set_xlabel('PC 1')
                     ax.set_ylabel('PC 2')
                     ax.set_zlabel('PC 3')
@@ -1572,20 +1596,18 @@ for j, videos in enumerate([control_videos, BD_videos]):
                     print("{}-{} has no latent for state {}".format(titles[j], epoch, g))
                 K_var[j][g][epoch - 1] = volume_of_group
 
-
-
-
-#%%
+# %%
 cmap = plt.get_cmap('tab20')
 titles = ["CP", "BD"]
 pca = PCA(n_components=3)
 K_var = [np.zeros((10, 3)), np.zeros((10, 3))]
-K_var_all_subjects = [np.zeros((n_subject_in_population,10, 3)), np.zeros((n_subject_in_population, 10, 3))]
+K_var_all_subjects = [np.zeros((n_subject_in_population, 10, 3)), np.zeros((n_subject_in_population, 10, 3))]
 for j, videos in enumerate([control_videos, BD_videos]):
     for epoch in range(1, 4):
         # latent vector of the epoch
-        latent_vec = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j], axis=0) # [25 x 9000 ]x 10 = 225000 x 10
-        latent_vec_trim = latent_vec #  2x 25 x 9000 x 10
+        latent_vec = np.concatenate(eval('Epoch{}_latent_vector'.format(epoch))[j],
+                                    axis=0)  # [25 x 9000 ]x 10 = 225000 x 10
+        latent_vec_trim = latent_vec  # 2x 25 x 9000 x 10
         label = np.concatenate(eval('Epoch{}_labels'.format(epoch))[j], axis=0)
         label_trim = label
         components = pca.fit_transform(latent_vec)
@@ -1600,11 +1622,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
         label_pop = label_trim[0: Latent_len_epoch[epoch - 1][j][sub]]
         label_pop_trim = label_trim[Latent_len_epoch[epoch - 1][j][sub]:]
         for sub in range(n_subject_in_population):
-            latent_vec_sub = latent_vec_trim[0: Latent_len_epoch[epoch-1][j][sub]]
-            latent_vec_trim = latent_vec_trim[Latent_len_epoch[epoch-1][j][sub]:]
+            latent_vec_sub = latent_vec_trim[0: Latent_len_epoch[epoch - 1][j][sub]]
+            latent_vec_trim = latent_vec_trim[Latent_len_epoch[epoch - 1][j][sub]:]
 
-            label_sub = label_trim[0: Latent_len_epoch[epoch-1][j][sub]]
-            label_trim = label_trim[Latent_len_epoch[epoch-1][j][sub]:]
+            label_sub = label_trim[0: Latent_len_epoch[epoch - 1][j][sub]]
+            label_trim = label_trim[Latent_len_epoch[epoch - 1][j][sub]:]
             sub_name = videos[sub]
             for g in np.unique(label):
                 # state-subject-plot
@@ -1614,7 +1636,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 latent_pop_g = latent_vec_pop[i_pop]
                 components_pop = pca.fit_transform(latent_pop_g)
                 total_var_pop = pca.explained_variance_ratio_.sum() * 100
-
 
                 if len(i_sub[0]) and latent_vec_sub[i_sub].shape[0] > 2:
                     # the latent for this subject, this epoch, this state
@@ -1642,7 +1663,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                             norm=plt.Normalize(vmin=0, vmax=9),
                             color=cmap(g * 2 + j), s=2, alpha=0.05, label='%d' % g)
 
-                ax2.set_title("PCs of {}-{}-State-{}-epoch-{}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, epoch, total_var))
+                ax2.set_title(
+                    "PCs of {}-{}-State-{}-epoch-{}\n Exp_Var:{:.2f}".format(titles[j], sub_name, g, epoch, total_var))
                 ax2.set_xlabel('PC 1')
                 ax2.set_ylabel('PC 2')
                 ax2.set_zlabel('PC 3')
@@ -1658,7 +1680,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 ax2.set_ylim(-30, 30)
                 ax2.set_zlim(-40, 40)
                 fig_pca_per_sub_per_state.show()
-                pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch\subject_each_state'.format(onedrive_path, project_name)
+                pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch\subject_each_state'.format(onedrive_path,
+                                                                                                   project_name)
                 Path(pwd).mkdir(parents=True, exist_ok=True)
                 fname = "PCs of {}-{} State {}-epoch{}.png".format(titles[j], sub_name, g, epoch)
                 fname_pdf = "PCs of {}-{} State {}-epoch{}.pdf".format(titles[j], sub_name, g, epoch)
@@ -1673,7 +1696,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
                     volume_of_group = np.trace(K)
                 else:
                     volume_of_group = 0
-                K_var[j][g][epoch-1] = volume_of_group
+                K_var[j][g][epoch - 1] = volume_of_group
                 fig_pca_per_state = plt.figure(figsize=(10, 10))
                 ax = fig_pca_per_state.add_subplot(1, 1, 1, projection='3d')
 
@@ -1685,7 +1708,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                            alpha=0.1,
                            label='%d' % g)
 
-                ax.set_title("PCs of {}-State-{}-Epoch-{} \n volume:{:.2f}".format(titles[j], g,epoch, volume_of_group))
+                ax.set_title(
+                    "PCs of {}-State-{}-Epoch-{} \n volume:{:.2f}".format(titles[j], g, epoch, volume_of_group))
                 ax.set_xlabel('PC 1')
                 ax.set_ylabel('PC 2')
                 ax.set_zlabel('PC 3')
@@ -1707,12 +1731,12 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 fname_pdf = "PCs of {} State {} Epoch {}.pdf".format(titles[j], g, epoch)
                 fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-#%%
+# %%
 for g in range(n_cluster):
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
     x = np.arange(3)
-    ax.plot(x, K_var[0][g],'-o')
-    ax.plot(x, K_var[1][g],'-o')
+    ax.plot(x, K_var[0][g], '-o')
+    ax.plot(x, K_var[1][g], '-o')
     ax.set_title('Volume of state {}'.format(g))
     ax.set_xticks(x, ['Epoch 1', 'Epoch 2', 'Epoch 3'])
     ax.set_xlabel('Epoch (5min)')
@@ -1722,7 +1746,7 @@ for g in range(n_cluster):
     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\volume'.format(onedrive_path, project_name)
     fname = "Volume of state {}.png".format(g)
     fig.savefig(os.path.join(pwd, fname))
-#%%
+# %%
 for epoch in range(3):
     for j, videos in enumerate([control_videos, BD_videos]):
         color = 'C{}'.format(j)
@@ -1732,19 +1756,19 @@ for epoch in range(3):
             fig, ax = plt.subplots(1, 1, figsize=(6, 4))
             x = np.arange(10)
             Ktemp = K_var_all_subjects[j]
-            ax.scatter(x,Ktemp[sub,:,epoch], c=color)
-            ax.set_title('{} Volume of state epoch {}'.format(sub_name, epoch+1))
+            ax.scatter(x, Ktemp[sub, :, epoch], c=color)
+            ax.set_title('{} Volume of state epoch {}'.format(sub_name, epoch + 1))
             ax.set_xticks(x)
             ax.set_xlabel('State')
             ax.set_ylabel('volume of state')
             ax.legend(titles, loc='center left', bbox_to_anchor=(1, 0.5))
             fig.show()
             pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\volume'.format(onedrive_path, project_name)
-            fname = "{}_{}_epoch{}_volume.png".format(sub_name, n_cluster, epoch+1)
+            fname = "{}_{}_epoch{}_volume.png".format(sub_name, n_cluster, epoch + 1)
             fig.savefig(os.path.join(pwd, fname))
-            fname_pdf = "{}_{}_epoch{}_volume.pdf".format(sub_name, n_cluster, epoch+1)
+            fname_pdf = "{}_{}_epoch{}_volume.pdf".format(sub_name, n_cluster, epoch + 1)
             fig.savefig(os.path.join(pwd, fname_pdf))
-#%%
+# %%
 for epoch in range(3):
     fig, ax = plt.subplots(1, 1, figsize=(6, 4))
     x = np.arange(10)
@@ -1752,11 +1776,11 @@ for epoch in range(3):
     Ktemp1 = K_var_all_subjects[1]
     for sub in range(12):
         ax.scatter(x, Ktemp[sub, :, epoch], c='C0', alpha=0.5)
-        ax.scatter(x+0.2, Ktemp1[sub, :, epoch], c='C1', alpha=0.5)
+        ax.scatter(x + 0.2, Ktemp1[sub, :, epoch], c='C1', alpha=0.5)
         x = np.arange(10)
 
-    ax.plot(x, np.median(Ktemp,axis=[0,2]), '-^', color='C0')
-    ax.plot(x, np.median(Ktemp1,axis=[0,2]),'-^', color='C1')
+    ax.plot(x, np.median(Ktemp, axis=[0, 2]), '-^', color='C0')
+    ax.plot(x, np.median(Ktemp1, axis=[0, 2]), '-^', color='C1')
     ax.set_title('Volume of state epoch {}'.format(epoch))
     ax.set_xticks(x)
     ax.set_xlabel('State')

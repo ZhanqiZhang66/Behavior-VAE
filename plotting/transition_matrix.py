@@ -4,55 +4,64 @@
 # L1/L2, and more metrics to analyze
 # Scenario:
 # Usage:
-#%%
-import seaborn as sns
-import pandas as pd
-import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+# %%
 import os
-import scipy
-from scipy import stats
 from pathlib import Path
-from vame.analysis.community_analysis import read_config, compute_transition_matrices, get_adjacency_matrix
-#, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
-from vame.analysis.pose_segmentation import get_motif_usage
-from data.load_data import load_pt_data
-import networkx as nx
-from networkx.drawing.nx_agraph import graphviz_layout
+
+import matplotlib.pyplot as plt
 import ndd
+import networkx as nx
+import numpy as np
+import pandas as pd
+import scipy
+import seaborn as sns
+from scipy import stats
+from vame.analysis.community_analysis import read_config, compute_transition_matrices, get_adjacency_matrix
+# , get_labels, compute_transition_matrices, get_community_labels, create_community_bag
+from vame.analysis.pose_segmentation import get_motif_usage
+
+from data.load_data import load_pt_data
 from plotting.get_paths import get_my_path
-#%%
+
+# %%
 myPath = get_my_path()
 onedrive_path = myPath['onedrive_path']
 github_path = myPath['github_path']
 data_path = myPath['data_path']
-#%%
+# %%
 b_o_colors = ['#1f77b4', '#ff7f0e']
-#%%
+# %%
 project_name = 'BD25-HC25-final-May17-2023'
 project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
-config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path, project_name) # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
+                                                       project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
 cfg = read_config(config)
-dlc_path = os.path.join(cfg['project_path'],"videos","\pose_estimation") #dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
+dlc_path = os.path.join(cfg['project_path'], "videos",
+                        "\pose_estimation")  # dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
 n_cluster = 10
 n_scores = 11
 model_name = 'VAME'
 
-data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+data, YMRS, HAM_D, start_frame, condition, isBD = load_pt_data(
+    video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
 control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
 BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
-score_bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
+                        "wear", "exercise"]
 n_subject_in_population = len(control_videos)
-transition_group = ['','_ctl', '_score']
-#%%
+transition_group = ['', '_ctl', '_score']
+# %%
 titles = ["CP", "BD"]
 N = [0, 0]
 Labels = [[], []]
 TM = [[], []]
 population_TM = [[], []]
-population_TM_ctl = [[],[]]
+population_TM_ctl = [[], []]
 population_TM_score = [[], []]
+
+motif_usage_cat = [[], []]
+motif_usage_cat_ctl = [[], []]
+motif_usage_cat_score = [[], []]
 
 transition_matrices = []
 transition_matrices_ctl = []
@@ -64,152 +73,161 @@ adjacent_matrices_score = []
 Epoch1_labels = [[], []]
 Epoch1_transition_matrix = [[], []]
 Epoch1_adjacent_matrix = [[], []]
-Epoch1_Entropies = [[],[]]
-Epoch1_Stationary_Entropies = [[],[]]
+Epoch1_Entropies = [[], []]
+Epoch1_Stationary_Entropies = [[], []]
 Epoch1_Effective_num_every_state = [[], []]
 Epoch1_Effective_num_avg = [[], []]
-Epoch1_num_zero_rows = [[],[]]
-Epoch1_num_zeros = [[],[]]
-Epoch1_num_ones = [[],[]]
+Epoch1_num_zero_rows = [[], []]
+Epoch1_num_zeros = [[], []]
+Epoch1_num_ones = [[], []]
 Epoch1_labels_ctl = [[], []]
 Epoch1_transition_matrix_ctl = [[], []]
 Epoch1_adjacent_matrix_ctl = [[], []]
-Epoch1_Entropies_ctl = [[],[]]
-Epoch1_Stationary_Entropies_ctl = [[],[]]
+Epoch1_Entropies_ctl = [[], []]
+Epoch1_Stationary_Entropies_ctl = [[], []]
 Epoch1_Effective_num_every_state_ctl = [[], []]
 Epoch1_Effective_num_avg_ctl = [[], []]
-Epoch1_num_zero_rows_ctl = [[],[]]
-Epoch1_num_zeros_ctl = [[],[]]
-Epoch1_num_ones_ctl = [[],[]]
+Epoch1_num_zero_rows_ctl = [[], []]
+Epoch1_num_zeros_ctl = [[], []]
+Epoch1_num_ones_ctl = [[], []]
 Epoch1_labels_score = [[], []]
 Epoch1_transition_matrix_score = [[], []]
 Epoch1_adjacent_matrix_score = [[], []]
-Epoch1_Entropies_score = [[],[]]
-Epoch1_Stationary_Entropies_score = [[],[]]
+Epoch1_Entropies_score = [[], []]
+Epoch1_Stationary_Entropies_score = [[], []]
 Epoch1_Effective_num_every_state_score = [[], []]
 Epoch1_Effective_num_avg_score = [[], []]
-Epoch1_num_zero_rows_score = [[],[]]
-Epoch1_num_zeros_score = [[],[]]
-Epoch1_num_ones_score = [[],[]]
+Epoch1_num_zero_rows_score = [[], []]
+Epoch1_num_zeros_score = [[], []]
+Epoch1_num_ones_score = [[], []]
 
 Epoch2_labels = [[], []]
 Epoch2_transition_matrix = [[], []]
 Epoch2_adjacent_matrix = [[], []]
-Epoch2_Entropies = [[],[]]
-Epoch2_Stationary_Entropies = [[],[]]
+Epoch2_Entropies = [[], []]
+Epoch2_Stationary_Entropies = [[], []]
 Epoch2_Effective_num_every_state = [[], []]
 Epoch2_Effective_num_avg = [[], []]
-Epoch2_num_zero_rows = [[],[]]
-Epoch2_num_zeros = [[],[]]
-Epoch2_num_ones = [[],[]]
+Epoch2_num_zero_rows = [[], []]
+Epoch2_num_zeros = [[], []]
+Epoch2_num_ones = [[], []]
 Epoch2_labels_ctl = [[], []]
 Epoch2_transition_matrix_ctl = [[], []]
 Epoch2_adjacent_matrix_ctl = [[], []]
-Epoch2_Entropies_ctl = [[],[]]
-Epoch2_Stationary_Entropies_ctl = [[],[]]
+Epoch2_Entropies_ctl = [[], []]
+Epoch2_Stationary_Entropies_ctl = [[], []]
 Epoch2_Effective_num_every_state_ctl = [[], []]
 Epoch2_Effective_num_avg_ctl = [[], []]
-Epoch2_num_zero_rows_ctl = [[],[]]
-Epoch2_num_zeros_ctl = [[],[]]
-Epoch2_num_ones_ctl = [[],[]]
+Epoch2_num_zero_rows_ctl = [[], []]
+Epoch2_num_zeros_ctl = [[], []]
+Epoch2_num_ones_ctl = [[], []]
 Epoch2_labels_score = [[], []]
 Epoch2_transition_matrix_score = [[], []]
 Epoch2_adjacent_matrix_score = [[], []]
-Epoch2_Entropies_score = [[],[]]
-Epoch2_Stationary_Entropies_score = [[],[]]
+Epoch2_Entropies_score = [[], []]
+Epoch2_Stationary_Entropies_score = [[], []]
 Epoch2_Effective_num_every_state_score = [[], []]
 Epoch2_Effective_num_avg_score = [[], []]
-Epoch2_num_zero_rows_score = [[],[]]
-Epoch2_num_zeros_score = [[],[]]
-Epoch2_num_ones_score = [[],[]]
+Epoch2_num_zero_rows_score = [[], []]
+Epoch2_num_zeros_score = [[], []]
+Epoch2_num_ones_score = [[], []]
 
 Epoch3_labels = [[], []]
 Epoch3_transition_matrix = [[], []]
 Epoch3_adjacent_matrix = [[], []]
-Epoch3_Entropies = [[],[]]
-Epoch3_Stationary_Entropies = [[],[]]
+Epoch3_Entropies = [[], []]
+Epoch3_Stationary_Entropies = [[], []]
 Epoch3_Effective_num_every_state = [[], []]
 Epoch3_Effective_num_avg = [[], []]
-Epoch3_num_zero_rows = [[],[]]
-Epoch3_num_zeros = [[],[]]
-Epoch3_num_ones = [[],[]]
+Epoch3_num_zero_rows = [[], []]
+Epoch3_num_zeros = [[], []]
+Epoch3_num_ones = [[], []]
 Epoch3_labels_ctl = [[], []]
 Epoch3_transition_matrix_ctl = [[], []]
 Epoch3_adjacent_matrix_ctl = [[], []]
-Epoch3_Entropies_ctl = [[],[]]
-Epoch3_Stationary_Entropies_ctl = [[],[]]
+Epoch3_Entropies_ctl = [[], []]
+Epoch3_Stationary_Entropies_ctl = [[], []]
 Epoch3_Effective_num_every_state_ctl = [[], []]
 Epoch3_Effective_num_avg_ctl = [[], []]
-Epoch3_num_zero_rows_ctl = [[],[]]
-Epoch3_num_zeros_ctl = [[],[]]
-Epoch3_num_ones_ctl = [[],[]]
+Epoch3_num_zero_rows_ctl = [[], []]
+Epoch3_num_zeros_ctl = [[], []]
+Epoch3_num_ones_ctl = [[], []]
 Epoch3_labels_score = [[], []]
 Epoch3_transition_matrix_score = [[], []]
 Epoch3_adjacent_matrix_score = [[], []]
-Epoch3_Entropies_score = [[],[]]
-Epoch3_Stationary_Entropies_score = [[],[]]
+Epoch3_Entropies_score = [[], []]
+Epoch3_Stationary_Entropies_score = [[], []]
 Epoch3_Effective_num_every_state_score = [[], []]
 Epoch3_Effective_num_avg_score = [[], []]
-Epoch3_num_zero_rows_score = [[],[]]
-Epoch3_num_zeros_score = [[],[]]
-Epoch3_num_ones_score = [[],[]]
+Epoch3_num_zero_rows_score = [[], []]
+Epoch3_num_zeros_score = [[], []]
+Epoch3_num_ones_score = [[], []]
 
-Entropies = [[],[]]
-Stationary_Entropy = [[],[]]
-Effective_num_states = [[],[]]
-Effective_num_states_list = [[],[]]
-num_zero_rows = [[],[]]
-num_zeros = [[],[]]
-num_ones = [[],[]]
+Entropies = [[], []]
+Stationary_Entropy = [[], []]
+Effective_num_states = [[], []]
+Effective_num_states_list = [[], []]
+num_zero_rows = [[], []]
+num_zeros = [[], []]
+num_ones = [[], []]
 
-Entropies_ctl = [[],[]]
-Stationary_Entropy_ctl = [[],[]]
-Effective_num_states_ctl = [[],[]]
-Effective_num_states_list_ctl = [[],[]]
-num_zero_rows_ctl = [[],[]]
-num_zeros_ctl = [[],[]]
-num_ones_ctl = [[],[]]
+Entropies_ctl = [[], []]
+Stationary_Entropy_ctl = [[], []]
+Effective_num_states_ctl = [[], []]
+Effective_num_states_list_ctl = [[], []]
+num_zero_rows_ctl = [[], []]
+num_zeros_ctl = [[], []]
+num_ones_ctl = [[], []]
 
-Entropies_score = [[],[]]
-Stationary_Entropy_score = [[],[]]
-Effective_num_states_score = [[],[]]
-Effective_num_states_list_score = [[],[]]
-num_zero_rows_score = [[],[]]
-num_zeros_score = [[],[]]
-num_ones_score = [[],[]]
-#%%
+Entropies_score = [[], []]
+Stationary_Entropy_score = [[], []]
+Effective_num_states_score = [[], []]
+Effective_num_states_list_score = [[], []]
+num_zero_rows_score = [[], []]
+num_zeros_score = [[], []]
+num_ones_score = [[], []]
+
+
+# %%
 def sum_columns(transition_m):
-    return np.sum(transition_m , axis=0)
+    return np.sum(transition_m, axis=0)
+
+
 def count_one_in_columns(transition_m):
     for j in range(np.shape(transition_m)[0]):
-         col = transition_m[j, :]
+        col = transition_m[j, :]
+
 
 def count_transition_frequency(adjacent_matrix):
     transition_frequency = np.count_nonzero(adjacent_matrix == 1)
     return transition_frequency
+
+
 def count_zeros(transition_m):
     transition = transition_m.copy()
     zero_rows = np.all(transition == 0, axis=1)
     zero_rows_i = np.where(zero_rows == True)
     zero_cols = np.all(transition == 0, axis=0)
-    return len(zero_rows_i[0]),  np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
+    return len(zero_rows_i[0]), np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
+
+
 def add_self_transition(transition_m, last_state):
     transition = transition_m.copy()
     zero_rows = np.all(transition == 0, axis=1)
-    zero_rows_i =  np.where(zero_rows == True)
+    zero_rows_i = np.where(zero_rows == True)
     zero_cols = np.all(transition == 0, axis=0)
     zero_cols_i = np.where(zero_cols == True)
 
-    #add self transition
+    # add self transition
     if np.sum(zero_rows) != np.sum(zero_cols):
         self_transition_i = list(set(zero_rows_i[0]) ^ set(zero_cols_i[0]))
         for idx in self_transition_i:
             if idx in set(zero_rows_i[0]):
                 transition[idx][idx] = 1
-    if np.sum(transition_m[last_state,:]) == 0 and np.sum(transition_m[:,last_state]) != 0:
+    if np.sum(transition_m[last_state, :]) == 0 and np.sum(transition_m[:, last_state]) != 0:
         transition[last_state][last_state] = 1
-    if zero_rows_i[0].size != 0 or zero_cols_i[0].size != 0: # when there are rows or zeros, or colums of zeros
-        zeros_rows_colums_i = list(set(zero_rows_i[0]) & set(zero_cols_i[0])) # remove them
+    if zero_rows_i[0].size != 0 or zero_cols_i[0].size != 0:  # when there are rows or zeros, or colums of zeros
+        zeros_rows_colums_i = list(set(zero_rows_i[0]) & set(zero_cols_i[0]))  # remove them
         idx_to_keep = np.ones(len(transition_m), dtype=bool)
         for i in range(len(transition_m)):
             if i in zeros_rows_colums_i:
@@ -221,6 +239,8 @@ def add_self_transition(transition_m, last_state):
     # if len_reduced:
     #     transition[last_state - n_rows_removed][last_state - n_rows_removed] = 1
     return transition
+
+
 def compute_stationary_probability(transition_m, last_state):
     # https://stackoverflow.com/questions/31791728/python-code-explanation-for-stationary-distribution-of-a-markov-chain
     # http://reeves.ee.duke.edu/information_theory/lecture4-Entropy_Rates.pdf
@@ -231,12 +251,14 @@ def compute_stationary_probability(transition_m, last_state):
         stationary = stationary / np.sum(stationary)
         stationary = stationary.real
     else:
-        stationary = [0]* len(transition_m)
+        stationary = [0] * len(transition_m)
     entropy = scipy.stats.entropy(stationary, base=2)
     if entropy < 0:
         print("negative entropy")
 
     return stationary, entropy
+
+
 def compute_entropy(transition_m, last_state):
     """
     Compute the entropy of a transition matrix.
@@ -258,6 +280,8 @@ def compute_entropy(transition_m, last_state):
     else:
         entropy = 0
     return entropy
+
+
 def count_probability(transition_matrix):
     """
     Counts the occurrences of each probability in the transition matrix and returns the counts in the order of first appearance.
@@ -279,6 +303,8 @@ def count_probability(transition_matrix):
         # Update counts for each occurrence
         counts[-1] = count_dict[number]
     return [count_dict[number] for number in count_dict]
+
+
 def compute_Bayesian_entropy_estimation(transition_m, last_state):
     """
     Compute the Bayesian entropy estimation of a list of occurrences of transition probability.
@@ -302,6 +328,8 @@ def compute_Bayesian_entropy_estimation(transition_m, last_state):
         entropy = 0
         std = np.nan
     return entropy
+
+
 def effective_num_states(transtion_m):
     effective_num_every_state = []
     for row in transtion_m:
@@ -314,11 +342,12 @@ def effective_num_states(transtion_m):
     effective_num_avg = np.mean(effective_num_every_state)
     return effective_num_every_state, effective_num_avg
 
+
 # https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors
-#%%
+# %%
 five_min_frame_no = 9000
 offset = 0
-#%% Load transition matrix in each video, and append into two classes (BD, CP)
+# %% Load transition matrix in each video, and append into two classes (BD, CP)
 YMRS_score = []
 HAM_D_score = []
 for j, videos in enumerate([control_videos, BD_videos]):
@@ -327,23 +356,40 @@ for j, videos in enumerate([control_videos, BD_videos]):
         v = videos[i]
         YMRS_score.append(YMRS[v][0])
         HAM_D_score.append(HAM_D[v][0])
-        print("Loading {}-{} data {}/{}...".format(v, titles[j], i+1, len(videos)))
+        print("Loading {}-{} data {}/{}...".format(v, titles[j], i + 1, len(videos)))
 
-        label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name, v, n_cluster, n_cluster, v))
+        label = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path, project_name,
+                                                                                           v, n_cluster, n_cluster, v))
         adjacent_m = get_adjacency_matrix(label, n_cluster)[0]
-        transition_m = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(onedrive_path, project_name, v, n_cluster, v))
-        cluster_center = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,project_name, v,n_cluster, v))
+        transition_m = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\community\transition_matrix_{}.npy'.format(
+                onedrive_path, project_name, v, n_cluster, v))
+        motif_usage = get_motif_usage(label, n_cluster)
+        cluster_center = np.load(
+            r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\cluster_center_{}.npy'.format(onedrive_path,
+                                                                                              project_name, v,
+                                                                                              n_cluster, v))
         folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
         if n_cluster == 10:
-            control_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path, project_name, v,n_cluster,n_cluster,v))
+            control_label = np.load(
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                                   project_name, v,
+                                                                                                   n_cluster, n_cluster,
+                                                                                                   v))
 
             control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
             control_adjacent_m = get_adjacency_matrix(control_label, n_cluster)[0]
+            control_motif_usage = get_motif_usage(control_label, n_cluster)
 
-            score_label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path, project_name, v,n_cluster,v))
+            score_label = np.load(
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path,
+                                                                                                project_name, v,
+                                                                                                n_cluster, v))
             score_label = score_label[: 27000]
             score_transition = compute_transition_matrices([v], [score_label], n_cluster)[0]
             score_adjacent_m = get_adjacency_matrix(score_label, n_cluster)[0]
+            score_motif_usage = get_motif_usage(score_label, n_scores)
 
         transition = transition_m.copy()
         transition_matrices.append(transition_m)
@@ -414,7 +460,6 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch2_transition_matrix_score[j].append(epoch_2_transition_matrix_score)
             Epoch2_adjacent_matrix_score[j].append(epoch_2_adjacent_matrix_score)
 
-
             Epoch3_labels_ctl[j].append(epoch_3_label_ctl)
             Epoch3_transition_matrix_ctl[j].append(epoch_3_transition_matrix_ctl)
             Epoch3_adjacent_matrix_ctl[j].append(epoch_3_adjacent_matrix_ctl)
@@ -422,15 +467,13 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch3_transition_matrix_score[j].append(epoch_3_transition_matrix_score)
             Epoch3_adjacent_matrix_score[j].append(epoch_3_adjacent_matrix_score)
 
-
-
             num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(epoch_1_transition_matrix_ctl[0])
             num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(
                 epoch_1_transition_matrix_score[0])
 
             entropy_ctl = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])
-            entropy_score = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])
-
+            entropy_score = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix_score[0],
+                                                                epoch_1_label_score[-1])
 
             effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(
                 epoch_1_transition_matrix_ctl[0])
@@ -445,7 +488,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             num_zeros_score[j].append(num_zero_item_score)
 
             Epoch1_Entropies_ctl[j].append(entropy_ctl)
-            Epoch1_Stationary_Entropies_ctl[j].append(compute_stationary_probability(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])[1])
+            Epoch1_Stationary_Entropies_ctl[j].append(
+                compute_stationary_probability(epoch_1_transition_matrix_ctl[0], epoch_1_label_ctl[-1])[1])
             Epoch1_Effective_num_every_state_ctl[j].append(effective_num_every_state_ctl)
             Epoch1_Effective_num_avg_ctl[j].append(effective_num_avg_ctl)
             Epoch1_num_zero_rows_ctl[j].append(num_zero_row_ctl)
@@ -453,7 +497,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch1_num_zeros_ctl[j].append(num_zero_item_ctl)
 
             Epoch1_Entropies_score[j].append(entropy_score)
-            Epoch1_Stationary_Entropies_score[j].append(compute_stationary_probability(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])[1])
+            Epoch1_Stationary_Entropies_score[j].append(
+                compute_stationary_probability(epoch_1_transition_matrix_score[0], epoch_1_label_score[-1])[1])
             Epoch1_Effective_num_every_state_score[j].append(effective_num_every_state_score)
             Epoch1_Effective_num_avg_score[j].append(effective_num_avg_score)
             Epoch1_num_zero_rows_score[j].append(num_zero_row_score)
@@ -465,7 +510,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 epoch_2_transition_matrix_score[0])
 
             entropy_2_ctl = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])
-            entropy_2_score = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])
+            entropy_2_score = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix_score[0],
+                                                                  epoch_2_label_score[-1])
 
             effective_num_every_state_2ctl, effective_num_avg_2ctl = effective_num_states(
                 epoch_2_transition_matrix_ctl[0])
@@ -473,7 +519,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 epoch_2_transition_matrix_score[0])
 
             Epoch2_Entropies_ctl[j].append(entropy_2_ctl)
-            Epoch2_Stationary_Entropies_ctl[j].append(compute_stationary_probability(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])[1])
+            Epoch2_Stationary_Entropies_ctl[j].append(
+                compute_stationary_probability(epoch_2_transition_matrix_ctl[0], epoch_2_label_ctl[-1])[1])
             Epoch2_Effective_num_every_state_ctl[j].append(effective_num_every_state_2ctl)
             Epoch2_Effective_num_avg_ctl[j].append(effective_num_avg_2ctl)
             Epoch2_num_zero_rows_ctl[j].append(num_zero_row_2_ctl)
@@ -481,7 +528,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch2_num_zeros_ctl[j].append(num_zero_item_2_ctl)
 
             Epoch2_Entropies_score[j].append(entropy_2_score)
-            Epoch2_Stationary_Entropies_score[j].append(compute_stationary_probability(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])[1])
+            Epoch2_Stationary_Entropies_score[j].append(
+                compute_stationary_probability(epoch_2_transition_matrix_score[0], epoch_2_label_score[-1])[1])
             Epoch2_Effective_num_every_state_score[j].append(effective_num_every_state_2score)
             Epoch2_Effective_num_avg_score[j].append(effective_num_avg_2score)
             Epoch2_num_zero_rows_score[j].append(num_zero_row_2_score)
@@ -493,7 +541,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 epoch_3_transition_matrix_score[0])
 
             entropy_3_ctl = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])
-            entropy_3_score = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])
+            entropy_3_score = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix_score[0],
+                                                                  epoch_3_label_score[-1])
 
             effective_num_every_state_3ctl, effective_num_avg_3ctl = effective_num_states(
                 epoch_3_transition_matrix_ctl[0])
@@ -501,7 +550,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
                 epoch_3_transition_matrix_score[0])
 
             Epoch3_Entropies_ctl[j].append(entropy_3_ctl)
-            Epoch3_Stationary_Entropies_ctl[j].append(compute_stationary_probability(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])[1])
+            Epoch3_Stationary_Entropies_ctl[j].append(
+                compute_stationary_probability(epoch_3_transition_matrix_ctl[0], epoch_3_label_ctl[-1])[1])
             Epoch3_Effective_num_every_state_ctl[j].append(effective_num_every_state_3ctl)
             Epoch3_Effective_num_avg_ctl[j].append(effective_num_avg_3ctl)
             Epoch3_num_zero_rows_ctl[j].append(num_zero_row_3_ctl)
@@ -509,7 +559,8 @@ for j, videos in enumerate([control_videos, BD_videos]):
             Epoch3_num_zeros_ctl[j].append(num_zero_item_3_ctl)
 
             Epoch3_Entropies_score[j].append(entropy_3_score)
-            Epoch3_Stationary_Entropies_score[j].append(compute_stationary_probability(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])[1])
+            Epoch3_Stationary_Entropies_score[j].append(
+                compute_stationary_probability(epoch_3_transition_matrix_score[0], epoch_3_label_score[-1])[1])
             Epoch3_Effective_num_every_state_score[j].append(effective_num_every_state_3score)
             Epoch3_Effective_num_avg_score[j].append(effective_num_avg_3score)
             Epoch3_num_zero_rows_score[j].append(num_zero_row_3_score)
@@ -521,15 +572,13 @@ for j, videos in enumerate([control_videos, BD_videos]):
         num_ones[j].append(num_one_item)
         num_zeros[j].append(num_zero_item)
 
-
         start_time = start_frame[v][0]
         five_min_frame_no = int(5 * 60 * 30)
-        offset = 0#  int(door_close_time - start_time)
+        offset = 0  # int(door_close_time - start_time)
 
         epoch_1_label = label[offset:five_min_frame_no + offset]
         epoch_2_label = label[five_min_frame_no + offset: five_min_frame_no * 2 + offset]
         epoch_3_label = label[five_min_frame_no * 2 + offset: five_min_frame_no * 3 + offset]
-
 
         epoch_1_transition_matrix = compute_transition_matrices([v], [epoch_1_label], n_cluster)
         epoch_2_transition_matrix = compute_transition_matrices([v], [epoch_2_label], n_cluster)
@@ -538,74 +587,59 @@ for j, videos in enumerate([control_videos, BD_videos]):
         epoch_2_adjacent_matrix = get_adjacency_matrix(epoch_2_label, n_cluster)[0]
         epoch_3_adjacent_matrix = get_adjacency_matrix(epoch_3_label, n_cluster)[0]
 
-
-
         Epoch1_labels[j].append(epoch_1_label)
         Epoch1_transition_matrix[j].append(epoch_1_transition_matrix)
         Epoch1_adjacent_matrix[j].append(epoch_1_adjacent_matrix)
-
 
         Epoch2_labels[j].append(epoch_2_label)
         Epoch2_transition_matrix[j].append(epoch_2_transition_matrix)
         Epoch2_adjacent_matrix[j].append(epoch_2_adjacent_matrix)
 
-
-
         Epoch3_labels[j].append(epoch_3_label)
         Epoch3_transition_matrix[j].append(epoch_3_transition_matrix)
         Epoch3_adjacent_matrix[j].append(epoch_3_adjacent_matrix)
 
-
-
         # ==== Epoch 1 ====
         num_zero_row, num_one_item, num_zero_item = count_zeros(epoch_1_transition_matrix[0])
 
-
         entropy = compute_Bayesian_entropy_estimation(epoch_1_transition_matrix[0], epoch_1_label[-1])
-
 
         effective_num_every_state, effective_num_avg = effective_num_states(epoch_1_transition_matrix[0])
 
-
         Epoch1_Entropies[j].append(entropy)
-        Epoch1_Stationary_Entropies[j].append(compute_stationary_probability(epoch_1_transition_matrix[0], epoch_1_label[-1])[1])
+        Epoch1_Stationary_Entropies[j].append(
+            compute_stationary_probability(epoch_1_transition_matrix[0], epoch_1_label[-1])[1])
         Epoch1_Effective_num_every_state[j].append(effective_num_every_state)
         Epoch1_Effective_num_avg[j].append(effective_num_avg)
         Epoch1_num_zero_rows[j].append(num_zero_row)
         Epoch1_num_ones[j].append(num_one_item)
         Epoch1_num_zeros[j].append(num_zero_item)
 
-
-
-
         # ==== Epoch 2 ====
         num_zero_row_2, num_one_item_2, num_zero_item_2 = count_zeros(epoch_2_transition_matrix[0])
         entropy_2 = compute_Bayesian_entropy_estimation(epoch_2_transition_matrix[0], epoch_2_label[-1])
         effective_num_every_state2, effective_num_avg2 = effective_num_states(epoch_2_transition_matrix[0])
         Epoch2_Entropies[j].append(entropy_2)
-        Epoch2_Stationary_Entropies[j].append(compute_stationary_probability(epoch_2_transition_matrix[0], epoch_2_label[-1])[1])
+        Epoch2_Stationary_Entropies[j].append(
+            compute_stationary_probability(epoch_2_transition_matrix[0], epoch_2_label[-1])[1])
         Epoch2_Effective_num_every_state[j].append(effective_num_every_state2)
         Epoch2_Effective_num_avg[j].append(effective_num_avg2)
         Epoch2_num_zero_rows[j].append(num_zero_row_2)
         Epoch2_num_ones[j].append(num_one_item_2)
         Epoch2_num_zeros[j].append(num_zero_item_2)
 
-
-
-
         # ==== Epoch 3 ====
         num_zero_row_3, num_one_item_3, num_zero_item_3 = count_zeros(epoch_3_transition_matrix[0])
         entropy_3 = compute_Bayesian_entropy_estimation(epoch_3_transition_matrix[0], epoch_3_label[-1])
         effective_num_every_state3, effective_num_avg3 = effective_num_states(epoch_3_transition_matrix[0])
         Epoch3_Entropies[j].append(entropy_3)
-        Epoch3_Stationary_Entropies[j].append(compute_stationary_probability(epoch_3_transition_matrix[0], epoch_3_label[-1])[1])
+        Epoch3_Stationary_Entropies[j].append(
+            compute_stationary_probability(epoch_3_transition_matrix[0], epoch_3_label[-1])[1])
         Epoch3_Effective_num_every_state[j].append(effective_num_every_state3)
         Epoch3_Effective_num_avg[j].append(effective_num_avg3)
         Epoch3_num_zero_rows[j].append(num_zero_row_3)
         Epoch3_num_ones[j].append(num_one_item_3)
         Epoch3_num_zeros[j].append(num_zero_item_3)
-
-
 
         if i == 0:
             l = label
@@ -616,11 +650,16 @@ for j, videos in enumerate([control_videos, BD_videos]):
             # tm_ctl = control_transition
             # tm_score = score_transition
         else:
-            l = np.concatenate([l,label])
+            l = np.concatenate([l, label])
             if n_cluster == 0:
                 l_ctl = np.concatenate([l_ctl, control_label])
                 l_score = np.concatenate([l_score, score_label])
             # tm += transition
+
+        motif_usage_cat[j].append(motif_usage / np.sum(motif_usage))
+        if n_cluster == 10:
+            motif_usage_cat_ctl[j].append(control_motif_usage / np.sum(control_motif_usage))
+            motif_usage_cat_score[j].append(score_motif_usage / np.sum(score_motif_usage))
 
         num_points = label.shape[0]
         n += num_points
@@ -636,16 +675,17 @@ for j, videos in enumerate([control_videos, BD_videos]):
         population_TM_score[j] = population_transition_matrix_score
     # TM[j] = tm/n_subject_in_population
 
-#%%   Population-level plots
-from plotting.create_color_maps import  generate_distinct_colors
-#%% Plot transition matrix
+# %%   Population-level plots
+from plotting.create_color_maps import generate_distinct_colors
+
+# %% Plot transition matrix
 
 pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
 patient_names = control_videos + BD_videos
 # plot score, vame, and dlc transition matrices
 cividis_cmap = plt.get_cmap('cividis')
 cividis_colors = cividis_cmap(np.linspace(0, 1, 20))
-for i in range(len(videos)*2):
+for i in range(len(videos) * 2):
     k = 0 if i < 25 else 1
     fig, axes = plt.subplots(3, 2, figsize=(10, 15))
     for j in range(len(transition_group)):
@@ -653,14 +693,13 @@ for i in range(len(videos)*2):
         transition_matrix_to_plot = transition_matrix_to_plot[i]
         # plot transition matrix
         im = axes[j][0].imshow(transition_matrix_to_plot, cmap='gist_gray', vmin=0, vmax=1)
-        axes[j][0].set_title("{}-{}-{}".format(titles[k],patient_names[i], transition_group[j]))
+        axes[j][0].set_title("{}-{}-{}".format(titles[k], patient_names[i], transition_group[j]))
         axes[j][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
         axes[j][0].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
-        cbar = plt.colorbar(im, ax=axes[j][0],fraction=0.046, pad=0.04)
+        cbar = plt.colorbar(im, ax=axes[j][0], fraction=0.046, pad=0.04)
         axes[j][0].grid(None)
         axes[j][0].set_xlabel('To')
         axes[j][0].set_ylabel('From')
-
 
         # plot graph of the transition matrix
         G = nx.DiGraph(transition_matrix_to_plot)
@@ -675,17 +714,18 @@ for i in range(len(videos)*2):
         # pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
         cmap = plt.get_cmap('tab20')
         if n_cluster == 30:
-            cmap = generate_distinct_colors(num_colors=n_cluster*2)
+            cmap = generate_distinct_colors(num_colors=n_cluster * 2)
         seed = 13648  # Seed random number generators for reproducibility
         pos = nx.circular_layout(G)
         node_sizes = [3 + 10 * i for i in range(len(G))]
-        motif_usage = eval('motif_usage_cat{}'.format(transition_group[j])).reshape(len(videos)*2, n_cluster)
-        motif_usage = motif_usage[i,:]
+        motif_usage = eval('motif_usage_cat{}'.format(transition_group[j]))
+        motif_usage = np.asarray(motif_usage).reshape(len(videos) * 2, n_cluster)
+        motif_usage = motif_usage[i, :]
 
         M = G.number_of_edges()
 
-
-        bahavior_names =["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear", "exercise"]
+        bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
+                          "wear", "exercise"]
         if j == 2:
             labels = dict(zip(nodelist, bahavior_names))
             colormap_used = cividis_colors
@@ -694,14 +734,14 @@ for i in range(len(videos)*2):
             labels = dict(zip(nodelist, nodelist))
 
             colormap_used = cmap.colors
-            node_radius = motif_usage/np.sum(motif_usage) * 5000
+            node_radius = motif_usage / np.sum(motif_usage) * 5000
         font_color = 'black'
         nodes = nx.draw_networkx_nodes(G, pos,
-                               nodelist=nodelist,
-                               node_size=node_radius,
-                               node_color=colormap_used[1::2],
-                               alpha=1,
-                               ax=axes[j][1])
+                                       nodelist=nodelist,
+                                       node_size=node_radius,
+                                       node_color=colormap_used[1::2],
+                                       alpha=1,
+                                       ax=axes[j][1])
         for e in list(G.edges(data=True)):
             axes[j][1].annotate("",
                                 xy=pos[e[0]], xycoords='data',
@@ -727,8 +767,8 @@ for i in range(len(videos)*2):
         #                        arrowsize=20,
         #                                ax=axes[j][1])
         labels_nx = nx.draw_networkx_labels(G, pos=pos,
-                                labels=labels,
-                                font_color=font_color,ax=axes[j][1])
+                                            labels=labels,
+                                            font_color=font_color, ax=axes[j][1])
         axes[j][1].axis('off')
 
         # maybe smaller factors work as well, but 1.1 works fine for this minimal example
@@ -736,18 +776,17 @@ for i in range(len(videos)*2):
         axes[j][1].set_ylim([1.1 * y for y in axes[j][1].get_ylim()])
         plt.show()
 
-
     fig.show()
     if i < n_subject_in_population:
         population = 'HC'
     else:
         population = 'BD'
 
-    fname = "{}-{}_{}_transition.png".format(population, patient_names[i], n_cluster )
+    fname = "{}-{}_{}_transition.png".format(population, patient_names[i], n_cluster)
     fname_pdf = "{}-{}_{}_transition.pdf".format(population, patient_names[i], n_cluster)
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%% Plot L0 measures: spasity, entropy, number of 1s, number of 0s
+# %% Plot L0 measures: spasity, entropy, number of 1s, number of 0s
 
 metric_names = ['dist of entropy',
                 'dist of stationary entropy',
@@ -755,7 +794,7 @@ metric_names = ['dist of entropy',
                 'dist of #p(state) = 1',
                 'dist of #p(state) = 0',
                 'is_BD']
-num_metrics = len(metric_names)-1
+num_metrics = len(metric_names) - 1
 lims = [[-2, 4], [-2, 4], [-5, 15], [-4, 8], [30, 120]]
 
 sns.set_style("white")
@@ -771,17 +810,17 @@ for j in range(len(transition_group)):
     num_zeros_to_plot = eval("num_zeros{}".format(transition_group[j]))
 
     latent_ds = pd.DataFrame(np.concatenate((
-        np.concatenate((Entropies_to_plot[0],Entropies_to_plot[1]),0).reshape(-1, 1),     # 2 x 25 list
-        np.concatenate((Stationary_entropy_to_plot[0],Stationary_entropy_to_plot[1]),0).reshape(-1, 1),
-        np.concatenate((num_zero_rows_to_plot[0],num_zero_rows_to_plot[1]),0).reshape(-1, 1),
-        np.concatenate((num_ones_to_plot[0],num_ones_to_plot[1]),0).reshape(-1, 1),
-        np.concatenate((num_zeros_to_plot[0],num_zeros_to_plot[1]),0).reshape(-1, 1),
-        np.concatenate((CP_idx, BD_idx),0).reshape(-1, 1)), 1),
+        np.concatenate((Entropies_to_plot[0], Entropies_to_plot[1]), 0).reshape(-1, 1),  # 2 x 25 list
+        np.concatenate((Stationary_entropy_to_plot[0], Stationary_entropy_to_plot[1]), 0).reshape(-1, 1),
+        np.concatenate((num_zero_rows_to_plot[0], num_zero_rows_to_plot[1]), 0).reshape(-1, 1),
+        np.concatenate((num_ones_to_plot[0], num_ones_to_plot[1]), 0).reshape(-1, 1),
+        np.concatenate((num_zeros_to_plot[0], num_zeros_to_plot[1]), 0).reshape(-1, 1),
+        np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1)), 1),
         columns=metric_names)
     for i in range(num_metrics):
         print(f"{metric_names[i]}\n")
         sns.violinplot(x=metric_names[-1], y=metric_names[i],
-                    data=latent_ds, palette="muted", ax=axes[i][j])
+                       data=latent_ds, palette="muted", ax=axes[i][j])
         sns.stripplot(y=metric_names[i], x=metric_names[-1], data=latent_ds,
                       color="white", edgecolor="gray", ax=axes[i][j])
         HC = latent_ds[metric_names[i]][:n_subject_in_population]
@@ -795,17 +834,16 @@ for j in range(len(transition_group)):
         corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
         corr_YMRS_score = scipy.stats.pearsonr(np.append(CP, BD), YMRS_score)
         print("          YMARS-all: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score[0], corr_YMRS_score[1]))
-        print("          HAM_D-all: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score[0], corr_HAM_D_score[1]))
-
+        print("          HAM_D-all: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score[0], corr_HAM_D_score[1]))
 
         corr_HAM_D_score_BD = scipy.stats.pearsonr(BD, HAM_D_score[n_subject_in_population:])
         corr_YMRS_score_BD = scipy.stats.pearsonr(BD, YMRS_score[n_subject_in_population:])
         corr_HAM_D_score_CP = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
         corr_YMRS_score_CP = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
         print("          YMARS-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_CP[0], corr_YMRS_score_CP[1]))
-        print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_CP[0], corr_HAM_D_score_CP[1]))
+        print("          HAM_D-CP: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_CP[0], corr_HAM_D_score_CP[1]))
         print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
-        print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format (corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
+        print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
         # print("corr_HAM_D_score:", corr_HAM_D_score)
         # print("corr_YMRS_score:", corr_YMRS_score)
         s = stats.ttest_ind(CP, BD, nan_policy='omit', equal_var=False)
@@ -824,21 +862,26 @@ fname_pdf = "L0-measures.pdf"
 #
 # fig.savefig(os.path.join(pwd, fname), transparent=True)
 # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%%
+# %%
 
-#%% Plot L1, l2 distance
+# %% Plot L1, l2 distance
 from scipy.spatial.distance import squareform
 import scipy.spatial as sp
 import scipy.cluster.hierarchy as sch
-import scipy.spatial.distance as ssd
+
+
 def similarity_func(u, v):
-    dis = np.linalg.norm(np.asarray(u)-np.asarray(v))
-    sim = 1/(1+np.linalg.norm(np.asarray(u)-np.asarray(v)))
+    dis = np.linalg.norm(np.asarray(u) - np.asarray(v))
+    sim = 1 / (1 + np.linalg.norm(np.asarray(u) - np.asarray(v)))
     return dis, sim
+
+
 def cosine_similarity_func(u, v):
-    #https://stackoverflow.com/questions/30152599/cosine-similarity-calculation-between-two-matrices
+    # https://stackoverflow.com/questions/30152599/cosine-similarity-calculation-between-two-matrices
     return 1 - sp.distance.cdist(u, v, 'cosine')
-#https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors/64338609#64338609
+
+
+# https://stackoverflow.com/questions/64248850/sort-simmilarity-matrix-according-to-plot-colors/64338609#64338609
 def argsort_sim_mat(sm):
     idx = [np.argmax(np.sum(sm, axis=1))]  # a
     for i in range(1, len(sm)):
@@ -847,33 +890,33 @@ def argsort_sim_mat(sm):
         idx.append(np.argmax(sm_i))  # b
     return np.array(idx)
 
-l2_matrix = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-l2_matrix_ctl = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-l2_matrix_score = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-sim_matrix = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-sim_matrix_ctl = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-sim_matrix_score = np.zeros((n_subject_in_population*2,n_subject_in_population*2))
-for i in range(n_subject_in_population*2):
-    for j in range(n_subject_in_population*2):
-        l2_matrix[i][j] = similarity_func(transition_matrices[i],transition_matrices[j])[0]
-        l2_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i],transition_matrices_ctl[j])[0]
-        l2_matrix_score[i][j] = similarity_func(transition_matrices_score[i],transition_matrices_score[j])[0]
 
-        sim_matrix[i][j] = similarity_func(transition_matrices[i],transition_matrices[j])[1]
-        sim_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i],transition_matrices_ctl[j])[1]
-        sim_matrix_score[i][j] = similarity_func(transition_matrices_score[i],transition_matrices_score[j])[1]
+l2_matrix = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
+l2_matrix_ctl = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
+l2_matrix_score = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
+sim_matrix = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
+sim_matrix_ctl = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
+sim_matrix_score = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
+for i in range(n_subject_in_population * 2):
+    for j in range(n_subject_in_population * 2):
+        l2_matrix[i][j] = similarity_func(transition_matrices[i], transition_matrices[j])[0]
+        l2_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i], transition_matrices_ctl[j])[0]
+        l2_matrix_score[i][j] = similarity_func(transition_matrices_score[i], transition_matrices_score[j])[0]
 
+        sim_matrix[i][j] = similarity_func(transition_matrices[i], transition_matrices[j])[1]
+        sim_matrix_ctl[i][j] = similarity_func(transition_matrices_ctl[i], transition_matrices_ctl[j])[1]
+        sim_matrix_score[i][j] = similarity_func(transition_matrices_score[i], transition_matrices_score[j])[1]
 
 for j in range(len(transition_group)):
     dis_mat, sim_mat = eval("l2_matrix{}".format(transition_group[j])), eval("sim_matrix{}".format(transition_group[j]))
 
     idx = argsort_sim_mat(dis_mat[:n_subject_in_population, :n_subject_in_population])
-    idx2 = argsort_sim_mat(dis_mat[n_subject_in_population:,n_subject_in_population:])
+    idx2 = argsort_sim_mat(dis_mat[n_subject_in_population:, n_subject_in_population:])
     idx2 = idx2 + n_subject_in_population
     idx_all = np.concatenate((idx[::-1], idx2[::-1]))
     # apply reordering for rows and columns
-    sim_mat2 = sim_mat[idx_all,:][:, idx_all]
-    dis_mat2 = dis_mat[idx_all,:][:, idx_all]
+    sim_mat2 = sim_mat[idx_all, :][:, idx_all]
+    dis_mat2 = dis_mat[idx_all, :][:, idx_all]
     dist_condensed = squareform(dis_mat)
     # https://stackoverflow.com/questions/2982929/plotting-results-of-hierarchical-clustering-on-top-of-a-matrix-of-data
     # Compute and plot first dendrogram.
@@ -903,8 +946,8 @@ for j in range(len(transition_group)):
     axmatrix.grid(None)
 
     patient_names = np.array(control_videos + BD_videos)
-    axmatrix.set_xticks(np.arange(n_subject_in_population*2), patient_names[idx1], rotation=-90)
-    axmatrix.set_yticks(np.arange(n_subject_in_population*2))
+    axmatrix.set_xticks(np.arange(n_subject_in_population * 2), patient_names[idx1], rotation=-90)
+    axmatrix.set_yticks(np.arange(n_subject_in_population * 2))
     axmatrix.set_yticklabels(patient_names[idx1], minor=False)
     axmatrix.yaxis.set_label_position('right')
     axmatrix.yaxis.tick_right()
@@ -919,9 +962,8 @@ for j in range(len(transition_group)):
     axcolor = fig.add_axes([0.96, 0.1, 0.02, 0.6])
     plt.colorbar(im, cax=axcolor)
     plt.grid(None)
-    #plt.title('15-min L2 distance of transition matrix{}'.format(transition_group[j]))
+    # plt.title('15-min L2 distance of transition matrix{}'.format(transition_group[j]))
     fig.show()
-
 
     pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
@@ -930,13 +972,13 @@ for j in range(len(transition_group)):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-#%% inspect high similarity ones
+# %% inspect high similarity ones
 patient_names = control_videos + BD_videos
 idx = [[11, 4], [17, 12], [16, 13]]
 for i in idx:
     idx_0 = i[0]
     idx_1 = i[1]
-    fig, axes = plt.subplots(2, figsize=(3,5))
+    fig, axes = plt.subplots(2, figsize=(3, 5))
     im = axes[0].imshow(transition_matrices[idx_0])
     axes[0].set_title(patient_names[idx_0])
     axes[0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
@@ -949,9 +991,9 @@ for i in idx:
     axes[1].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
     plt.colorbar(im, ax=axes[1])
     fig.show()
-#%% Epoch level plots
+# %% Epoch level plots
 
-#%% violin plot
+# %% violin plot
 
 metric_names = ['distribution of entropy',
                 'distribution of stationary entropy',
@@ -959,12 +1001,12 @@ metric_names = ['distribution of entropy',
                 'distribution of #p(state) = 1',
                 'distribution of #p(state) = 0',
                 'is_BD']
-num_metrics = len(metric_names)-1
-lims = [[-2, 4], [-2, 4],[-5, 15], [-4, 8], [30, 120]]
+num_metrics = len(metric_names) - 1
+lims = [[-2, 4], [-2, 4], [-5, 15], [-4, 8], [30, 120]]
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 
-for epoch in range(1,4):
+for epoch in range(1, 4):
     fig, axes = plt.subplots(num_metrics, len(transition_group), figsize=(10, 15))
     sns.set_style("white")
     for k in range(len(transition_group)):
@@ -1024,19 +1066,22 @@ for epoch in range(1,4):
     fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
     # fig.savefig(os.path.join(pwd, fname), transparent=True)
     # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%% Effective number stat test
+
+
+# %% Effective number stat test
 def statistic(x, y, axis):
     return np.mean(x, axis=axis) - np.mean(y, axis=axis)
+
 
 for epoch in range(1, 4):
     effective_num_usage_ = np.asarray(eval("Epoch{}_Effective_num_every_state".format(epoch)))
 
     print("Epoch {}".format(epoch))
     for i in range(n_cluster):
-        CP = np.vstack(effective_num_usage_[0])[:,i]
-        BD = np.vstack(effective_num_usage_[1])[:,i]
+        CP = np.vstack(effective_num_usage_[0])[:, i]
+        BD = np.vstack(effective_num_usage_[1])[:, i]
         s = stats.ttest_ind(CP, BD, nan_policy='omit')
-        print("motif  {}\n 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i,s.statistic, s.pvalue))
+        print("motif  {}\n 2 sample t-stat: {:.2f}, p-val: {:.3f}".format(i, s.statistic, s.pvalue))
 
         corr_HAM_D_score = scipy.stats.pearsonr(CP, HAM_D_score[:n_subject_in_population])
         corr_YMRS_score = scipy.stats.pearsonr(CP, YMRS_score[:n_subject_in_population])
@@ -1049,18 +1094,15 @@ for epoch in range(1, 4):
         print("          YMARS-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_YMRS_score_BD[0], corr_YMRS_score_BD[1]))
         print("          HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD[0], corr_HAM_D_score_BD[1]))
 
-
-
-#%% Effective number box
+# %% Effective number box
 
 for epoch in range(1, 4):
-
 
     effective_num_usage_ = eval("Epoch{}_Effective_num_every_state".format(epoch))
     effective_num_usage_cat = np.asarray(effective_num_usage_)
     states = []
     for i in range(n_cluster):
-        states.append([i]*n_subject_in_population)
+        states.append([i] * n_subject_in_population)
     states = np.asarray(states).flatten()
     sns.set_style('white')
 
@@ -1068,21 +1110,22 @@ for epoch in range(1, 4):
     BD_idx = np.ones(n_subject_in_population * n_cluster)
 
     ds = pd.DataFrame(np.concatenate((
-        np.concatenate((effective_num_usage_cat[0, :, :].T.flatten(), effective_num_usage_cat[1, :, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((effective_num_usage_cat[0, :, :].T.flatten(), effective_num_usage_cat[1, :, :].T.flatten()),
+                       0).reshape(-1, 1),
         np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
         np.concatenate((states, states), 0).reshape(-1, 1)), 1),
         columns=['effective number', 'is_BD', 'state'])
 
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
-    violin = sns.boxplot(y="effective number", x='state',hue='is_BD',
+    violin = sns.boxplot(y="effective number", x='state', hue='is_BD',
                          data=ds,
                          orient="v",
                          palette=sns.color_palette("tab10"),
                          linewidth=.75)
     handles = violin.legend_.legendHandles
-    dict_name = {0.0:'CP', 1.0:'BD'}
+    dict_name = {0.0: 'CP', 1.0: 'BD'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
-    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    # sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
     x = np.arange(n_cluster)
     ax.legend(handles, labels)
     ax.set_xticks(x)
@@ -1097,51 +1140,47 @@ for epoch in range(1, 4):
     fname_pdf = "{}-effective_number.pdf".format(epoch)
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%% Plot Box of effective numbers three bars
+# %% Plot Box of effective numbers three bars
 # Fig. 3e
-w = n_cluster/10 * 6
+w = n_cluster / 10 * 6
 titles = ['HC', 'BD']
 for j in range(2):
     fig, ax = plt.subplots(1, 1, figsize=(w, 4))
 
-
     effective_num_usage_1 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(1))[j])
     effective_num_usage_2 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(2))[j])
     effective_num_usage_3 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(3))[j])
-
 
     label1 = np.ones(len(effective_num_usage_1[:, :].T.flatten()))
     label2 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 2
     label3 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 3
     states = []
     for i in range(n_cluster):
-        states.append([i]*n_subject_in_population)
+        states.append([i] * n_subject_in_population)
     states = np.asarray(states).flatten()
     sns.set_style('white')
 
-
     ds = pd.DataFrame(np.concatenate((
-        np.concatenate((effective_num_usage_1[:, :].T.flatten(), effective_num_usage_2[:, :].T.flatten(), effective_num_usage_3[:, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((effective_num_usage_1[:, :].T.flatten(), effective_num_usage_2[:, :].T.flatten(),
+                        effective_num_usage_3[:, :].T.flatten()), 0).reshape(-1, 1),
         np.concatenate((label1, label2, label3), 0).reshape(-1, 1),
-        np.concatenate((states, states,states), 0).reshape(-1, 1)), 1),
+        np.concatenate((states, states, states), 0).reshape(-1, 1)), 1),
         columns=['motif frequency', 'epoch', 'state'])
 
-
-    boxplot = sns.boxplot(y="motif frequency", x='state',hue='epoch',
-                   data=ds, orient="v", color=b_o_colors[j])
+    boxplot = sns.boxplot(y="motif frequency", x='state', hue='epoch',
+                          data=ds, orient="v", color=b_o_colors[j])
     handles = boxplot.legend_.legendHandles
-    dict_name = {1.0:'Epoch 1', 2.0:'Epoch 2', 3.0:'Epoch 3'}
+    dict_name = {1.0: 'Epoch 1', 2.0: 'Epoch 2', 3.0: 'Epoch 3'}
     labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
-    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    # sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
     x = np.arange(n_cluster)
     ax.legend(handles, labels)
     ax.set_xticks(x)
     ax.set_ylim([0, 8])
-    ax.set_title('effective number over {} motifs'.format( n_cluster))
+    ax.set_title('effective number over {} motifs'.format(n_cluster))
     ax.set_xlabel('Motifs(States)')
     sns.despine()
     fig.show()
-
 
     pwd = r'{}\Behavior_VAE_data\{}\figure\effective_number'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
@@ -1149,20 +1188,19 @@ for j in range(2):
     fname_pdf = "effective_number-three_epochs_{}.pdf".format(titles[j])
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%% Epoch-wise transition plot
+# %% Epoch-wise transition plot
 
-#%% adjacent matrix transiton frequency
+# %% adjacent matrix transiton frequency
 # Fig. 3c
-from scipy import stats
-transition_frequency = np.zeros((2, 25,3, len(transition_group)))
+
+transition_frequency = np.zeros((2, 25, 3, len(transition_group)))
 for j, videos in enumerate([control_videos, BD_videos]):
     for k in range(len(transition_group)):
-        fig, axes = plt.subplots(3, 2, figsize=(10, 15))
-        for epoch in range(1,4):
+        for epoch in range(1, 4):
             adjacent_m = eval('Epoch{}_adjacent_matrix{}'.format(epoch, transition_group[k]))
             adjacent_m_j = np.asarray(adjacent_m)[j, :, :, :]
             for sub in range(n_subject_in_population):
-                    transition_frequency[j, sub, epoch - 1, k] = np.sum(adjacent_m_j[sub, :, :])/(n_cluster*n_cluster)
+                transition_frequency[j, sub, epoch - 1, k] = np.sum(adjacent_m_j[sub, :, :]) / (n_cluster * n_cluster)
 x = [0, 1, 2]
 x1 = [0.2, 1.2, 2.2]
 list_of_ones = [1] * 25
@@ -1172,38 +1210,66 @@ list_of_threes = [3] * 25
 # Combining all lists
 x3 = list_of_ones + list_of_twos + list_of_threes
 
-fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+# Prepare data for seaborn boxplot
+plot_data = []
 for k in range(len(transition_group)):
-    ax[k].errorbar(x, np.mean(transition_frequency[0, :, :, k], axis=0), yerr=np.std(transition_frequency[0, :, :, k], axis=0), color=b_o_colors[0], fmt='--o')
-    ax[k].errorbar(x1, np.mean(transition_frequency[1, :, :, k], axis=0), yerr=np.std(transition_frequency[1, :, :, k], axis=0), color=b_o_colors[1], fmt='-o')
+    for epoch in range(3):
+        for sub in range(25):
+            plot_data.append({
+                "Group": "HC",
+                "Epoch": f"Epoch {epoch + 1}",
+                "Frequency": transition_frequency[0, sub, epoch, k],
+                "Transition Group": f"{transition_group[k]}"
+            })
+            plot_data.append({
+                "Group": "BD",
+                "Epoch": f"Epoch {epoch + 1}",
+                "Frequency": transition_frequency[1, sub, epoch, k],
+                "Transition Group": f"{transition_group[k]}"
+            })
 
-    y_HC = transition_frequency[0, :, :, k].T.flatten()
-    y_BD = transition_frequency[1, :, :, k].T.flatten()
+plot_df = pd.DataFrame(plot_data)
+
+# Create seaborn boxplot
+fig, ax = plt.subplots(1, len(transition_group), figsize=(15, 8))
+for idx, k in enumerate(transition_group):
+    sns.boxplot(
+        data=plot_df[plot_df["Transition Group"] == f"{k}"],
+        x="Epoch",
+        y="Frequency",
+        hue="Group",
+        ax=ax[idx],
+        palette=sns.color_palette("tab10")
+    )
+    ax[idx].set_title(f"Transition Frequency {k}")
+    ax[idx].set_ylim([-1 * 0.05, 0.55] if n_cluster != 30 else [0, 0.12])
+    ax[idx].grid(False)
+    ax[idx].legend(loc="upper right")
+    y_HC = transition_frequency[0, :, :, idx].T.flatten()
+    y_BD = transition_frequency[1, :, :, idx].T.flatten()
     slope, intercept, r, p, se = stats.linregress(x3, y_BD)
     slope1, intercept1, r1, p1, se1 = stats.linregress(x3, y_HC)
     print("BD: slope: {:.2f},  r: {:.2f}, p: {:.10f}, se: {:.2f}".format(slope, r, p, se))
     print("HC: slope: {:.2f},  r: {:.2f}, p: {:.10f}, se: {:.2f}".format(slope1, r1, p1, se1))
-    ax[k].set_ylim([0, 0.4])
-    if n_cluster == 30:
-        ax[k].set_ylim([0, 0.12])
-    ax[k].grid(False)
-    ax[k].set_title(f"transition_frequency{transition_group[k]}")
-fig.show()
+
+plt.tight_layout()
+plt.show()
 pwd = r'{}\Behavior_VAE_data\{}\figure\adjacent'.format(onedrive_path, project_name)
 Path(pwd).mkdir(parents=True, exist_ok=True)
 fname = f"adjacent-transition_{n_cluster}.png"
 fname_pdf = f"adjacent-transition_{n_cluster}.pdf"
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%%
+
+# %%
 
 
+from scipy.spatial.distance import squareform
 
-from scipy.spatial.distance import euclidean, pdist, squareform
 for k in range(len(transition_group)):
-    for epoch in range(1,4):
-        sim_matrix = np.zeros((n_subject_in_population * 2,n_subject_in_population * 2))
-        dis_mat = np.zeros((n_subject_in_population * 2,n_subject_in_population * 2))
+    for epoch in range(1, 4):
+        sim_matrix = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
+        dis_mat = np.zeros((n_subject_in_population * 2, n_subject_in_population * 2))
         epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
         epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1])
         epoch_label = eval('Epoch{}_labels{}'.format(epoch, transition_group[k]))
@@ -1278,7 +1344,6 @@ for k in range(len(transition_group)):
             axmatrix.get_xticklabels()[idx].set_color(b_o_colors[0])
             axmatrix.get_yticklabels()[idx].set_color(b_o_colors[0])
 
-
         axcolor = fig.add_axes([0.96, 0.1, 0.02, 0.6])
         plt.colorbar(im, cax=axcolor)
         plt.grid(None)
@@ -1290,7 +1355,7 @@ for k in range(len(transition_group)):
         fname_pdf = f"epoch{epoch}-TM-similarity-{transition_group[k]}.pdf"
         fig.savefig(os.path.join(pwd, fname), transparent=True)
         fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-#%% transition matrix and graphs
+# %% transition matrix and graphs
 # Fig. 3a,b
 pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices\epoch-dwell'.format(onedrive_path, project_name)
 Path(pwd).mkdir(exist_ok=True)
@@ -1298,19 +1363,20 @@ for i in range(n_subject_in_population * 2):
     j = 0 if i < n_subject_in_population else 1
     for k in range(len(transition_group)):
         fig, axes = plt.subplots(3, 2, figsize=(10, 15))
-        for epoch in range(1,4):
+        for epoch in range(1, 4):
             epoch_tm = eval('Epoch{}_transition_matrix{}'.format(epoch, transition_group[k]))
             epoch_tm_ = np.asarray(epoch_tm[0] + epoch_tm[1]).squeeze()
-            im = axes[epoch-1][0].imshow(epoch_tm_[i], cmap='gist_gray', vmin=0, vmax=1)
+            im = axes[epoch - 1][0].imshow(epoch_tm_[i], cmap='gist_gray', vmin=0, vmax=1)
             plt.grid(False)
-            axes[epoch-1][0].set_title("{}-{}-{}-epoch {}".format(titles[j],patient_names[i], transition_group[k], epoch))
-            axes[epoch-1][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
-            axes[epoch-1][0].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
-            axes[epoch-1][0].grid(None)
-            axes[epoch-1][0].set_xlabel('To')
-            axes[epoch-1][0].set_ylabel('From')
+            axes[epoch - 1][0].set_title(
+                "{}-{}-{}-epoch {}".format(titles[j], patient_names[i], transition_group[k], epoch))
+            axes[epoch - 1][0].set_xticks(np.arange(n_cluster), np.arange(n_cluster))
+            axes[epoch - 1][0].set_yticks(np.arange(n_cluster), np.arange(n_cluster))
+            axes[epoch - 1][0].grid(None)
+            axes[epoch - 1][0].set_xlabel('To')
+            axes[epoch - 1][0].set_ylabel('From')
 
-            plt.colorbar(im, ax=axes[epoch-1][0], fraction=0.046, pad=0.04)
+            plt.colorbar(im, ax=axes[epoch - 1][0], fraction=0.046, pad=0.04)
 
             # plot graph of the transition matrix
             G = nx.DiGraph(epoch_tm_[i])
@@ -1321,14 +1387,15 @@ for i in range(n_subject_in_population * 2):
 
             nodelist = G.nodes()
             edgeList = G.edges()
-            motif_usage = np.asarray(eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[0]+ eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[1])
-            motif_usage = motif_usage[i,:]
+            motif_usage = np.asarray(eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[0] +
+                                     eval('Epoch{}_motif_usage{}'.format(epoch, transition_group[k]))[1])
+            motif_usage = motif_usage[i, :]
 
             # pos = nx.circular_layout(G)
             # pos = nx.drawing.nx_pydot.pydot_layout(G, prog='dot')
             cmap = plt.get_cmap('tab20')
             if n_cluster == 30:
-                cmap = generate_distinct_colors(n_cluster*2)
+                cmap = generate_distinct_colors(n_cluster * 2)
             seed = 13648  # Seed random number generators for reproducibility
             pos = nx.circular_layout(G)
             node_sizes = [3 + 10 * i for i in range(len(G))]
@@ -1340,31 +1407,32 @@ for i in range(n_subject_in_population * 2):
             else:
                 labels = dict(zip(nodelist, nodelist))
                 colormap_used = cmap.colors
-                node_radius = motif_usage/np.sum(motif_usage) * 5000
+                node_radius = motif_usage / np.sum(motif_usage) * 5000
             nodes = nx.draw_networkx_nodes(G, pos,
                                            nodelist=nodelist,
                                            node_size=node_radius,
                                            node_color=colormap_used[1::2],
                                            alpha=1,
-                                           ax=axes[epoch-1][1])
+                                           ax=axes[epoch - 1][1])
             font_color = 'black'
             if weight:
                 LWidths = (weight / max(weight)) * 5
                 # curved edges
                 # ref: https://stackoverflow.com/questions/15053686/networkx-overlapping-edges-when-visualizing-multigraph
                 for e in list(G.edges(data=True)):
-                    axes[epoch-1][1].annotate("",
-                                        xy=pos[e[0]], xycoords='data',
-                                        xytext=pos[e[1]], textcoords='data',
-                                        arrowprops=dict(arrowstyle="<-",
-                                                        color=colormap_used[int(e[0] * 2 + 0)],
-                                                        linewidth=(e[2]['weight'] / max(weight)) * 10,
-                                                        shrinkA=5, shrinkB=5,
-                                                        patchA=None, patchB=None,
-                                                        connectionstyle="arc3,rad=rrr".replace('rrr',
-                                                                                               str(0.5 * e[2]['weight'])),
-                                                        ),
-                                        )
+                    axes[epoch - 1][1].annotate("",
+                                                xy=pos[e[0]], xycoords='data',
+                                                xytext=pos[e[1]], textcoords='data',
+                                                arrowprops=dict(arrowstyle="<-",
+                                                                color=colormap_used[int(e[0] * 2 + 0)],
+                                                                linewidth=(e[2]['weight'] / max(weight)) * 10,
+                                                                shrinkA=5, shrinkB=5,
+                                                                patchA=None, patchB=None,
+                                                                connectionstyle="arc3,rad=rrr".replace('rrr',
+                                                                                                       str(0.5 * e[2][
+                                                                                                           'weight'])),
+                                                                ),
+                                                )
             bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
                               "wear"]
 
@@ -1372,12 +1440,13 @@ for i in range(n_subject_in_population * 2):
                                                 labels=labels,
                                                 font_color=font_color,
                                                 font_size=24,
-                                                ax=axes[epoch-1][1])
-            axes[epoch-1][1].axis('off')
-            axes[epoch-1][1].set_title("{}-{}-{}-epoch {}".format(titles[j],patient_names[i], transition_group[k], epoch))
+                                                ax=axes[epoch - 1][1])
+            axes[epoch - 1][1].axis('off')
+            axes[epoch - 1][1].set_title(
+                "{}-{}-{}-epoch {}".format(titles[j], patient_names[i], transition_group[k], epoch))
 
-            axes[epoch-1][1].set_xlim([1.2 * x for x in axes[epoch-1][1].get_xlim()])
-            axes[epoch-1][1].set_ylim([1.2 * y for y in axes[epoch-1][1].get_ylim()])
+            axes[epoch - 1][1].set_xlim([1.2 * x for x in axes[epoch - 1][1].get_xlim()])
+            axes[epoch - 1][1].set_ylim([1.2 * y for y in axes[epoch - 1][1].get_ylim()])
 
         if i < n_subject_in_population:
             population = 'HC'
@@ -1386,58 +1455,56 @@ for i in range(n_subject_in_population * 2):
         plt.axis('off')
 
         plt.tight_layout()
-        plt.suptitle("{}-{}_{}_transition_epoch{}-{}".format(population, patient_names[i], n_cluster, epoch, transition_group[k]))
+        plt.suptitle("{}-{}_{}_transition_epoch{}-{}".format(population, patient_names[i], n_cluster, epoch,
+                                                             transition_group[k]))
         fig.show()
 
-
-
-        fname = "{}-{}_{}_transition_epoch{}-dwell.png".format(population, patient_names[i], n_cluster, transition_group[k])
-        fname_pdf = "{}-{}_{}_transition_epoch{}-dwell.pdf".format(population, patient_names[i], n_cluster, transition_group[k])
+        fname = "{}-{}_{}_transition_epoch{}-dwell.png".format(population, patient_names[i], n_cluster,
+                                                               transition_group[k])
+        fname_pdf = "{}-{}_{}_transition_epoch{}-dwell.pdf".format(population, patient_names[i], n_cluster,
+                                                                   transition_group[k])
         fig.savefig(os.path.join(pwd, fname), transparent=True)
         fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-#%% Plot ENAS of two population on same box plot
-w = n_cluster/10 * 6
+# %% Plot ENAS of two population on same box plot
+w = n_cluster / 10 * 6
 titles = ['HC', 'BD']
 box_count = 1
 fig, ax = plt.subplots(1, 1, figsize=(w, 4))
 for epoch in range(3):
     epoch_num = epoch + 1
     for j in range(2):
-
         effective_num_usage_1 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(epoch_num))[j])
         effective_num_usage_2 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(2))[j])
         effective_num_usage_3 = np.asarray(eval("Epoch{}_Effective_num_every_state".format(3))[j])
-
 
     label1 = np.ones(len(effective_num_usage_1[:, :].T.flatten()))
     label2 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 2
     label3 = np.ones(len(effective_num_usage_1[:, :].T.flatten())) * 3
     states = []
     for i in range(n_cluster):
-        states.append([i]*n_subject_in_population)
+        states.append([i] * n_subject_in_population)
     states = np.asarray(states).flatten()
     sns.set_style('white')
 
-
     ds = pd.DataFrame(np.concatenate((
-        np.concatenate((effective_num_usage_1[:, :].T.flatten(), effective_num_usage_2[:, :].T.flatten(), effective_num_usage_3[:, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((effective_num_usage_1[:, :].T.flatten(), effective_num_usage_2[:, :].T.flatten(),
+                        effective_num_usage_3[:, :].T.flatten()), 0).reshape(-1, 1),
         np.concatenate((label1, label2, label3), 0).reshape(-1, 1),
-        np.concatenate((states, states,states), 0).reshape(-1, 1)), 1),
+        np.concatenate((states, states, states), 0).reshape(-1, 1)), 1),
         columns=['motif frequency', 'epoch', 'state'])
 
-
-    violin = sns.boxplot(y="motif frequency", x='state',hue='epoch',
-                   data=ds, orient="v", color=b_o_colors[j])
+    violin = sns.boxplot(y="motif frequency", x='state', hue='epoch',
+                         data=ds, orient="v", color=b_o_colors[j])
     handles = violin.legend_.legendHandles
-    dict_name = {1.0:'Epoch 1', 2.0:'Epoch 2', 3.0:'Epoch 3'}
-    labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
-    #sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
+    dict_name = {1.0: 'Epoch 1', 2.0: 'Epoch 2', 3.0: 'Epoch 3'}
+    # labels = [dict_name[float(text.get_text())] for text in ax.legend_.texts]
+    # sns.swarmplot(y="motif frequency", x="state", hue='is_BD',data=ds,dodge=True,size=2)
     x = np.arange(n_cluster)
-    ax.legend(handles, labels)
+    ax.legend(handles, ['Epoch 1', 'Epoch 2', 'Epoch 3'])
     ax.set_xticks(x)
     ax.set_ylim([0, 8])
-    ax.set_title('effective number over {} motifs'.format( n_cluster))
+    ax.set_title('effective number over {} motifs'.format(n_cluster))
     ax.set_xlabel('Motifs(States)')
     sns.despine()
     fig.show()
@@ -1448,7 +1515,7 @@ for epoch in range(3):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
-#%%
+# %%
 
 
 import seaborn as sns
@@ -1457,12 +1524,11 @@ import pandas as pd
 import numpy as np
 import matplotlib as mpl
 import os
-from pathlib import Path
 
 # Sample data (replace with your actual data)
 # n_cluster = 10  # Example value, replace with actual number of clusters
-n_subject_in_population = 25  # Example value, replace with actual number of subjects
-w = 12 * n_cluster/10  # Example width for the figure
+
+w = 12 * n_cluster / 10  # Example width for the figure
 
 # Concatenate data for all epochs
 concatenated_data = []
@@ -1476,7 +1542,8 @@ for epoch in range(1, 4):
     epoch_idx_BD = np.ones(n_subject_in_population * n_cluster) * (epoch * 2)
 
     ds = pd.DataFrame(np.concatenate((
-        np.concatenate((effective_num_usage_cat[0, :, :].T.flatten(), effective_num_usage_cat[1, :, :].T.flatten()), 0).reshape(-1, 1),
+        np.concatenate((effective_num_usage_cat[0, :, :].T.flatten(), effective_num_usage_cat[1, :, :].T.flatten()),
+                       0).reshape(-1, 1),
         np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1),
         np.concatenate((states, states), 0).reshape(-1, 1),
         np.concatenate((epoch_idx_CP, epoch_idx_BD), 0).reshape(-1, 1),
@@ -1507,7 +1574,7 @@ ax = sns.boxplot(y="effective number",
                  orient="v",
                  palette=new_color_map,
                  linewidth=0.5,
-              )
+                 )
 
 # Set legend labels
 plt.legend(['CP', 'BD'])
@@ -1516,10 +1583,9 @@ plt.legend(['CP', 'BD'])
 plt.title('Effective number over motifs')
 plt.xlabel('Motifs (States)')
 plt.ylabel('Effective number')
-plt.ylim([0, 8])
+plt.ylim([-0.5, 8])
 if n_cluster == 30:
     plt.ylim([0, 11])
-
 
 # Remove top and right spines
 sns.despine()

@@ -1,9 +1,6 @@
-from plotting.get_paths import get_my_path
-
-myPath = get_my_path()
-onedrive_path = myPath['onedrive_path']
-github_path = myPath['github_path']
-data_path = myPath['data_path']
+github_path = r'D:\OneDrive - UC San Diego\GitHub'
+onedrive_path = r'D:\OneDrive - UC San Diego\Data'
+data_path = rf"D:\OneDrive - UC San Diego\SURF"
 '''
 Colors
 '''
@@ -14,12 +11,14 @@ Load
 '''
 project_name = 'BD25-HC25-final-May17-2023'
 project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
-import pandas as pd
 import itertools
+import pickle
 from multiprocessing import Pool
+
 import numpy as np
 from scipy.linalg import sqrtm
-import pickle
+
+
 def wasserstein_distance(m1, C1, m2, C2):
     """
     Calculate the 2-Wasserstein distance between two Gaussian distributions.
@@ -44,6 +43,7 @@ def wasserstein_distance(m1, C1, m2, C2):
 
     return np.sqrt(W2_squared).real
 
+
 def calculate_HC_distances(args):
     epoch, motif, df = args
     df_epoch_motif_HC = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 0)]
@@ -58,13 +58,16 @@ def calculate_HC_distances(args):
             HC_HC_distance = np.nan
             print(" skip")
         else:
-            m1, C1, m2, C2 = np.mean(latent_vector_HC2, axis=0), np.cov(latent_vector_HC2.T), np.mean(latent_vector_HC, axis=0), np.cov(latent_vector_HC.T)
+            m1, C1, m2, C2 = np.mean(latent_vector_HC2, axis=0), np.cov(latent_vector_HC2.T), np.mean(latent_vector_HC,
+                                                                                                      axis=0), np.cov(
+                latent_vector_HC.T)
             HC_HC_distance = wasserstein_distance(m1, C1, m2, C2)
 
         distances.append({'Epoch': epoch, 'Motif': motif, 'Distance': HC_HC_distance})
 
-
     return distances
+
+
 def calculate_BD_distances(args):
     epoch, motif, df = args
     df_epoch_motif_BD = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 1)]
@@ -76,7 +79,7 @@ def calculate_BD_distances(args):
         latent_vector_BD2 = df_epoch_motif_BD.iloc[j]['Latent_Vector']
         print(f"BD-BD  person{i} vs person {j}")
         # Compute distance between the latent vectors
-        if len(latent_vector_BD) <= 1  or len(latent_vector_BD2) <= 1 :
+        if len(latent_vector_BD) <= 1 or len(latent_vector_BD2) <= 1:
             BD_BD_distance = np.nan
             print(" skip")
         else:
@@ -87,8 +90,9 @@ def calculate_BD_distances(args):
 
         distances.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_BD_distance})
 
-
     return distances
+
+
 def calculate_BD_HC_distances(args):
     epoch, motif, df = args
     df_epoch_motif_HC = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 0)]
@@ -101,11 +105,13 @@ def calculate_BD_HC_distances(args):
         latent_vector_BD = df_epoch_motif_BD.iloc[j]['Latent_Vector']
         print(f"HC-BD  person{i} vs person {j}")
         # Compute distance between the latent vectors
-        if len(latent_vector_HC) <= 1 or len(latent_vector_BD) <= 1 :
+        if len(latent_vector_HC) <= 1 or len(latent_vector_BD) <= 1:
             BD_HC_distance = np.nan
             print(" skip")
         else:
-            m1, C1, m2, C2 = np.mean(latent_vector_HC, axis=0), np.cov(latent_vector_HC.T), np.mean(latent_vector_BD, axis=0), np.cov(latent_vector_BD.T)
+            m1, C1, m2, C2 = np.mean(latent_vector_HC, axis=0), np.cov(latent_vector_HC.T), np.mean(latent_vector_BD,
+                                                                                                    axis=0), np.cov(
+                latent_vector_BD.T)
             BD_HC_distance = wasserstein_distance(m1, C1, m2, C2)
             print(" computed distance")
 
@@ -113,6 +119,8 @@ def calculate_BD_HC_distances(args):
         distances.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_HC_distance})
 
     return distances
+
+
 if __name__ == '__main__':
     n_cluster = 10
     with open(f'{project_path}/data/latent_vectors.pkl', 'rb') as f:
@@ -130,12 +138,9 @@ if __name__ == '__main__':
     distances_HC_HC = [item for sublist in results2 for item in sublist]
     distances_BD_BD = [item for sublist in results3 for item in sublist]
 
-
     with open(f'{project_path}/data/Wasserstein_distances_BD_HC.pkl', 'wb') as f:
         pickle.dump(distances_BD_HC, f)
     with open(f'{project_path}/data/Wasserstein_distances_HC_HC.pkl', 'wb') as f:
         pickle.dump(distances_HC_HC, f)
     with open(f'{project_path}/data/Wasserstein_distances_BD_BD.pkl', 'wb') as f:
         pickle.dump(distances_BD_BD, f)
-
-
