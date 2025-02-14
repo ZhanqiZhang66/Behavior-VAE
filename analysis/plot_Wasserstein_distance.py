@@ -7,11 +7,13 @@ from numpy import *
 from scipy import stats
 
 from data.load_data import load_pt_data
+from plotting.get_paths import get_my_path
 
 # %%
-github_path = r'D:\OneDrive - UC San Diego\GitHub'
-onedrive_path = r'D:\OneDrive - UC San Diego\Data'
-data_path = rf"D:\OneDrive - UC San Diego\SURF"
+myPath = get_my_path()
+onedrive_path = myPath['onedrive_path']
+github_path = myPath['github_path']
+data_path = myPath['data_path']
 '''
 Colors
 '''
@@ -52,6 +54,45 @@ with open(f'{project_path}/data/Wasserstein_distances_HC_HC.pkl', 'rb') as f:
 with open(f'{project_path}/data/Wasserstein_distances_BD_BD.pkl', 'rb') as f:
     distances_BD_BD_df = pd.DataFrame(pickle.load(f))
 distances_HC_BD_df = distances_BD_HC_df.copy()
+# %% Reformat the HC_HC DataFrame for classifier
+
+res = np.zeros([n_subject_in_population, 3, 10])
+for i in range(n_subject_in_population):
+    for j in range(3):
+        for k in range(10):
+            res[i][j][k] = distances_HC_HC_df[
+                ((distances_HC_HC_df['HCPerson1'] == i) | (distances_HC_HC_df['HCPerson2'] == i)) & (
+                            distances_HC_HC_df['Epoch'] == (j + 1)) & (distances_HC_HC_df['Motif'] == k)][
+                'Distance'].mean(skipna=True)
+res = res.reshape((n_subject_in_population, -1))
+# Reformat the BD_BD DataFrame for classifier
+
+res_BD_BD = np.zeros([n_subject_in_population, 3, 10])
+for i in range(n_subject_in_population):
+    for j in range(3):
+        for k in range(10):
+            res_BD_BD[i][j][k] = distances_BD_BD_df[((distances_BD_BD_df[
+                                                          'BDPerson1'] == i + n_subject_in_population) | (
+                                                                 distances_BD_BD_df[
+                                                                     'BDPerson2'] == i + n_subject_in_population)) & (
+                                                                distances_BD_BD_df['Epoch'] == (j + 1)) & (
+                                                                distances_BD_BD_df['Motif'] == k)]['Distance'].mean(
+                skipna=True)
+res_BD_BD = res_BD_BD.reshape((n_subject_in_population, -1))
+res_intra = np.concatenate((res, res_BD_BD), axis=0)
+# %% Reformat the BD_HC DataFrame for classifier
+res_HC_BD = np.zeros([n_subject_in_population * 2, 3, 10])
+for i in range(n_subject_in_population):
+    for ii in range(n_subject_in_population):
+        for j in range(3):
+            for k in range(10):
+                res_HC_BD[i][j][k] = distances_HC_BD_df[((distances_HC_BD_df['HCPerson1'] == i) | (
+                            distances_HC_BD_df['BDPerson2'] == ii + n_subject_in_population)) & (
+                                                                    distances_HC_BD_df['Epoch'] == (j + 1)) & (
+                                                                    distances_HC_BD_df['Motif'] == k)]['Distance'].mean(
+                    skipna=True)
+res_HC_BD = res_HC_BD.reshape((n_subject_in_population * 2, -1))
+interpop_df = pd.DataFrame(res_HC_BD, columns=[f"motif{i}_epoch{j}" for i in range(10) for j in range(1, 4)])
 # %%
 '''
 Plot the pairwise Wasserterin distances
@@ -59,7 +100,7 @@ Plot the pairwise Wasserterin distances
 distances_HC_BD_df.replace([np.inf, -np.inf], 0, inplace=True)
 distances_HC_HC_df.replace([np.inf, -np.inf], 0, inplace=True)
 distances_BD_BD_df.replace([np.inf, -np.inf], 0, inplace=True)
-# Calculate the mean distances for each epoch and motif
+# Calculate the mean distances for each epoch and motifn
 mean_distances_HC_BD = distances_HC_BD_df.groupby(['Epoch', 'Motif'])['Distance'].mean().reset_index()
 mean_distances_HC_HC = distances_HC_HC_df.groupby(['Epoch', 'Motif'])['Distance'].mean().reset_index()
 mean_distances_BD_BD = distances_BD_BD_df.groupby(['Epoch', 'Motif'])['Distance'].mean().reset_index()

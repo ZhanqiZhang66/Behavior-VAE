@@ -3,28 +3,31 @@
 # Description: 
 # Scenario:
 # Usage:
-#%%
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
+# %%
+import math
 import os
+import time
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 import scipy
 import seaborn as sns
 from scipy import stats
-import time
-import math
-from pathlib import Path
-from vame.analysis.community_analysis import read_config, compute_transition_matrices
-#, get_labels, compute_transition_matrices, get_community_labels, create_community_bag
-from vame.analysis.pose_segmentation import get_motif_usage
 from sklearn.decomposition import PCA
+from vame.analysis.community_analysis import read_config, compute_transition_matrices
+# , get_labels, compute_transition_matrices, get_community_labels, create_community_bag
+from vame.analysis.pose_segmentation import get_motif_usage
+
 from data.load_data import load_pt_data
 from plotting.get_paths import get_my_path
-#%%
+
+# %%
 load_precomputed_sliding_window = False
 n_cluster = 10
-#%%
-#%%
+# %%
+# %%
 if not load_precomputed_sliding_window:
     def count_zeros(transition_m):
         transition = transition_m.copy()
@@ -32,6 +35,8 @@ if not load_precomputed_sliding_window:
         zero_rows_i = np.where(zero_rows == True)
         zero_cols = np.all(transition == 0, axis=0)
         return len(zero_rows_i[0]), np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
+
+
     def add_self_transition(transition_m, last_state):
         transition = transition_m.copy()
         zero_rows = np.all(transition == 0, axis=1)
@@ -39,16 +44,16 @@ if not load_precomputed_sliding_window:
         zero_cols = np.all(transition == 0, axis=0)
         zero_cols_i = np.where(zero_cols == True)
 
-        #add self transition
+        # add self transition
         if np.sum(zero_rows) != np.sum(zero_cols):
             self_transition_i = list(set(zero_rows_i[0]) ^ set(zero_cols_i[0]))
             for idx in self_transition_i:
                 if idx in set(zero_rows_i[0]):
                     transition[idx][idx] = 1
-        if np.sum(transition_m[last_state,:]) == 0 and np.sum(transition_m[:,last_state]) != 0:
+        if np.sum(transition_m[last_state, :]) == 0 and np.sum(transition_m[:, last_state]) != 0:
             transition[last_state][last_state] = 1
-        if zero_rows_i[0].size != 0 or zero_cols_i[0].size != 0: # when there are rows or zeros, or colums of zeros
-            zeros_rows_colums_i = list(set(zero_rows_i[0]) & set(zero_cols_i[0])) # remove them
+        if zero_rows_i[0].size != 0 or zero_cols_i[0].size != 0:  # when there are rows or zeros, or colums of zeros
+            zeros_rows_colums_i = list(set(zero_rows_i[0]) & set(zero_cols_i[0]))  # remove them
             idx_to_keep = np.ones(len(transition_m), dtype=bool)
             for i in range(len(transition_m)):
                 if i in zeros_rows_colums_i:
@@ -74,6 +79,7 @@ if not load_precomputed_sliding_window:
         effective_num_avg = np.mean(effective_num_every_state)
         return effective_num_every_state, effective_num_avg
 
+
     def compute_l0_entropy(transition_m, last_state):
         # https://stackoverflow.com/questions/31791728/python-code-explanation-for-stationary-distribution-of-a-markov-chain
         invertible_T = add_self_transition(transition_m, last_state)
@@ -87,13 +93,18 @@ if not load_precomputed_sliding_window:
         else:
             entropy = 0
         return entropy
+
+
     def minimum_state_duration(labels, n_cluster):
         return None
+
 
     def calculate_distance(starting_x, starting_y, destination_x, destination_y):
         distance = math.hypot(destination_x - starting_x,
                               destination_y - starting_y)  # calculates Euclidean distance (straight-line) distance between two points
         return distance
+
+
     def compute_velocity(pose, window_size):
 
         velocity = []
@@ -103,20 +114,21 @@ if not load_precomputed_sliding_window:
             x_s = j[0]
             y_s = j[1]
             dist_traveled = 0
-            for (x,y) in (x_s, y_s):
+            for (x, y) in (x_s, y_s):
                 dist_seg = calculate_distance(x, y)
                 dist_traveled += dist_seg
-            velocity.append(dist_traveled/window_size)
+            velocity.append(dist_traveled / window_size)
         return velocity
-    #%% Sliding window of 3 min analysis
 
 
-    #%%
+    # %% Sliding window of 3 min analysis
+
+    # %%
     myPath = get_my_path()
     onedrive_path = myPath['onedrive_path']
     github_path = myPath['github_path']
     data_path = myPath['data_path']
-    #%%
+    # %%
     project_name = 'BD25-HC25-final-May17-2023'
     project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
     config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
@@ -137,7 +149,8 @@ if not load_precomputed_sliding_window:
     # %%
     b_o_colors = ['#1f77b4', '#ff7f0e']
 
-    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+    data, YMRS, HAM_D, start_frame, condition, isBD = load_pt_data(
+        video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
     control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
     BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
     score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
@@ -153,9 +166,9 @@ if not load_precomputed_sliding_window:
         # "entropy": [],
         # "effective_num_every_state": [],
         # "effective_num_avg": [],
-        # "num_zero_row":[],
+        "num_zero_row": [],
         # "num_one_item": [],
-        # "num_zero_item":[],
+        "num_zero_item": [],
         "motif0_usage_freq": [],
         "motif1_usage_freq": [],
         "motif2_usage_freq": [],
@@ -180,9 +193,9 @@ if not load_precomputed_sliding_window:
         # "entropy_score": [],
         # "effective_num_every_state_score": [],
         # "effective_num_avg_score": [],
-        # "num_zero_row_score": [],
+        "num_zero_row_score": [],
         # "num_one_item_score": [],
-        # "num_zero_item_score": [],
+        "num_zero_item_score": [],
         # "motif0_usage_freq_score": [],
         # "motif1_usage_freq_score": [],
         # "motif2_usage_freq_score": [],
@@ -196,9 +209,9 @@ if not load_precomputed_sliding_window:
         # "entropy_ctl": [],
         # "effective_num_every_state_ctl": [],
         # "effective_num_avg_ctl": [],
-        # "num_zero_row_ctl": [],
+        "num_zero_row_ctl": [],
         # "num_one_item_ctl": [],
-        # "num_zero_item_ctl": [],
+        "num_zero_item_ctl": [],
         # "motif0_usage_freq_ctl": [],
         # "motif1_usage_freq_ctl": [],
         # "motif2_usage_freq_ctl": [],
@@ -215,8 +228,8 @@ if not load_precomputed_sliding_window:
         # slide_window['motif{}_usage_freq_ctl'.format(i)] = []
         # slide_window['motif{}_usage_freq_score'.format(i)] = []
         slide_window['latent_volume_motif{}'.format(i)] = []
-    csv_path = os.path.join(cfg['project_path'],"videos","pose_estimation")
-#%%
+    csv_path = os.path.join(cfg['project_path'], "videos", "pose_estimation")
+    # %%
     '''
     Step 1: Mean-centered the population-latent vectors for computing
     '''
@@ -246,13 +259,12 @@ if not load_precomputed_sliding_window:
 
         Latent_vectors[j] = latent
 
-
     # compute the mean of latent population
     population_latent_vector = np.vstack(Latent_vectors)
     population_latent_vector_centroid = np.mean(population_latent_vector, axis=0)
     Latent_centroids = population_latent_vector_centroid
 
-    #%%
+    # %%
     pca = PCA(n_components=3)
     for j, videos in enumerate([control_videos, BD_videos]):
         for i in range(len(videos)):
@@ -260,32 +272,32 @@ if not load_precomputed_sliding_window:
             v = videos[i]
             print("Loading {} data...".format(v))
             folder = os.path.join(cfg['project_path'], "results", v, model_name, 'kmeans-' + str(n_cluster), "")
-            label = np.load(r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path,project_name, v,n_cluster,n_cluster,v))
-            latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy')) # L x 30
+            label = np.load(
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                               project_name, v,
+                                                                                               n_cluster, n_cluster, v))
+            latent_vector = np.load(os.path.join(folder, 'latent_vector_' + v + '.npy'))  # L x 30
             latent_vector = latent_vector - Latent_centroids
 
-            #
-            # control_label = np.load(
-            #     r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path,
-            #                                                                                        project_name, v,
-            #                                                                                        n_cluster, n_cluster,
-            #                                                                                        v))
-            # control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
-            # score_label = np.load(
-            #     r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path,
-            #                                                                                     project_name, v,
-            #                                                                                     n_cluster, v))
-            # score_label = score_label[: 27000]
-            # score_transition = compute_transition_matrices([v], [score_label], n_cluster)[0]
+            control_label = np.load(
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\DLC_{}_km_label_{}.npy'.format(onedrive_path,
+                                                                                                   project_name, v,
+                                                                                                   n_cluster, n_cluster,
+                                                                                                   v))
+            control_transition = compute_transition_matrices([v], [control_label], n_cluster)[0]
+            score_label = np.load(
+                r'{}\Behavior_VAE_data\{}\results\{}\VAME\kmeans-{}\score_labels_{}.npy'.format(onedrive_path,
+                                                                                                project_name, v,
+                                                                                                n_cluster, v))
+            score_label = score_label[: 27000]
+            score_transition = compute_transition_matrices([v], [score_label], n_cluster)[0]
 
             door_close_time = int(start_frame[v][0])
             start_time = door_close_time
 
-            offset = 0# int(door_close_time - start_time)
+            offset = 0  # int(door_close_time - start_time)
 
-
-
-            data = pd.read_csv(os.path.join(csv_path, v +'.csv'), skiprows=2)
+            data = pd.read_csv(os.path.join(csv_path, v + '.csv'), skiprows=2)
             data_mat = pd.DataFrame.to_numpy(data)
             data_mat = data_mat[start_time:, 1:]
 
@@ -298,46 +310,47 @@ if not load_precomputed_sliding_window:
                 window_motif_usage = get_motif_usage(window_label, n_cluster)
                 window_latent_vector = latent_vector[offset + k: window_size + offset + k]
                 window_transition_matrix = compute_transition_matrices([v], [window_label], n_cluster)
-                # num_zero_row, num_one_item, num_zero_item = count_zeros(window_transition_matrix[0])
+                num_zero_row, num_one_item, num_zero_item = count_zeros(window_transition_matrix[0])
                 # entropy = compute_l0_entropy(window_transition_matrix[0], window_label[-1])
                 # effective_num_every_state, effective_num_avg = effective_num_states(window_transition_matrix[0])
 
-                # num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
+                num_zero_row_score, num_one_item_score, num_zero_item_score = count_zeros(score_transition)
                 # entropy_score = compute_l0_entropy(score_transition, control_label[-1])
                 # effective_num_every_state_score, effective_num_avg_score = effective_num_states(score_transition)
                 # control_motif_usage = get_motif_usage(control_label, n_cluster)
                 #
-                # num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
+                num_zero_row_ctl, num_one_item_ctl, num_zero_item_ctl = count_zeros(control_transition)
                 # entropy_ctl = compute_l0_entropy(control_transition, control_label[-1])
                 # effective_num_every_state_ctl, effective_num_avg_ctl = effective_num_states(control_transition)
                 # score_motif_usage = get_motif_usage(score_label, n_scores)
-                #velocity = compute_velocity(data_mat[offset + k: window_size + offset + k], window_size)
+                # velocity = compute_velocity(data_mat[offset + k: window_size + offset + k], window_size)
 
                 slide_window["subject"].append(v)
                 slide_window["start_frame"].append(k)
                 slide_window["is_BD"].append(j)
                 # slide_window["entropy"].append(entropy)
-                # slide_window["num_zero_row"].append(num_zero_row)
+                slide_window["num_zero_row"].append(num_zero_row)
                 # slide_window["num_one_item"].append(num_one_item)
-                # slide_window["num_zero_item"].append(num_zero_item)
+                slide_window["num_zero_item"].append(num_zero_item)
                 # slide_window["effective_num_every_state"].append(effective_num_every_state)
                 # slide_window["effective_num_avg"].append(effective_num_avg)
 
                 # slide_window["entropy_score"].append(entropy_score)
-                # slide_window["num_zero_row_score"].append(num_zero_row_score)
+                slide_window["num_zero_row_score"].append(num_zero_row_score)
                 # slide_window["num_one_item_score"].append(num_one_item_score)
-                # slide_window["num_zero_item_score"].append(num_zero_item_score)
+                slide_window["num_zero_item_score"].append(num_zero_item_score)
                 # slide_window["effective_num_every_state_score"].append(effective_num_every_state_score)
                 # slide_window["effective_num_avg_score"].append(effective_num_avg_score)
 
                 # slide_window["entropy_ctl"].append(entropy_ctl)
-                # slide_window["num_zero_row_ctl"].append(num_zero_row_ctl)
+                slide_window["num_zero_row_ctl"].append(num_zero_row_ctl)
                 # slide_window["num_one_item_ctl"].append(num_one_item_ctl)
-                # slide_window["num_zero_item_ctl"].append(num_zero_item_ctl)
+                slide_window["num_zero_item_ctl"].append(num_zero_item_ctl)
                 # slide_window["effective_num_every_state_ctl"].append(effective_num_every_state_score)
                 # slide_window["effective_num_avg_ctl"].append(effective_num_avg_ctl)
                 for i in range(n_cluster):
-                    slide_window['motif{}_usage_freq'.format(i)].append(window_motif_usage[i]/np.sum(window_motif_usage))
+                    slide_window['motif{}_usage_freq'.format(i)].append(
+                        window_motif_usage[i] / np.sum(window_motif_usage))
                     # slide_window['motif{}_usage_freq_ctl'.format(i)].append(control_motif_usage[i] / np.sum(control_motif_usage))
                     # slide_window['motif{}_usage_freq_score'.format(i)].append(score_motif_usage[i] / np.sum(score_motif_usage))
                 # slide_window["motif_usage_freq"].append(window_motif_usage/np.sum(window_motif_usage))
@@ -361,15 +374,29 @@ if not load_precomputed_sliding_window:
                 # slide_window["latent_volume_per_motif"].append(latent_volume_per_motif)
             end = time.time()
             print(f"Runtime of one video is {end - start}")
-    pwd = r'{}\Behavior_VAE_data\{}\data\slide_window3_{}motifs_new_motif_volume.csv'.format(onedrive_path,project_name, n_cluster)
+
+    min_len = 1051016  # Target length
+
+    for key in slide_window:
+        if len(slide_window[key]) > min_len:
+            slide_window[key] = slide_window[key][:min_len]  # Trim to 10516
+
+    # Now create the DataFrame
+    ds_new = pd.DataFrame.from_dict(slide_window)
+
+    pwd = r'{}\Behavior_VAE_data\{}\data\slide_window3_{}motifs_new_motif_volume_n24.csv'.format(onedrive_path,
+                                                                                                 project_name,
+                                                                                                 n_cluster)
     ds_new = pd.DataFrame.from_dict(slide_window)
     ds_new.to_csv(pwd)
-#%%
+# %%
+load_precomputed_sliding_window = 1
 if load_precomputed_sliding_window:
     project_name = 'BD25-HC25-final-May17-2023'
-    pwd = r'{}\Behavior_VAE_data\{}\data\slide_window3_{}motifs_new_motif_volume.csv'.format(onedrive_path,project_name, n_cluster)
+    pwd = r'{}\Behavior_VAE_data\{}\data\slide_window3_{}motifs_new_motif_volume_n24.csv'.format(onedrive_path,
+                                                                                                 project_name,
+                                                                                                 n_cluster)
     ds = pd.read_csv(pwd)
-
 
     project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
     config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
@@ -382,7 +409,8 @@ if load_precomputed_sliding_window:
     cluster_start = cfg['time_window'] / 2
     d_latent = 10
     window_size = int(3 * 60 * 30)
-    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
+    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(
+        video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
     control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
     BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
     score_bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact",
@@ -393,28 +421,33 @@ if load_precomputed_sliding_window:
     b_o_colors = ['#1f77b4', '#ff7f0e']
 
     t_max = (15 * 60 * 30) - window_size  # ds["start_frame"].max()
-#%% plot average metric per population
+
+
+# %% plot average metric per population
 def tolerant_mean(arrs):
     lens = [len(i) for i in arrs]
-    arr = np.ma.empty((np.max(lens),len(arrs)))
+    arr = np.ma.empty((np.max(lens), len(arrs)))
     arr.mask = True
     for idx, l in enumerate(arrs):
-        arr[:len(l),idx] = l
+        arr[:len(l), idx] = l
     return arr.mean(axis=-1), arr.std(axis=-1)
+
+
 def error_bar(arrs, axis=0):
     arrs = np.array(arrs)
-    return np.nanmean(arrs, axis=axis), np.nanstd(arrs, axis=axis, ddof=1)/np.sqrt(np.size(arrs, axis=axis))
+    return np.nanmean(arrs, axis=axis), np.nanstd(arrs, axis=axis, ddof=1) / np.sqrt(np.size(arrs, axis=axis))
+
 
 num_metrics = 5
-metric_names = [#"entropy",
-                #"effect_num_states"
-                #"num_zero_row",
-                #"num_one_item",
-                #"num_zero_item",
-                "latent_volume_all_motifs" ,
-                "start_frame",
-                "is_BD"
-                ]
+metric_names = [  # "entropy",
+    # "effect_num_states"
+    # "num_zero_row",
+    # "num_one_item",
+    # "num_zero_item",
+    # "latent_volume_all_motifs",
+    "start_frame",
+    "is_BD"
+]
 lims = [[-0.5, 2.3], [-5, 15], [-4, 8], [30, 120]]
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
@@ -429,15 +462,15 @@ for i in range(num_metrics):
             ds_t = ds1[ds1["start_frame"] == t]
             y, error = error_bar(ds_t[metric_names[i]], axis=0)
             metric_mean_over_sub.append(ds_t[metric_names[i]].mean())
-            metric_ste_over_sub.append(ds_t[metric_names[i]].std()/np.sqrt(len(ds_t[metric_names[i]])))
+            metric_ste_over_sub.append(ds_t[metric_names[i]].std() / np.sqrt(len(ds_t[metric_names[i]])))
         x = np.arange(t_max)
         metric_mean_over_sub = np.asarray(metric_mean_over_sub)
         metric_ste_over_sub = np.asarray(metric_ste_over_sub)
         line = axes.plot(x, metric_mean_over_sub, color=b_o_colors[group].format(group), zorder=1)
 
-
-        axes.fill_between(x, metric_mean_over_sub - metric_ste_over_sub, metric_mean_over_sub + metric_ste_over_sub, norm=plt.Normalize(vmin=0, vmax=9),
-                         alpha=0.2, facecolor=b_o_colors[group].format(group))
+        axes.fill_between(x, metric_mean_over_sub - metric_ste_over_sub, metric_mean_over_sub + metric_ste_over_sub,
+                          norm=plt.Normalize(vmin=0, vmax=9),
+                          alpha=0.2, facecolor=b_o_colors[group].format(group))
 
         axes.set_title('average {}'.format(metric_names[i]))
 
@@ -452,10 +485,9 @@ for i in range(num_metrics):
     fig.savefig(os.path.join(pwd, fname), transparent=True)
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
+# plt.suptitle("sliding window")
 
-#plt.suptitle("sliding window")
-
-#%% Plot per patient L0 metrics
+# %% Plot per patient L0 metrics
 num_metrics = 1
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
@@ -472,14 +504,15 @@ for i in range(num_metrics):
             sub_name = videos[sub]
             ds1 = ds[ds["subject"] == sub_name]
             line = sns.scatterplot(data=ds1, x="start_frame", y=metric_names[i],
-                                hue="is_BD",  ax=axes, legend=leg,
-                                linewidth=0, alpha=1, s=5, palette={0:color[0], 1:color[1]})#palette={0:'C0', 1:'C1'},
+                                   hue="is_BD", ax=axes, legend=leg,
+                                   linewidth=0, alpha=1, s=5,
+                                   palette={0: color[0], 1: color[1]})  # palette={0:'C0', 1:'C1'},
             sns.despine()
             axes.set_ylim(lims[i])
             axes.set_xlim([0, t_max])
             axes.set_title('subject {}'.format(sub_name))
             axes.set_xlabel('population')
-            #axes.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
+            # axes.legend(bbox_to_anchor=(1.02, 1), loc='upper left', borderaxespad=0)
             plt.show()
             pwd = r'{}\Behavior_VAE_data\{}\figure\transition_metrics'.format(onedrive_path, project_name)
             fname = "{}_{}.png".format(metric_names[i], sub_name)
@@ -487,11 +520,10 @@ for i in range(num_metrics):
             fname1 = "{}_{}.pdf".format(metric_names[i], sub_name)
             fig.savefig(os.path.join(pwd, fname1), transparent=True)
 
-#%% First half second half analysis
+# %% First half second half analysis
 
 
-
-#%% Per patient, entropy, and latent volume per motif second half/ first half
+# %% Per patient, entropy, and latent volume per motif second half/ first half
 n_latent = 10
 groups = ['CP', 'BD']
 entropy_df_first_second = []
@@ -525,10 +557,10 @@ for j, videos in enumerate([control_videos, BD_videos]):
         df1 = ds[ds["subject"] == sub_name]
         total_len = t_max
         df2 = df1["entropy"]
-        entropy_first_half = np.nanmean(df2[:total_len//2])
-        entropy_second_half = np.nanmean(df2[total_len //2:])
+        entropy_first_half = np.nanmean(df2[:total_len // 2])
+        entropy_second_half = np.nanmean(df2[total_len // 2:])
 
-        entropy_df_first_second.append(np.abs(entropy_second_half-entropy_first_half))
+        entropy_df_first_second.append(np.abs(entropy_second_half - entropy_first_half))
         is_BD.append(j)
         for d in range(n_cluster):
             y = df1['latent_volume_motif{}'.format(d)].to_numpy()
@@ -537,11 +569,11 @@ for j, videos in enumerate([control_videos, BD_videos]):
             eval('latent_volume{}_dif'.format(d)).append(latent_v_second_half - latent_v_first_half)
             eval('latent_volume{}'.format(d)).append(y[:t_max])
         latent_volume_df_first_second.append(eval('latent_volume{}'.format(d)))
-entropy_df = pd.DataFrame(np.asarray([entropy_df_first_second, is_BD]).T, columns=['metric','is_BD'])
-#%% Plot entropy and latent volume change in first half and second half
+entropy_df = pd.DataFrame(np.asarray([entropy_df_first_second, is_BD]).T, columns=['metric', 'is_BD'])
+# %% Plot entropy and latent volume change in first half and second half
 fig, ax = plt.subplots(1, figsize=(10, 5))
-sns.boxplot(y="metric", x='is_BD', hue='is_BD', data=entropy_df, orient="v",palette=sns.color_palette("tab10"))
-ax.set_xticklabels(['CP','BD'])
+sns.boxplot(y="metric", x='is_BD', hue='is_BD', data=entropy_df, orient="v", palette=sns.color_palette("tab10"))
+ax.set_xticklabels(['CP', 'BD'])
 ax.set_title('change in entropy')
 ax.set_ylabel('second half - first half ')
 fig.show()
@@ -554,12 +586,15 @@ fig.savefig(os.path.join(pwd, fname1), transparent=True)
 latent_df = pd.DataFrame(np.asarray([latent_volume0, latent_volume1, latent_volume2, latent_volume3, latent_volume4,
                                      latent_volume5, latent_volume6, latent_volume7, latent_volume8, latent_volume9,
                                      is_BD]).T,
-                         columns=['latent_volume0', 'latent_volume1', 'latent_volume2', 'latent_volume3', 'latent_volume4',
-                                  'latent_volume5', 'latent_volume6', 'latent_volume7', 'latent_volume8', 'latent_volume9','is_BD'])
+                         columns=['latent_volume0', 'latent_volume1', 'latent_volume2', 'latent_volume3',
+                                  'latent_volume4',
+                                  'latent_volume5', 'latent_volume6', 'latent_volume7', 'latent_volume8',
+                                  'latent_volume9', 'is_BD'])
 
 for d in range(n_cluster):
     fig, ax = plt.subplots(1, figsize=(10, 5))
-    sns.boxplot(y="latent_volume{}".format(d), x='is_BD', hue='is_BD', data=latent_df, orient="v",palette=sns.color_palette("tab10"))
+    sns.boxplot(y="latent_volume{}".format(d), x='is_BD', hue='is_BD', data=latent_df, orient="v",
+                palette=sns.color_palette("tab10"))
     ax.set_xticklabels(['CP', 'BD'])
     ax.set_ylabel('second half  - first half ')
     ax.set_title('change in latent volume motif {}'.format(d))
@@ -571,33 +606,34 @@ for d in range(n_cluster):
     fig.savefig(os.path.join(pwd, fname))
     fname1 = "latent_volume_motif_{}_first_over_second.pdf".format(d)
     fig.savefig(os.path.join(pwd, fname1), transparent=True)
-#%% entropy diff stat tests
+# %% entropy diff stat tests
 from scipy import stats
+
 CP = entropy_df['metric'][:n_subject_in_population].to_numpy()
 BD = entropy_df['metric'][n_subject_in_population:].to_numpy()
 res = stats.ttest_ind(CP, BD)
 print(res.pvalue)
-f= stats.f_oneway(CP, BD)
+f = stats.f_oneway(CP, BD)
 
 F = np.var(CP) / np.var(BD)
 df1 = len(CP) - 1
 df2 = len(BD) - 1
-alpha = 0.05 #Or whatever you want your alpha to be.
+alpha = 0.05  # Or whatever you want your alpha to be.
 p_value = stats.f.cdf(F, df1, df2)
 print(p_value)
-#%% volume diff stat tests
+# %% volume diff stat tests
 for d in range(n_latent):
     print("latent volume  {} ".format(d))
 
-    latent_df = pd.DataFrame(np.asarray([eval('latent_volume{}_dif'.format(d)), is_BD]).T, columns=['metric','is_BD'])
+    latent_df = pd.DataFrame(np.asarray([eval('latent_volume{}_dif'.format(d)), is_BD]).T, columns=['metric', 'is_BD'])
     latent_motif = eval('latent_volume{}'.format(d))
     CP = latent_df['metric'][:n_subject_in_population].to_numpy()
     BD = latent_df['metric'][n_subject_in_population:].to_numpy()
 
     CP_vol = np.asarray(latent_motif[:n_subject_in_population])
     BD_vol = np.asarray(latent_motif[n_subject_in_population:])
-    #TODO: check what stat to use to test 25 observations of two distributions
-    #TODO: check some volume is nan or zero
+    # TODO: check what stat to use to test 25 observations of two distributions
+    # TODO: check some volume is nan or zero
     res = stats.ttest_ind(CP_vol, BD_vol)
 
     f = stats.f_oneway(CP, BD)
@@ -608,17 +644,17 @@ for d in range(n_latent):
     p_value = stats.f.cdf(F, df1, df2)
     print(" F test for sec - first pvalue {}".format(p_value))
     print(" t test for BD-HP pvalue {}".format(res.pvalue))
-#%% Plot per patient change of dwell time, and latent volume
-from itertools import zip_longest
+# %% Plot per patient change of dwell time, and latent volume
+
 latent_d = 10
 n_cluster = 10
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 cmap = plt.get_cmap('tab20')
-lims = [[-500, 2000],[-0.2, 1.2]]
+lims = [[-500, 2000], [-0.2, 1.2]]
 groups = ['Control', 'BD']
-CP_mean_motifs = [[],[]]
-BD_mean_motifs = [[],[]]
+CP_mean_motifs = [[], []]
+BD_mean_motifs = [[], []]
 
 latent_length = 27000 - window_size
 
@@ -651,31 +687,30 @@ for j, videos in enumerate([control_videos, BD_videos]):
         pwd = r'{}\Behavior_VAE_data\{}\figure\latent_slide_window'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "{}_{}.png".format('latent_colume', sub_name)
-        #fig.savefig(os.path.join(pwd, fname), transparent=True)
+        # fig.savefig(os.path.join(pwd, fname), transparent=True)
         fname0 = "{}_{}.pdf".format('latent_colume', sub_name)
-        #fig.savefig(os.path.join(pwd, fname0), transparent=True)
+        # fig.savefig(os.path.join(pwd, fname0), transparent=True)
 
         pwd = r'{}\Behavior_VAE_data\{}\figure\motif_freq_slide_window'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "{}_{}.png".format('motif_usage', sub_name)
-        #fig1.savefig(os.path.join(pwd, fname), transparent=True)
+        # fig1.savefig(os.path.join(pwd, fname), transparent=True)
         fname1 = "{}_{}.pdf".format('motif_usage', sub_name)
-        #fig1.savefig(os.path.join(pwd, fname1), transparent=True)
+        # fig1.savefig(os.path.join(pwd, fname1), transparent=True)
     if j == 0:
         CP_mean_motifs = [mean_motif_freq, mean_motif_volume]
     if j == 1:
         BD_mean_motifs = [mean_motif_freq, mean_motif_volume]
 plt.close('all')
-#%% Plot per population change of dwell time, and latent volume
-from scipy.stats import pearsonr
+# %% Plot per population change of dwell time, and latent volume
+
 latent_d = 10
 n_cluster = 10
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 cmap = plt.get_cmap('tab20')
-lims = [[-100, 800],[-0.1, 0.4]]
+lims = [[-100, 800], [-0.1, 0.4]]
 groups = ['CP', 'BD']
-
 
 for d in range(n_cluster):
     fig, ax = plt.subplots(1, figsize=(10, 5))
@@ -702,13 +737,13 @@ for d in range(n_cluster):
                          alpha=0.2, facecolor=cmap(d * 2 + j))
         ax1.plot(x1, z, color=cmap(d * 2 + j), label='{}-{}'.format(group, d), zorder=1)
 
-    ax.axhline(0, color='k',linestyle="dashed")
+    ax.axhline(0, color='k', linestyle="dashed")
     ax.set_ylim(lims[0])
-    ax.set_xlim([0,t_max])
+    ax.set_xlim([0, t_max])
     ax.set_title('{}-{}-latent volume motif {} +- sem'.format('BD-CP', 'average', d))
     ax.set_xlabel('time (frames)')
 
-    ax1.axhline(0, color='white',linestyle="dashed")
+    ax1.axhline(0, color='white', linestyle="dashed")
     ax1.set_ylim(lims[1])
     ax1.set_xlim([0, t_max])
     ax1.set_title('{}-{}-motif{} frequency'.format('BD-CP', 'average', d))
@@ -735,7 +770,7 @@ for d in range(n_cluster):
     fig1.savefig(os.path.join(pwd, fname), transparent=True)
     fname1 = "{}_{}_motif{}.pdf".format('motif_usage', 'BD-CP', d)
     fig1.savefig(os.path.join(pwd, fname1), transparent=True)
-#%%
+# %%
 # num_metrics = 5
 # CP_idx = np.zeros(n_subject_in_population)
 # BD_idx = np.ones(n_subject_in_population)

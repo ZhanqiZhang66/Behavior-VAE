@@ -26,7 +26,7 @@ onedrive_path = myPath['onedrive_path']
 github_path = myPath['github_path']
 data_path = myPath['data_path']
 # %%
-b_o_colors = ['#1f77b4', '#DE3163']
+b_o_colors = ['#1f77b4', '#ff7f0e']
 # %%
 project_name = 'BD25-HC25-final-May17-2023'
 config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
@@ -472,8 +472,8 @@ for k in range(3):
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "15-min-dwell-{}.png".format(transition_group[k])
     fname_pdf = "15-min-dwell-{}.pdf".format(transition_group[k])
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
-    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # %% no mearge state for human labels
 # Plot Box plot Fig. 2e right
 bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear"]
@@ -509,8 +509,8 @@ pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project
 Path(pwd).mkdir(parents=True, exist_ok=True)
 fname = "15-min-dwell-score.png"
 fname_pdf = "15-min-dwell-score.pdf"
-fig.savefig(os.path.join(pwd, fname), transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+# fig.savefig(os.path.join(pwd, fname), transparent=True)
+# fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # %% merge state for human labels
 # Plot Box plot Fig. 2e right
 bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear"]
@@ -552,8 +552,8 @@ pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project
 Path(pwd).mkdir(parents=True, exist_ok=True)
 fname = "15-min-dwell-merged-score.png"
 fname_pdf = "15-min-dwell-merged-score.pdf"
-fig.savefig(os.path.join(pwd, fname), transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+# fig.savefig(os.path.join(pwd, fname), transparent=True)
+# fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 # %% Scored motif between motif paired t test and score correlation
 motif_usage_to_plot_ = np.array(eval("motif_usage_cat{}".format(transition_group[2])))
@@ -618,7 +618,7 @@ for j, videos in enumerate([control_videos, BD_videos]):
         pwd = r'{}\Behavior_VAE_data\{}\figure\motif_freq_each_video'.format(onedrive_path, project_name)
         Path(pwd).mkdir(parents=True, exist_ok=True)
         fname = "{}_{}_motif_freq.png".format(n_cluster, v)
-        fig.savefig(os.path.join(pwd, fname))
+        # fig.savefig(os.path.join(pwd, fname))
 # %% Plot histogram of averaged dwell frequency
 # # Plot Box plot Fig. 2e right
 
@@ -651,8 +651,8 @@ ax.set_xlabel('Motifs(States)')
 fig.show()
 fname = "15-min-dwell.png"
 fname_pdf = "15-min-dwell.pdf"
-fig.savefig(os.path.join(pwd, fname), transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+# fig.savefig(os.path.join(pwd, fname), transparent=True)
+# fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # %% Epoch-wise analysis
 
 
@@ -778,8 +778,8 @@ for epoch in range(1, 4):
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "{}-dwell.png".format(epoch)
     fname_pdf = "{}-dwell.pdf".format(epoch)
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
-    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # %% Plot three bar Box
 
 for j in range(2):

@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from scipy import stats
-from scipy.stats import ttest_ind
 from sklearn import linear_model
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.linear_model import LogisticRegression
@@ -20,6 +19,7 @@ from statsmodels.stats.multicomp import pairwise_tukeyhsd
 
 from data.load_data import load_pt_data
 
+# TODO remove JUPA and LUSE in the classifiers, add SpatialD and age
 # %% Path
 if os.environ['COMPUTERNAME'] == 'VICTORIA-WORK':
     onedrive_path = r'C:\Users\zhanq\OneDrive - UC San Diego'
@@ -90,8 +90,6 @@ mmaction_score_path = rf"{data_path}\MMAction\scores_seed_{random_seed}"
 
 export_path = rf"{data_path}\Classification\{random_seed}"
 export_result_path = rf"{data_path}\Classification\{random_seed}"
-
-medication_path = f"{onedrive_path}\Data\Behavior_VAE_data\medication_list.csv"
 
 ensm_epoch3 = ['ens_epoch3_m0', 'ens_epoch3_m1', 'ens_epoch3_m2', 'ens_epoch3_m3', 'ens_epoch3_m4',
                'ens_epoch3_m5', 'ens_epoch3_m6', 'ens_epoch3_m7', 'ens_epoch3_m8', 'ens_epoch3_m9']
@@ -187,13 +185,6 @@ def drop_rows_if_50(df):
     return df
 
 
-# %% Reading medication data
-
-medication_df = pd.read_csv(medication_path)
-medication_df = drop_rows_if_50(medication_df)
-medication_df['video'] = medication_df['subject_name']
-medication_df.drop('subject_name', axis=1, inplace=True)
-
 # %% Reading assessment data
 
 assessment_df = pd.read_csv(diagnostic_path)
@@ -233,22 +224,26 @@ vame_volume_df.rename(columns=lambda x: f'vol_epoch{int(x[5]) + 1}' if 'split' i
 # inter and intra population distance
 vame_intradis_df = pd.read_csv(vame_intradis_path)
 vame_interdis_df = pd.read_csv(vame_interdis_path)
-
+# %%
 vame_volume_per_motif_df = pd.read_csv(vame_volume_per_motif_path)
 
+# %%
 vame_volume_per_motif_df.rename(columns=lambda x: f'vol_epoch{int(x[0]) + 1}_motif{(x[6:])}' if 'motif' in x else x,
                                 inplace=True)
 
+# %%
 vame_df = pd.merge(bd_df, vame_motif_df, on='video')
 vame_df = pd.merge(vame_df, vame_ens_df, on='video')
 vame_df = pd.merge(vame_df, vame_ensm_df, on='video')
 # vame_df = pd.merge(vame_df, vame_entropy_df, on='video')
 
-
+# %%
 vame_df = pd.merge(vame_df, vame_count_df, on='video')
 vame_df = pd.merge(vame_df, vame_volume_df, on='video')
-
+# %%
 vame_df = pd.merge(vame_df, vame_volume_per_motif_df, on='video')
+# %%
+vame_df.drop('video', axis=1, inplace=True)
 
 vame_df['ens_diff'] = vame_df['ens_epoch3'] - vame_df['ens_epoch1']
 # vame_df['entropy_diff'] = vame_df['entropy_epoch3'] - vame_df['entropy_epoch1']
@@ -258,94 +253,16 @@ vame_df['vol_diff_2_0'] = vame_df['vol_epoch3'] - vame_df['vol_epoch1']
 
 for i, v in enumerate(ensm_diff):
     vame_df[v] = vame_df[ensm_epoch3[i]] - vame_df[ensm_epoch1[i]]
-
+vame_df = vame_df.sort_values(by="BD", ascending=True)
 vame_df = drop_rows_if_50(vame_df)
-
-# %% Medication Effect table
-# Identify BD subjects who are NOT on any of the top 5 medications
-top_5_normalized_meds = ['lictal', 'abilify', 'seroquel', 'lithium', 'zoloft']
-bd_no_meds = medication_df[
-    (medication_df[top_5_normalized_meds].sum(axis=1) == 0) & (medication_df["is_BD"] != "HC")]
-hc_group = medication_df[medication_df["is_BD"] == "HC"]
-
-bd_no_meds_data = vame_df[vame_df["video"].isin(bd_no_meds["video"])]
-hc_all_data = vame_df[vame_df["video"].isin(hc_group["video"])]
-bd_all_data = vame_df[vame_df["BD"] == 1]
-
-# Create a dictionary to store DataFrames for each medication
-bd_meds_data = {}
-
-# Iterate over the top 5 most common medications
-for med in top_5_normalized_meds:
-    # Select BD subjects who are taking this medication
-    bd_meds_data[med] = bd_all_data[bd_all_data["video"].isin(medication_df[medication_df[med] == 1]["video"])].copy()
-# %% Medication Effect Analysis
-# Initialize dictionary to store test results
-test_results = {}
-
-# List of BD medication groups to compare
-bd_med_groups = {
-    "lictal": bd_meds_data["lictal"],
-    "abilify": bd_meds_data["abilify"],
-    "seroquel": bd_meds_data["seroquel"],
-    "lithium": bd_meds_data["lithium"],
-    "zoloft": bd_meds_data["zoloft"],
-}
-
-# Iterate through each feature (excluding the first two columns)
-for feature in bd_all_data.columns[2:]:
-    # Extract values for each group
-    bd_all_values = bd_all_data[feature].dropna()
-    bd_no_meds_values = bd_no_meds_data[feature].dropna()
-    hc_values = hc_all_data[feature].dropna()
-
-    # Perform statistical tests
-    p_values = {
-        "p_bd_vs_hc": ttest_ind(bd_all_values, hc_values, equal_var=False)[1] if len(bd_all_values) > 1 and len(
-            hc_values) > 1 else None,
-        "p_bd_no_meds_vs_hc": ttest_ind(bd_no_meds_values, hc_values, equal_var=False)[1] if len(
-            bd_no_meds_values) > 1 and len(hc_values) > 1 else None,
-        "p_bd_no_meds_vs_bd_all": ttest_ind(bd_no_meds_values, bd_all_values, equal_var=False)[1] if len(
-            bd_no_meds_values) > 1 and len(bd_all_values) > 1 else None,
-    }
-
-    # Perform tests for each BD medication group
-    for med, med_df in bd_med_groups.items():
-        med_values = med_df[feature].dropna()
-        p_values[f"p_{med}_vs_hc"] = ttest_ind(med_values, hc_values, equal_var=False)[1] if len(
-            med_values) > 1 and len(hc_values) > 1 else None
-        p_values[f"p_{med}_vs_bd_all"] = ttest_ind(med_values, bd_all_values, equal_var=False)[1] if len(
-            med_values) > 1 and len(bd_all_values) > 1 else None
-
-    # Store results
-    test_results[feature] = p_values
-
-# Convert results to DataFrame
-test_results_df = pd.DataFrame.from_dict(test_results, orient="index")
-
-save_path = rf'{onedrive_path}\Data\Behavior_VAE_data\medication_effect_stat_test.csv'
-test_results_df.to_csv(save_path)
-# Count how many times values in other columns are < 0.05 when p_bd_vs_hc is also < 0.05
-significant_counts = (test_results_df.loc[test_results_df["p_bd_vs_hc"] < 0.05] < 0.05).sum()
-
 # %%
-vame_df.drop('video', axis=1, inplace=True)
-# %% Wasserstein Distance will introduce NaNs that is not allowed for feature selector
-# data, YMRS, HAM_D, start_frame, condition, isBD = load_pt_data(video_information_pth=
-# r'{}\Behavior-VAE\data\video-information.csv'.format(
-#     github_path))
-# control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
-# BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
-# vame_interdis_df['video'] = control_videos + BD_videos
-# vame_intradis_df['video'] = control_videos + BD_videos
-#
-# vame_intradis_df = vame_intradis_df.drop(columns=['BD'])
-#
-# vame_interdis_df = vame_interdis_df.drop(columns=['BD'])
-#
-# vame_df = pd.merge(vame_df, vame_interdis_df, on='video')
-# vame_df = pd.merge(vame_df, vame_intradis_df, on='video')
-# vame_df.drop('video', axis=1, inplace=True)
+vame_interdis_df = vame_interdis_df.rename(columns={"is_BD": "BD"})
+vame_intradis_df = vame_intradis_df.rename(columns={"is_BD": "BD"})
+# %% TODO this is wrong
+vame_df = pd.concat([vame_df, vame_interdis_df.drop(columns=['BD'])], axis=1)
+
+vame_df = pd.concat([vame_df, vame_intradis_df.drop(columns=['BD'])], axis=1)
+
 # for i,v in enumerate(volume_per_motif_diff):
 #     vame_df[v] = vame_df[volume_per_motif_epoch3[i]] - vame_df[volume_per_motif_epoch1[i]]
 
@@ -500,11 +417,9 @@ for i in top_10_motifs:
     s3d_df[v] = s3d_df[v] - s3d_df[v]
 import scipy
 
-s3d_motif_df_ = s3d_motif_df.copy()
-drop_rows_if_50(s3d_motif_df_)
-HC_motif_usage = s3d_motif_df_[bd_df['BD'] == 0]
+HC_motif_usage = s3d_motif_df[bd_df['BD'] == 0]
 HC_motif_usage.drop('video', axis=1, inplace=True)
-BD_motif_usage = s3d_motif_df_[bd_df['BD'] == 1]
+BD_motif_usage = s3d_motif_df[bd_df['BD'] == 1]
 BD_motif_usage.drop('video', axis=1, inplace=True)
 # %%
 for motif_i_usage in HC_motif_usage.columns:
@@ -583,12 +498,6 @@ HC_motif_usage = mmaction_motif_df[bd_df['BD'] == 0]
 HC_motif_usage.drop('video', axis=1, inplace=True)
 BD_motif_usage = mmaction_motif_df[bd_df['BD'] == 1]
 BD_motif_usage.drop('video', axis=1, inplace=True)
-mmaction_motif_df_ = mmaction_motif_df.copy()
-drop_rows_if_50(mmaction_motif_df_)
-HC_motif_usage = mmaction_motif_df_[bd_df['BD'] == 0]
-HC_motif_usage.drop('video', axis=1, inplace=True)
-BD_motif_usage = mmaction_motif_df_[bd_df['BD'] == 1]
-BD_motif_usage.drop('video', axis=1, inplace=True)
 # %%
 for motif_i_usage in HC_motif_usage.columns:
     s = stats.ttest_ind(HC_motif_usage[motif_i_usage], BD_motif_usage[motif_i_usage])
@@ -604,6 +513,7 @@ for motif_i_usage in HC_motif_usage.columns:
 
 # %% Quality check. Apply drop_rows_if_50 to all loaded CSVs
 
+
 dlc_df = drop_rows_if_50(dlc_df)
 
 hbpm_motif_df = drop_rows_if_50(hbpm_df)
@@ -613,7 +523,7 @@ s3d_df = drop_rows_if_50(s3d_df)
 mmaction_df = drop_rows_if_50(mmaction_df)
 
 spatialD_df = drop_rows_if_50(spatialD_df)
-bd_df = drop_rows_if_50(bd_df)
+
 # %%
 assessmentNames = assessment_df.columns[2:]
 # %% Compute the Entropy of dwell time of each approach
@@ -623,13 +533,8 @@ dfs = [vame_motif_df, mmaction_motif_df, s3d_motif_df, dlc_motif_df, hbpm_motif_
 dfs_name = ['vame', 'mmaction', 's3d', 'dlc', 'hbpm']
 entropy_values = []
 entropy_values_std = []
-entropy_values_all = []
-entropy_values_all_std = []
-entropy_of_BD_all = []
-entropy_of_HC_all = []
 for i, df in enumerate(dfs):
     df = pd.merge(bd_df, df, on='video')
-    df = drop_rows_if_50(df)
     X = df.drop('video', axis=1)
     y = df['BD']
     BD_motif_usage = df[bd_df['BD'] == 1]
@@ -638,46 +543,18 @@ for i, df in enumerate(dfs):
     HC_motif_usage.drop('video', axis=1, inplace=True)
     BD_motif_usage_values = BD_motif_usage.values
     HC_motif_usage_values = HC_motif_usage.values
-
     entropy_of_BD = []
     for row in BD_motif_usage_values:
         probabilities = row.astype(float)
         entropy_of_BD.append(entropy(probabilities, base=2))  # Compute entropy
-    entropy_of_BD_all.append(entropy_of_BD)
-
     entropy_of_HC = []
     for row in HC_motif_usage_values:
         probabilities = row.astype(float)
         entropy_of_HC.append(entropy(probabilities, base=2))  #
-    entropy_of_HC_all.append(entropy_of_HC)
-
-    entropy_values.append((np.nanmean(entropy_of_BD), np.nanmean(entropy_of_HC)))
-    entropy_values_std.append((np.nanstd(entropy_of_BD), np.nanstd(entropy_of_HC)))
-
-    entropy_of_all = []
-    for row in [BD_motif_usage_values, HC_motif_usage_values]:
-        probabilities = row.astype(float)
-        entropy_of_all.append(entropy(probabilities, base=2))
-    entropy_values_all.append(np.nanmean(entropy_of_all))
-    entropy_values_all_std.append(np.nanstd(entropy_of_all))
-
-from scipy.stats import ttest_ind
-
-BD_p_values = []
-for i in range(1, 5):  # Compare with sublists 1, 2, 3, 4
-    _, p_val = ttest_ind(entropy_of_BD_all[0], entropy_of_BD_all[i], equal_var=False)
-    BD_p_values.append(p_val)
-    print(f"P-value between sublist 0 and sublist {i}: {p_val}")
-HC_p_values = []
-for i in range(1, 5):  # Compare with sublists 1, 2, 3, 4
-    _, p_val = ttest_ind(entropy_of_HC_all[0], entropy_of_HC_all[i], equal_var=False)
-    HC_p_values.append(p_val)
-    print(f"P-value between sublist 0 and sublist {i}: {p_val}")
+    entropy_values.append((np.mean(entropy_of_BD), np.mean(entropy_of_HC)))
+    entropy_values_std.append((np.std(entropy_of_BD), np.std(entropy_of_HC)))
 
 # Extracting mean and std_devs into separate lists
-entropy_all = [x for x in entropy_values_all]
-entropy_std_all = [x for x in entropy_values_all_std]
-
 BD_mean_values = [x[0] for x in entropy_values]
 BD_std_devs = [x[0] for x in entropy_values_std]
 HC_mean_values = [x[1] for x in entropy_values]
@@ -707,46 +584,27 @@ fname = "dwell-time-entropy-{}.png".format(n_cluster)
 fname_pdf = "dwell-time-entropy-{}.pdf".format(n_cluster)
 fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
-
-# plot total entropy
-#
-fig, ax = plt.subplots()
-index = np.arange(len(dfs_name))
-
-plt.errorbar(index, entropy_all, yerr=entropy_std_all, color='k', label='Entropy All', marker='o', linestyle='')
-plt.ylabel('Entropy')
-plt.xticks(index + bar_width / 2, dfs_name)
-plt.legend()
-plt.tight_layout()
-plt.show()
-pwd = r'{}\Behavior_VAE_data\{}\figure\dwell-time'.format(onedrive_path, project_name)
-Path(pwd).mkdir(parents=True, exist_ok=True)
-fname = "dwell-time-all-entropy-{}.png".format(n_cluster)
-fname_pdf = "dwell-time-all-entropy-{}.pdf".format(n_cluster)
-fig.savefig(os.path.join(pwd, fname), transparent=True)
-fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # %%
 '''
-Feature Selection with 4-CV
+Feature Selection
 '''
 
 features = []
 results = []
 scaler = MinMaxScaler()
-dfs = [vame_df, mmaction_df, s3d_df, dlc_df, hbpm_df, spatialD_df]
+dfs = [vame_df, mmaction_df, s3d_df, dlc_df, hbpm_df]
 dfs_name = ['vame', 'mmaction', 's3d', 'dlc', 'hbpm', 'spatialD']
 for i, df in enumerate(dfs):
     df[df.columns] = scaler.fit_transform(df)
     X = df.drop('BD', axis=1)
     y = df['BD']
-    groups = bd_df['video']
     print(f"scaled data for {dfs_name[i]}")
     logreg = LogisticRegression()
     selector = SequentialFeatureSelector(logreg,
-                                         n_features_to_select=30,
+                                         n_features_to_select=15,
                                          direction="backward",
                                          scoring='accuracy',
-                                         cv=4)  # cv=4
+                                         cv=4)
     print(f"selecting features for {dfs_name[i]}")
     selector.fit(X, y)
     selected_features = selector.get_support()
@@ -763,216 +621,10 @@ assessment_top_features = list(X.columns)
 features.append(assessment_top_features)
 print(f"Classify selected features in assessment ")
 results.append(classify(df, assessment_top_features, 100, random_seed)[0])
+
 # %%
-'''
-Feature Selection with LOSO-CV
-'''
-from sklearn.model_selection import LeaveOneGroupOut
-from sklearn.linear_model import LogisticRegression
-from sklearn.feature_selection import SequentialFeatureSelector
-from sklearn.preprocessing import MinMaxScaler
-import numpy as np
-
-features = []
-results = []
-scaler = MinMaxScaler()
-
-dfs = [vame_df, mmaction_df, s3d_df, dlc_df, hbpm_df]
-dfs_name = ['vame', 'mmaction', 's3d', 'dlc', 'hbpm']
-
-for i, df in enumerate(dfs):
-    df[df.columns] = scaler.fit_transform(df)
-
-    X = df.drop(columns=['BD'])
-    y = df['BD']
-    groups = bd_df['video']  # Use 'video' as the grouping factor for LOSO
-
-    print(f"Selecting features for {dfs_name[i]} using standard 4-fold CV")
-
-    # **Feature Selection with Standard 4-Fold CV**
-    logreg = LogisticRegression()
-    selector = SequentialFeatureSelector(logreg,
-                                         n_features_to_select=30,
-                                         direction="backward",
-                                         scoring='accuracy',
-                                         cv=4)  # Standard 4-fold CV for feature selection
-
-    selector.fit(X, y)
-    selected_features = selector.get_support()
-    top_features = list(X.columns[selected_features])
-
-    print(f"{dfs_name[i]} selected features: {top_features}")
-    features.append(top_features)
-
-    # **Classification and Validation using LOSO-CV**
-    print(f"Classifying using LOSO-CV on {dfs_name[i]}")
-
-    logo = LeaveOneGroupOut()
-    logo_results = []
-
-    for train_idx, test_idx in logo.split(X, y, groups):
-        X_train, X_test = X.iloc[train_idx][top_features], X.iloc[test_idx][top_features]
-        y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-        classifier = LogisticRegression(penalty='l2', C=0.1)
-        classifier.fit(X_train, y_train)
-        score = classifier.score(X_test, y_test)  # Evaluate on test subject
-        logo_results.append(score)
-
-    mean_accuracy = np.mean(logo_results)  # Compute LOSO accuracy
-    results.append(mean_accuracy)
-    print(f"Mean LOSO-CV accuracy for {dfs_name[i]}: {mean_accuracy:.4f} +-{np.std(logo_results):.4f}")
-
-# **Process the assessment dataset separately**
-df = assessment_df
-X = df.drop(columns=['BD'])
-y = df['BD']
-assessment_top_features = list(X.columns)
-features.append(assessment_top_features)
-
-print(f"Classifying assessment dataset using LOSO-CV")
-
-logo_results = []
-logo = LeaveOneGroupOut()
-for train_idx, test_idx in logo.split(X, y, groups):
-    X_train, X_test = X.iloc[train_idx][assessment_top_features], X.iloc[test_idx][assessment_top_features]
-    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-    classifier = LogisticRegression(penalty='l2')
-    classifier.fit(X_train, y_train)
-    score = classifier.score(X_test, y_test)
-    logo_results.append(score)
-
-mean_accuracy = np.mean(logo_results)
-results.append(mean_accuracy)
-print(f"Mean LOSO-CV accuracy for assessment: {mean_accuracy:.4f}+-{np.std(logo_results):.4f}")
-
-# **Process the spatialD dataset separately**
-df = spatialD_df
-X = df.drop(columns=['BD'])
-y = df['BD']
-spatialD_features = list(X.columns)
-features.append(spatialD_features)
-print(f"Classifying spatialD dataset using LOSO-CV")
-logo = LeaveOneGroupOut()
-for train_idx, test_idx in logo.split(X, y, groups):
-    X_train, X_test = X.iloc[train_idx][spatialD_features], X.iloc[test_idx][spatialD_features]
-    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-    classifier = LogisticRegression(penalty='l2')
-    classifier.fit(X_train, y_train)
-    score = classifier.score(X_test, y_test)
-    logo_results.append(score)
-
-mean_accuracy = np.mean(logo_results)
-results.append(mean_accuracy)
-print(f"Mean LOSO-CV accuracy for spatialD: {mean_accuracy:.4f}+-{np.std(logo_results):.4f}")
-# %%
-'''
-Feature Selection with LNSO-CV
-'''
-from sklearn.model_selection import GroupKFold
-from sklearn.linear_model import LogisticRegression
-from sklearn.feature_selection import SequentialFeatureSelector
-from sklearn.preprocessing import MinMaxScaler
-import numpy as np
-
-features = []
-results = []
-scaler = MinMaxScaler()
-
-dfs = [vame_df, mmaction_df, s3d_df, dlc_df, hbpm_df]
-dfs_name = ['vame', 'mmaction', 's3d', 'dlc', 'hbpm']
-
-for i, df in enumerate(dfs):
-    df[df.columns] = scaler.fit_transform(df)
-
-    X = df.drop(columns=['BD'])
-    y = df['BD']
-    groups = bd_df['video']  # Using 'video' as subject ID
-
-    print(f"Selecting features for {dfs_name[i]} using standard 4-fold CV")
-
-    # **Step 1: Feature Selection (Using 4-Fold CV)**
-    logreg = LogisticRegression()
-    selector = SequentialFeatureSelector(logreg,
-                                         n_features_to_select=25,
-                                         direction="backward",
-                                         scoring='accuracy',
-                                         cv=4)  # Standard 4-fold CV for feature selection
-
-    selector.fit(X, y)
-    selected_features = selector.get_support()
-    top_features = list(X.columns[selected_features])
-
-    print(f"{dfs_name[i]} selected features: {top_features}")
-    features.append(top_features)
-
-    # **Step 2: Classification Using Leave-5-Subjects-Out (L5SO-CV)**
-    print(f"Classifying using L5SO-CV on {dfs_name[i]}")
-
-    l5so = GroupKFold(n_splits=len(np.unique(groups)) // 5)  # Splitting into groups of 5 subjects
-    l5so_results = []
-
-    for train_idx, test_idx in l5so.split(X, y, groups):
-        X_train, X_test = X.iloc[train_idx][top_features], X.iloc[test_idx][top_features]
-        y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-        classifier = LogisticRegression(penalty='l2')
-        classifier.fit(X_train, y_train)
-        score = classifier.score(X_test, y_test)  # Evaluate on test subjects
-        l5so_results.append(score)
-
-    mean_accuracy = np.mean(l5so_results)  # Compute Leave-5-Subjects-Out accuracy
-    results.append(mean_accuracy)
-    print(f"Mean L5SO-CV accuracy for {dfs_name[i]}: {mean_accuracy:.4f} +- {np.std(l5so_results):.4f}")
-
-# **Process the assessment dataset separately**
-df = assessment_df
-X = df.drop(columns=['BD'])
-y = df['BD']
-assessment_top_features = list(X.columns)
-features.append(assessment_top_features)
-
-print(f"Classifying assessment dataset using L5SO-CV")
-l5so_results = []
-
-for train_idx, test_idx in l5so.split(X, y, groups):
-    X_train, X_test = X.iloc[train_idx][assessment_top_features], X.iloc[test_idx][assessment_top_features]
-    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-    classifier = LogisticRegression(penalty='l2')
-    classifier.fit(X_train, y_train)
-    score = classifier.score(X_test, y_test)
-    l5so_results.append(score)
-
-mean_accuracy = np.mean(l5so_results)
-results.append(mean_accuracy)
-print(f"Mean L5SO-CV accuracy for assessment: {mean_accuracy:.4f} +- {np.std(l5so_results):.4f}")
-
-# **Process the spatialD dataset separately**
-df = spatialD_df
-X = df.drop(columns=['BD'])
-y = df['BD']
-spatialD_features = list(X.columns)
-features.append(spatialD_features)
-print(f"Classifying spatialD dataset using LOSO-CV")
-l5so_results = []
-for train_idx, test_idx in l5so.split(X, y, groups):
-    X_train, X_test = X.iloc[train_idx][spatialD_features], X.iloc[test_idx][spatialD_features]
-    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
-
-    classifier = LogisticRegression(penalty='l2')
-    classifier.fit(X_train, y_train)
-    score = classifier.score(X_test, y_test)
-    l5so_results.append(score)
-
-mean_accuracy = np.mean(l5so_results)
-results.append(mean_accuracy)
-print(f"Mean LOSO-CV accuracy for spatialD: {mean_accuracy:.4f}+-{np.std(l5so_results):.4f}")
-# %%
-score_path = rf"{data_path}\all_approaches_30feature_selected_scores_seed_{random_seed}_rm_entropy"
-features_path = rf"{data_path}\all_approaches_30features_seed_{random_seed}_rm_entropy"
+score_path = rf"{data_path}\all_approaches_15feature_selected_scores_seed_{random_seed}_rm_entropy"
+features_path = rf"{data_path}\all_approaches_15features_seed_{random_seed}_rm_entropy"
 np.save(score_path, np.array(results))
 np.save(features_path, np.array(features, dtype=object))
 

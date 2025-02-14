@@ -45,6 +45,7 @@ def wasserstein_distance(m1, C1, m2, C2):
 
 
 def calculate_HC_distances(args):
+    n_subject_in_population = 24
     epoch, motif, df = args
     df_epoch_motif_HC = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 0)]
 
@@ -63,12 +64,13 @@ def calculate_HC_distances(args):
                 latent_vector_HC.T)
             HC_HC_distance = wasserstein_distance(m1, C1, m2, C2)
 
-        distances.append({'Epoch': epoch, 'Motif': motif, 'Distance': HC_HC_distance})
+        distances.append({'HCPerson1': i, 'HCPerson2': j, 'Epoch': epoch, 'Motif': motif, 'Distance': HC_HC_distance})
 
     return distances
 
 
 def calculate_BD_distances(args):
+    n_subject_in_population = 24
     epoch, motif, df = args
     df_epoch_motif_BD = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 1)]
 
@@ -88,35 +90,40 @@ def calculate_BD_distances(args):
                 latent_vector_BD2.T)
             BD_BD_distance = wasserstein_distance(m1, C1, m2, C2)
 
-        distances.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_BD_distance})
+        distances.append(
+            {'BDPerson1': i + n_subject_in_population, 'BDPerson2': j + n_subject_in_population, 'Epoch': epoch,
+             'Motif': motif, 'Distance': BD_BD_distance})
 
     return distances
 
 
 def calculate_BD_HC_distances(args):
+    n_subject_in_population = 24
     epoch, motif, df = args
     df_epoch_motif_HC = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 0)]
     df_epoch_motif_BD = df[(df['Epoch'] == epoch) & (df['Motif'] == motif) & (df['is_BD'] == 1)]
 
     print(f"motif{motif} epoch {epoch}")
     distances = []
-    for i, j in itertools.combinations(range(len(df_epoch_motif_HC)), 2):
+    for i in range(len(df_epoch_motif_HC)):
         latent_vector_HC = df_epoch_motif_HC.iloc[i]['Latent_Vector']
-        latent_vector_BD = df_epoch_motif_BD.iloc[j]['Latent_Vector']
-        print(f"HC-BD  person{i} vs person {j}")
-        # Compute distance between the latent vectors
-        if len(latent_vector_HC) <= 1 or len(latent_vector_BD) <= 1:
-            BD_HC_distance = np.nan
-            print(" skip")
-        else:
-            m1, C1, m2, C2 = np.mean(latent_vector_HC, axis=0), np.cov(latent_vector_HC.T), np.mean(latent_vector_BD,
-                                                                                                    axis=0), np.cov(
-                latent_vector_BD.T)
-            BD_HC_distance = wasserstein_distance(m1, C1, m2, C2)
-            print(" computed distance")
+        for j in range(len(df_epoch_motif_BD)):
+            latent_vector_BD = df_epoch_motif_BD.iloc[j]['Latent_Vector']
+            print(f"HC-BD  person{i} vs person {j}")
+            # Compute distance between the latent vectors
+            if len(latent_vector_HC) <= 1 or len(latent_vector_BD) <= 1:
+                BD_HC_distance = np.nan
+                print(" skip")
+            else:
+                m1, C1, m2, C2 = np.mean(latent_vector_HC, axis=0), np.cov(latent_vector_HC.T), np.mean(latent_vector_BD,
+                                                                                                        axis=0), np.cov(
+                    latent_vector_BD.T)
+                BD_HC_distance = wasserstein_distance(m1, C1, m2, C2)
+                print(" computed distance")
 
-        # Add the distance to the distances DataFrame
-        distances.append({'Epoch': epoch, 'Motif': motif, 'Distance': BD_HC_distance})
+            # Add the distance to the distances DataFrame
+            distances.append({'HCPerson1': i, 'BDPerson2': j + n_subject_in_population, 'Epoch': epoch, 'Motif': motif,
+                              'Distance': BD_HC_distance})
 
     return distances
 

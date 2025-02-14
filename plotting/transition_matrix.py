@@ -1064,8 +1064,102 @@ for epoch in range(1, 4):
     Path(pwd).mkdir(exist_ok=True)
     fname = f"epoch{epoch}-L0-measures-{transition_group[k]}.png"
     fname_pdf = f"epoch{epoch}-L0-measures-{transition_group[k]}.pdf"
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+# %%
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import scipy.stats as stats
+import os
+from pathlib import Path
+
+metric_names = ['distribution of entropy',
+                'distribution of stationary entropy',
+                'distribution of #empty state',
+                'distribution of #p(state) = 1',
+                'distribution of #p(state) = 0',
+                'is_BD']
+
+num_metrics = len(metric_names) - 1
+lims = [[-2, 4], [-2, 4], [-5, 15], [-4, 8], [2, 5]]
+CP_idx = np.zeros(n_subject_in_population)
+BD_idx = np.ones(n_subject_in_population)
+
+# Prepare a single DataFrame to store all epochs
+all_epochs_data = []
+
+for epoch in range(1, 4):
+    for k in range(1):
+        print(f"\nProcessing Epoch {epoch} - {transition_group[k]}\n")
+
+        entropy = eval(f"Epoch{epoch}_Entropies{transition_group[k]}")
+        stationary_entropy = eval(f"Epoch{epoch}_Stationary_Entropies{transition_group[k]}")
+        num_zero_rows = eval(f"Epoch{epoch}_num_zero_rows{transition_group[k]}")
+        num_ones = eval(f"Epoch{epoch}_num_ones{transition_group[k]}")
+        num_zeros = eval(f"Epoch{epoch}_num_zeros{transition_group[k]}")
+
+        # Create a DataFrame for this epoch
+        latent_ds = pd.DataFrame(np.concatenate((
+            np.concatenate((entropy[0], entropy[1]), 0).reshape(-1, 1),
+            np.concatenate((stationary_entropy[0], stationary_entropy[1]), 0).reshape(-1, 1),
+            np.concatenate((num_zero_rows[0], num_zero_rows[1]), 0).reshape(-1, 1),
+            np.concatenate((num_ones[0], num_ones[1]), 0).reshape(-1, 1),
+            np.concatenate(
+                (np.array(num_zeros[0]), np.array(num_zeros[1])),
+                axis=0).reshape(-1, 1),
+            np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1)), 1),
+            columns=metric_names)
+
+        latent_ds.replace([np.inf, -np.inf], np.nan, inplace=True)
+        latent_ds.dropna(inplace=True)
+
+        # Add epoch and transition group info
+        latent_ds['Epoch'] = epoch
+        latent_ds['Transition_Group'] = transition_group[k]
+
+        all_epochs_data.append(latent_ds)
+
+# Combine all epoch data into a single DataFrame
+combined_data = pd.concat(all_epochs_data, ignore_index=True)
+
+# Plot separate figures for each metric
+for i in range(num_metrics):
+    print(metric_names[i])
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.boxplot(x='Epoch', y=metric_names[i], hue='is_BD',
+                data=combined_data, palette=sns.color_palette("tab10"), ax=ax)
+
+    ax.set_title(f'{metric_names[i]} Across Epochs')
+    ax.set_ylim(lims[i])
+    ax.legend(title="Epoch", loc='upper right')
+
+    plt.xticks(rotation=45)
+
+    # Save the figure
+    pwd = r'{}\Behavior_VAE_data\{}\figure\transition_matrices'.format(onedrive_path, project_name)
+    fname = f"L0-measures-box{metric_names[i].replace(' ', '_')}.png"
+    fname_pdf = f"L0-measures-box{metric_names[i].replace(' ', '_')}.pdf"
+    #
     # fig.savefig(os.path.join(pwd, fname), transparent=True)
     # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+
+    plt.show()
+
+    # Perform t-tests and annotate p-values
+    epochs = combined_data['Epoch'].unique()
+    for epoch in epochs:
+        # Extract values for BD and CP groups
+        data_epoch = combined_data[combined_data['Epoch'] == epoch]
+        cp_values = data_epoch[data_epoch['is_BD'] == 0][metric_names[i]].dropna()
+        bd_values = data_epoch[data_epoch['is_BD'] == 1][metric_names[i]].dropna()
+
+        # Perform independent t-test
+        if len(cp_values) > 1 and len(bd_values) > 1:  # Ensure enough data points
+            t_stat, p_value = stats.ttest_ind(cp_values, bd_values)
+            print(p_value)
 
 
 # %% Effective number stat test
