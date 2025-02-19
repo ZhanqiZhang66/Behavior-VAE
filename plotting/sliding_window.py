@@ -393,14 +393,14 @@ if not load_precomputed_sliding_window:
 load_precomputed_sliding_window = 1
 if load_precomputed_sliding_window:
     project_name = 'BD25-HC25-final-May17-2023'
-    pwd = r'{}\Behavior_VAE_data\{}\data\slide_window3_{}motifs_new_motif_volume_n24.csv'.format(onedrive_path,
-                                                                                                 project_name,
-                                                                                                 n_cluster)
+    pwd = r'{}\Data\Behavior_VAE_data\{}\data\slide_window3_{}motifs_new_motif_volume.csv'.format(onedrive_path,
+                                                                                                  project_name,
+                                                                                                  n_cluster)
     ds = pd.read_csv(pwd)
 
     project_path = f'{onedrive_path}\Behavior_VAE_data\{project_name}'
-    config = r'{}\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
-                                                           project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
+    config = r'{}\Data\Behavior_VAE_data\{}\config.yaml'.format(onedrive_path,
+                                                                project_name)  # config = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}/config.yaml'.format(project_name)
     cfg = read_config(config)
     dlc_path = os.path.join(project_path, "videos",
                             "\pose_estimation")  # dlc_path = 'D:/OneDrive - UC San Diego/GitHub/hBPMskeleton/{}'.format(project_name)
@@ -409,7 +409,7 @@ if load_precomputed_sliding_window:
     cluster_start = cfg['time_window'] / 2
     d_latent = 10
     window_size = int(3 * 60 * 30)
-    data, YMRS, HAM_D, gender, start_frame, condition, isBD = load_pt_data(
+    data, YMRS, HAM_D, start_frame, condition, isBD = load_pt_data(
         video_information_pth=r'{}\Behavior-VAE\data\video-information.csv'.format(github_path))
     control_videos = [k for k, v in isBD.items() if v[0] == 'healthy']
     BD_videos = [k for k, v in isBD.items() if v[0] == 'Euthymic']
@@ -478,7 +478,7 @@ for i in range(num_metrics):
         axes.set_xlabel('population')
     sns.despine()
     plt.show()
-    pwd = r'{}\Behavior_VAE_data\{}\figure\transition_metrics'.format(onedrive_path, project_name)
+    pwd = r'{}\Data\Behavior_VAE_data\{}\figure\transition_metrics'.format(onedrive_path, project_name)
     Path.mkdir(Path(pwd), exist_ok=True)
     fname = 'average {}-{}motifs_new.png'.format(metric_names[i], n_cluster)
     fname_pdf = 'average {}-{}motifs_new.pdf'.format(metric_names[i], n_cluster)
@@ -711,10 +711,36 @@ BD_idx = np.ones(n_subject_in_population)
 cmap = plt.get_cmap('tab20')
 lims = [[-100, 800], [-0.1, 0.4]]
 groups = ['CP', 'BD']
+all_mean_motif_freq = CP_mean_motifs[0] + BD_mean_motifs[0]  # Combine frequencies
+all_mean_motif_volume = CP_mean_motifs[1] + BD_mean_motifs[1]  # Combine volumes
 
 for d in range(n_cluster):
     fig, ax = plt.subplots(1, figsize=(10, 5))
     fig1, ax1 = plt.subplots(1, figsize=(10, 5))
+
+    # mean_motif_freq = all_mean_motif_freq[d]
+    # mean_motif_volume = all_mean_motif_volume[d]
+
+    # r_values = []
+    # p_values = []
+    #
+    # for i in range(len([control_videos, BD_videos])):  # Iterate over all subjects
+    #     x_data = mean_motif_freq[i]
+    #     y_data = mean_motif_volume[i]
+    #
+    #     # Remove NaNs and Infs
+    #     valid_idx = np.isfinite(x_data) & np.isfinite(y_data)
+    #     x_filtered = x_data[valid_idx]
+    #     y_filtered = y_data[valid_idx]
+    #
+    #     if len(x_filtered) > 1 and len(y_filtered) > 1:  # Ensure enough data points
+    #         r, p = stats.pearsonr(x_filtered, y_filtered)
+    #         r_values.append(r)
+    #         p_values.append(p)
+    #
+    # print(f'Motif {d} correlation: r={np.nanmean(r_values)} ± {np.nanstd(r_values)}, '
+    #       f'p-value={np.nanmean(p_values)} ± {np.nanstd(p_values)}')
+
     for j, videos in enumerate([control_videos, BD_videos]):
         group = groups[j]
         mean_motif_freq = CP_mean_motifs[0][d] if j == 0 else BD_mean_motifs[0][d]
@@ -759,17 +785,17 @@ for d in range(n_cluster):
     pwd = r'{}\Behavior_VAE_data\{}\figure\latent_slide_window'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "{}_{}_motif{}-new.png".format('latent_volume', 'BD-CP', d)
-    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname), transparent=True)
     fname0 = "{}_{}_motif{}-new.pdf".format('latent_volume', 'BD-CP', d)
-    fig.savefig(os.path.join(pwd, fname0), transparent=True)
+    # fig.savefig(os.path.join(pwd, fname0), transparent=True)
 
     fig1.show()
     pwd = r'{}\Behavior_VAE_data\{}\figure\motif_freq_slide_window'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "{}_{}_motif{}.png".format('motif_usage', 'BD-CP', d)
-    fig1.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig1.savefig(os.path.join(pwd, fname), transparent=True)
     fname1 = "{}_{}_motif{}.pdf".format('motif_usage', 'BD-CP', d)
-    fig1.savefig(os.path.join(pwd, fname1), transparent=True)
+    # fig1.savefig(os.path.join(pwd, fname1), transparent=True)
 # %%
 # num_metrics = 5
 # CP_idx = np.zeros(n_subject_in_population)

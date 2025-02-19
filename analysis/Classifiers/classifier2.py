@@ -45,6 +45,7 @@ diagnostic_path = rf"{data_path}\scaled_diagnostic_data.csv"
 assessment_score_path = rf"{data_path}\assessment_scores_seed_{random_seed}"
 
 vame_motif_path = rf"{data_path}\VAME\motif_usage_overall.csv"
+vame_motif_epoch_path = rf"{data_path}\VAME\motif_usage_3_split.csv"
 vame_ens_path = rf'{data_path}\VAME\ens_3_split.csv'
 # ens per motif
 vame_ensm_path = rf'{data_path}\VAME\ens_per_motif_3_split.csv'
@@ -210,6 +211,8 @@ assessment_df = drop_rows_if_50(assessment_df)
 vame_motif_df = pd.read_csv(vame_motif_path)
 vame_motif_df.rename(columns=lambda x: f'motif{x[2:]}' if x.startswith('0m') else x, inplace=True)
 
+vame_motif_epoch_df = pd.read_csv(vame_motif_epoch_path)
+
 # ENS(transition matrix)
 vame_ens_df = pd.read_csv(vame_ens_path)
 vame_ens_df.rename(columns=lambda x: f'ens_epoch{int(x[5]) + 1}' if 'split' in x else x, inplace=True)
@@ -240,6 +243,7 @@ vame_volume_per_motif_df.rename(columns=lambda x: f'vol_epoch{int(x[0]) + 1}_mot
                                 inplace=True)
 
 vame_df = pd.merge(bd_df, vame_motif_df, on='video')
+vame_df = pd.merge(vame_df, vame_motif_epoch_df, on='video')
 vame_df = pd.merge(vame_df, vame_ens_df, on='video')
 vame_df = pd.merge(vame_df, vame_ensm_df, on='video')
 # vame_df = pd.merge(vame_df, vame_entropy_df, on='video')
@@ -262,15 +266,22 @@ for i, v in enumerate(ensm_diff):
 vame_df = drop_rows_if_50(vame_df)
 
 # %% Medication Effect table
+'''
+Medication Effect Analysis
+'''
 # Identify BD subjects who are NOT on any of the top 5 medications
 top_5_normalized_meds = ['lictal', 'abilify', 'seroquel', 'lithium', 'zoloft']
 bd_no_meds = medication_df[
     (medication_df[top_5_normalized_meds].sum(axis=1) == 0) & (medication_df["is_BD"] != "HC")]
 hc_group = medication_df[medication_df["is_BD"] == "HC"]
 
-bd_no_meds_data = vame_df[vame_df["video"].isin(bd_no_meds["video"])]
+bd_no_meds_data = vame_df[
+    vame_df['video'].isin(['BC1LESA', 'BC1LOMI', 'BC1BRBU', 'BC1LUOR', 'BC1MEMA', 'BC1KEMA', 'BC1MISE', 'BC1CISI'])]
+
 hc_all_data = vame_df[vame_df["video"].isin(hc_group["video"])]
 bd_all_data = vame_df[vame_df["BD"] == 1]
+bd_all_meds_data = bd_all_data[~
+bd_all_data['video'].isin(['BC1LESA', 'BC1LOMI', 'BC1BRBU', 'BC1LUOR', 'BC1MEMA', 'BC1KEMA', 'BC1MISE', 'BC1CISI'])]
 
 # Create a dictionary to store DataFrames for each medication
 bd_meds_data = {}
@@ -279,7 +290,8 @@ bd_meds_data = {}
 for med in top_5_normalized_meds:
     # Select BD subjects who are taking this medication
     bd_meds_data[med] = bd_all_data[bd_all_data["video"].isin(medication_df[medication_df[med] == 1]["video"])].copy()
-# %% Medication Effect Analysis
+# %%
+
 # Initialize dictionary to store test results
 test_results = {}
 
@@ -296,6 +308,7 @@ bd_med_groups = {
 for feature in bd_all_data.columns[2:]:
     # Extract values for each group
     bd_all_values = bd_all_data[feature].dropna()
+    bd_all_meds_values = bd_all_meds_data[feature].dropna()
     bd_no_meds_values = bd_no_meds_data[feature].dropna()
     hc_values = hc_all_data[feature].dropna()
 
@@ -305,28 +318,109 @@ for feature in bd_all_data.columns[2:]:
             hc_values) > 1 else None,
         "p_bd_no_meds_vs_hc": ttest_ind(bd_no_meds_values, hc_values, equal_var=False)[1] if len(
             bd_no_meds_values) > 1 and len(hc_values) > 1 else None,
-        "p_bd_no_meds_vs_bd_all": ttest_ind(bd_no_meds_values, bd_all_values, equal_var=False)[1] if len(
-            bd_no_meds_values) > 1 and len(bd_all_values) > 1 else None,
+        "p_bd_no_meds_vs_bd_meds": ttest_ind(bd_no_meds_values, bd_all_meds_values, equal_var=False)[1] if len(
+            bd_no_meds_values) > 1 and len(bd_all_meds_values) > 1 else None,
     }
 
-    # Perform tests for each BD medication group
-    for med, med_df in bd_med_groups.items():
-        med_values = med_df[feature].dropna()
-        p_values[f"p_{med}_vs_hc"] = ttest_ind(med_values, hc_values, equal_var=False)[1] if len(
-            med_values) > 1 and len(hc_values) > 1 else None
-        p_values[f"p_{med}_vs_bd_all"] = ttest_ind(med_values, bd_all_values, equal_var=False)[1] if len(
-            med_values) > 1 and len(bd_all_values) > 1 else None
+    # # Perform tests for each BD medication group
+    # for med, med_df in bd_med_groups.items():
+    #     med_values = med_df[feature].dropna()
+    #     p_values[f"p_{med}_vs_hc"] = ttest_ind(med_values, hc_values, equal_var=False)[1] if len(
+    #         med_values) > 1 and len(hc_values) > 1 else None
+    #     p_values[f"p_{med}_vs_bd_all"] = ttest_ind(med_values, bd_all_values, equal_var=False)[1] if len(
+    #         med_values) > 1 and len(bd_all_values) > 1 else None
 
     # Store results
     test_results[feature] = p_values
 
 # Convert results to DataFrame
 test_results_df = pd.DataFrame.from_dict(test_results, orient="index")
-
+test_results_df = test_results_df.round(3)
 save_path = rf'{onedrive_path}\Data\Behavior_VAE_data\medication_effect_stat_test.csv'
-test_results_df.to_csv(save_path)
+# test_results_df.to_csv(save_path)
+
 # Count how many times values in other columns are < 0.05 when p_bd_vs_hc is also < 0.05
 significant_counts = (test_results_df.loc[test_results_df["p_bd_vs_hc"] < 0.05] < 0.05).sum()
+# %%
+'''
+Age as a covariate analysis
+'''
+
+import pandas as pd
+import statsmodels.formula.api as smf
+
+# Load demographic data
+file_path = rf'{onedrive_path}\Data\Behavior_VAE_data\demographic_table.csv'  # Adjust file path if needed
+demographic_data = pd.read_csv(file_path)
+
+# Filter out unwanted conditions
+demographic_data = demographic_data[~demographic_data['condition'].isin(['JUPA', 'LUSE'])]
+
+# Normalize BD condition labels
+demographic_data['condition'] = demographic_data['condition'].replace(
+    ['BD', 'BD1', 'BD2', 'Cyclothymic'], 'BD'
+)
+# Select only relevant columns (assuming subject ID exists for merging)
+demographic_data = demographic_data[['video_name', 'condition', 'age']]
+# Rename 'subject_id' to match behavioral data's 'video' column
+demographic_data = demographic_data.rename(columns={'video_name': 'video'})
+
+# Load behavioral data
+behavioral_data = vame_df
+# Merge with demographic data on subject_id
+df = behavioral_data.merge(demographic_data, on='video')
+
+df = df.rename(columns=lambda x: f"f_{x}" if x[0].isdigit() else x)
+# Define the list of behavioral features to analyze
+test_results_df = test_results_df.rename(index=lambda x: f"f_{x}" if x[0].isdigit() else x)
+features = test_results_df[test_results_df['p_bd_vs_hc'] < 0.05].index.tolist()
+
+# Run ANCOVA for each feature
+results = {}
+count = 0
+count_mar = 0
+for feature in features:
+    full_model = smf.ols(f"{feature} ~ BD + age", data=df).fit()
+
+    # Reduced model: only age
+    reduced_model = smf.ols(f"{feature} ~ age", data=df).fit()
+
+    # Compute effect size (Cohen’s f²)
+    R2_full = full_model.rsquared
+    R2_reduced = reduced_model.rsquared
+    effect_size = (R2_full - R2_reduced) / (1 - R2_full) if R2_full < 1 else float('nan')
+
+    # Extract key statistics
+    coef_table = full_model.summary().tables[1].data  # Extract coefficient table
+    headers = coef_table[0]  # Column headers
+    values = {row[0]: row[1:] for row in coef_table[1:]}  # Extract values
+
+    # Print only the relevant stats for 'condition' and 'age'
+    print(f"\nFeature: {feature}")
+    print(f"{headers[0]:<10} | {headers[1]:<10} | {headers[2]:<10} | {headers[3]:<10} | {headers[4]:<10}")
+    print("-" * 60)
+    for term in ["BD", "age"]:
+        if term in values:
+            print(
+                f"{term:<10} | {values[term][0]:<10} | {values[term][1]:<10} | {values[term][2]:<10} | {values[term][3]:<10}")
+
+    # Print a quick interpretation
+    p_condition = float(values["BD"][3])  # Extract p-value for condition
+    print(f"Effect Size (Cohen’s f²): {effect_size:.4f}")
+    if p_condition < 0.05:
+        print("✅ Condition remains significant after controlling for age.")
+        count += 1
+    elif p_condition < 0.06:
+        print("⚠️Condition is marginally significant after controlling for age.")
+        count_mar += 1
+    else:
+        print("❌ Condition is no longer significant after controlling for age.")
+
+# # Store results in a text file if needed
+# with open("ANCOVA_results.txt", "w") as f:
+#     for feature, summary in results.items():
+#         f.write(f"Feature: {feature}\n")
+#         f.write(str(summary) + "\n\n")
 
 # %%
 vame_df.drop('video', axis=1, inplace=True)
@@ -727,7 +821,7 @@ fig.savefig(os.path.join(pwd, fname), transparent=True)
 fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # %%
 '''
-Feature Selection with 4-CV
+Feature Selection with 4-CV (did not use after all)
 '''
 
 features = []
@@ -765,7 +859,7 @@ print(f"Classify selected features in assessment ")
 results.append(classify(df, assessment_top_features, 100, random_seed)[0])
 # %%
 '''
-Feature Selection with LOSO-CV
+Feature Selection with LOSO-CV (did not use after all)
 '''
 from sklearn.model_selection import LeaveOneGroupOut
 from sklearn.linear_model import LogisticRegression
@@ -869,7 +963,7 @@ results.append(mean_accuracy)
 print(f"Mean LOSO-CV accuracy for spatialD: {mean_accuracy:.4f}+-{np.std(logo_results):.4f}")
 # %%
 '''
-Feature Selection with LNSO-CV
+Feature Selection with LNSO-CV (we used this)
 '''
 from sklearn.model_selection import GroupKFold
 from sklearn.linear_model import LogisticRegression
