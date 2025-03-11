@@ -374,7 +374,10 @@ motif_usage_cat_s3d = pd.merge(bd_df, motif_usage_cat_s3d, on='video')
 
 # %% between motif paired t test and score correlation
 
-from scipy import stats
+
+# def statistic(x, y, axis):
+#     return np.mean(x, axis=axis) - np.mean(y, axis=axis)
+
 
 p = []
 fig, ax = plt.subplots(1, 1, figsize=(6, 4))
@@ -382,14 +385,19 @@ for i in range(n_cluster):
     HC = motif_usage_cat[0, :, i].reshape(-1, 1)
     BD = motif_usage_cat[1, :, i].reshape(-1, 1)
     s = stats.ttest_ind(HC, BD, permutations=9999)
-
+    res = stats.permutation_test(
+        (BD, HC),
+        statistic=lambda x, y: stats.ttest_ind(x, y).statistic,
+        permutation_type='independent',
+        alternative='two-sided'
+    )
     # because our statistic is vectorized, we pass `vectorized=True`
     # `n_resamples=np.inf` indicates that an exact test is to be performed
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
     # res = scipy.stats.permutation_test(BD, HC)
 
     print("Motif {}".format(i))
-    print("2 sample t-stat: {:.2f}, p-val: {:.5f}".format(s.statistic[0], s.pvalue[0]))
+    print("2 sample t-stat: {:.2f}, p-val: {:.5f}".format(res.statistic[0], res.pvalue[0]))
     p.append(s.pvalue[0])
     # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score = scipy.stats.pearsonr(motif_usage_cat[0, :, i], HAM_D_score[:n_subject_in_population])
@@ -410,13 +418,18 @@ for i in range(n_cluster):
     HC_ctl = motif_usage_cat_ctl[0, :, i].reshape(-1, 1)
     BD_ctl = motif_usage_cat_ctl[1, :, i].reshape(-1, 1)
     s_ctl = stats.ttest_ind(HC_ctl, BD_ctl)
-
+    res_ctl = stats.permutation_test(
+        (BD_ctl, HC_ctl),
+        statistic=lambda x, y: stats.ttest_ind(x, y).statistic,
+        permutation_type='independent',
+        alternative='two-sided'
+    )
     # because our statistic is vectorized, we pass `vectorized=True`
     # `n_resamples=np.inf` indicates that an exact test is to be performed
     # https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.permutation_test.html
     # res = p.permutation_test(BD, HC)
     print(" Control \n")
-    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(s_ctl.statistic[0], s_ctl.pvalue[0]))
+    print("2 sample t-stat: {:.2f}, p-val: {:.3f}".format(res_ctl.statistic[0], res_ctl.pvalue[0]))
     # print("motif  {}, permutation_test: {:.2f}, p-val: {:.3f}".format(i,res.statistic, res.pvalue))
     corr_HAM_D_score_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[0, :, i], HAM_D_score[:n_subject_in_population])
     corr_YMRS_score_ctl = scipy.stats.pearsonr(motif_usage_cat_ctl[0, :, i], YMRS_score[:n_subject_in_population])
@@ -431,9 +444,7 @@ for i in range(n_cluster):
                                                                                corr_YMRS_score_BD_ctl[1]))
     print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD_ctl[0][0],
                                                                                corr_HAM_D_score_BD_ctl[1]))
-np.save(rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\motif_usage_cat.npy', motif_usage_cat)
-np.save(rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\motif_usage_cat_ctl.npy',
-        motif_usage_cat_ctl)
+np.save(rf'{data_path}\motif_usage_cat.npy', motif_usage_cat)
 # %% Plot Box plot for benchmark approaches
 bahavior_names = ["sit", "sit_obj", "stand", "stand-obj", "walk", "walk_obj", "lie", "lie_obj", "interact", "wear"]
 states = []
@@ -587,8 +598,6 @@ for i, motif_behavior in enumerate(bahavior_names):
                                                                                corr_YMRS_score_BD_score[1]))
     print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.2f}".format(corr_HAM_D_score_BD_score[0][0],
                                                                                corr_HAM_D_score_BD_score[1]))
-np.save(rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\motif_usage_to_plot_.npy',
-        motif_usage_to_plot_)
 # %% plot box dwell per video
 sns.set_style('white')
 
@@ -706,10 +715,6 @@ for epoch in range(1, 4):
                                                                                    corr_YMRS_score_BD_ctl[1]))
         print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.5f}".format(corr_HAM_D_score_BD_ctl[0][0],
                                                                                    corr_HAM_D_score_BD_ctl[1]))
-        np.save(rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\Epoch{epoch}_motif_usage.npy',
-                motif_usage_)
-        np.save(rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\Epoch{epoch}_motif_usage_ctl.npy',
-                motif_usage_control_)
 
 # %% Scored motif between motif paired t test and score correlation
 for epoch in range(1, 4):
@@ -749,8 +754,6 @@ for epoch in range(1, 4):
                                                                                    corr_YMRS_score_BD_score[1]))
         print("          Pearson corr HAM_D-BD: rho: {:.2f}, p-val: {:.5f}".format(corr_HAM_D_score_BD_score[0][0],
                                                                                    corr_HAM_D_score_BD_score[1]))
-        np.save(rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\Epoch{epoch}_motif_usage_score.npy',
-                motif_usage_score_)
 
 # %% Plot Box
 for epoch in range(1, 4):

@@ -496,8 +496,8 @@ pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual'.format(onedrive_path, project
 Path(pwd).mkdir(exist_ok=True)
 fname = "PCs-of-BD-CP-2d.png"
 fname_pdf = "PCs-of-BD-CP-2d.pdf"
-fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
-fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+# fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+# fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 # %% Plot PCA of BD and CP population, for each state
 cmap = plt.get_cmap('tab20')
@@ -557,8 +557,8 @@ for g in np.unique(label):
     Path(pwd).mkdir(exist_ok=True)
     fname = "PCs-of-BD-CP-STATE-{}.png".format(g)
     fname_pdf = "PCs-of-BD-CP-STATE-{}.pdf".format(g)
-    fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
-    fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fig_pca.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig_pca.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 # %% Plot PCA of BD and CP population, for each state, and each subject
 latent_vector_stack = np.vstack(Latent_vectors)
@@ -994,9 +994,9 @@ for g in range(10):
     pwd = r'{}\Behavior_VAE_data\{}\figure\PCA_visual\epoch_centroid'.format(onedrive_path, project_name)
     Path(pwd).mkdir(parents=True, exist_ok=True)
     fname = "PCs of {} State {}-centroid.png".format(titles[j], g)
-    fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
+    # fig_pca_per_state.savefig(os.path.join(pwd, fname), transparent=True)
     fname_pdf = "PCs of {} State {}-centroid.pdf".format(titles[j], g)
-    fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    # fig_pca_per_state.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 # %% We also need the centroid of each subject, for error bars
 '''
 latent per subject
@@ -1291,7 +1291,7 @@ for g in range(n_cluster):  # 10):
 import scipy.stats as stats
 
 iv = np.linalg.inv(np.cov(latent_all_.T))
-
+np.save(f'{project_path}/data/stat_tests/state_epoch_sub_volume.npy', state_epoch_sub_volume)
 for i in range(n_cluster):
     fig, axes = plt.subplots(3, 1, figsize=(5, 15))
     # epoch_volume = state_epoch_volume[i]

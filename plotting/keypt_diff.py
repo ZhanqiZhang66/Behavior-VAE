@@ -7,10 +7,19 @@
 # %%
 
 import os
+from pathlib import Path
 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 from scipy.spatial.distance import pdist, squareform
+from scipy.stats import ttest_ind
+
+from plotting.get_paths import get_my_path
 
 
+# %%
 def analyze_motifs(patients, keypoints, project_path, n_clusters=10, likelihood_threshold=0.9):
     # Define base paths
     results_path = os.path.join(project_path, "results")
@@ -153,13 +162,7 @@ analyze_motifs(
 PLOT
 '''
 # %%
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy.stats import ttest_ind
-from pathlib import Path
-from plotting.get_paths import get_my_path
+from statsmodels.stats.multitest import multipletests
 
 MOTIF_DESCRIPTIONS = {
     0: "torso rotation",
@@ -212,8 +215,34 @@ def plot_motif_comparison(pairwise_distances_df, lb, ub, a, b):
     upper_p_values = {pair: ttest_ind(
         df_filtered[df_filtered["Motif"] == a][pair].dropna(),
         df_filtered[df_filtered["Motif"] == b][pair].dropna(),
-        nan_policy='omit'
+        nan_policy='omit',
+        equal_var=False
     ).pvalue for pair in ub}
+
+    lower_p_values_raw = list(lower_p_values.values())
+    upper_p_values_raw = list(upper_p_values.values())
+
+    # Adjust p-values using Benjamini-Hochberg procedure
+    lower_p_values_adjusted = multipletests(lower_p_values_raw, alpha=0.05, method='fdr_bh')[1]
+    upper_p_values_adjusted = multipletests(upper_p_values_raw, alpha=0.05, method='fdr_bh')[1]
+
+    # Convert back to dictionary with corresponding keypoint pairs
+    lower_p_values_ = dict(zip(lb, lower_p_values_adjusted))
+    upper_p_values_ = dict(zip(ub, upper_p_values_adjusted))
+
+    print(lower_p_values_)
+
+    for pair, pval in lower_p_values_.items():
+        if pval == 0:
+            print(f"{pair}: <1e-308")  # Display very small values as a lower bound
+        else:
+            print(f"{pair}: {pval:.{max(1, abs(int('{:.0e}'.format(pval).split('e')[-1])))}f}")
+    print(upper_p_values_)
+    for pair, pval in upper_p_values_.items():
+        if pval == 0:
+            print(f"{pair}: <1e-308")  # Display very small values as a lower bound
+        else:
+            print(f"{pair}: {pval:.{max(1, abs(int('{:.0e}'.format(pval).split('e')[-1])))}f}")
 
     # Plot
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
@@ -224,14 +253,14 @@ def plot_motif_comparison(pairwise_distances_df, lb, ub, a, b):
                 palette=colors, ax=axes[0])
     axes[0].set_title(
         f"Upper Body Rotation: {MOTIF_DESCRIPTIONS[a]} vs {MOTIF_DESCRIPTIONS[b]}\nLower Body Pairs\n" + "\n".join(
-            [f"{pair}: p={pval:.6f}" for pair, pval in lower_p_values.items()]))
+            [f"{pair}: p={pval:.6f}" for pair, pval in lower_p_values_.items()]))
 
     # Upper Body
     sns.boxplot(data=df_melted[df_melted["Keypoint Pair"].isin(ub)], x="Keypoint Pair", y="Distance", hue="Motif",
                 palette=colors, ax=axes[1])
     axes[1].set_title(
         f"Upper Body Rotation: {MOTIF_DESCRIPTIONS[a]} vs {MOTIF_DESCRIPTIONS[b]}\nUpper Body Pairs\n" + "\n".join(
-            [f"{pair}: p={pval:.6f}" for pair, pval in upper_p_values.items()]))
+            [f"{pair}: p={pval:.6f}" for pair, pval in upper_p_values_.items()]))
 
     # Adjust layout and show
     plt.tight_layout()
@@ -246,6 +275,10 @@ def plot_motif_comparison(pairwise_distances_df, lb, ub, a, b):
     fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
 
+# %%
+df = pd.read_csv(
+    r"D:\OneDrive - UC San Diego\Data\Behavior_VAE_data\BD25-HC25-final-May17-2023\raw_pairwise_distances.csv")
+pairwise_distances_df = df
 # %%
 '''
 # 1. Turning vs. Departing
@@ -265,9 +298,7 @@ upper_body_pairs = [
     "center_neck - l-eye",
     "center_neck - r-eye"
 ]
-df = pd.read_csv(
-    r"D:\OneDrive - UC San Diego\Data\Behavior_VAE_data\BD25-HC25-final-May17-2023\raw_pairwise_distances.csv")
-pairwise_distances_df = df
+
 # Call the function
 # plot_motif_comparison(pairwise_distances_df, lower_body_pairs, upper_body_pairs, 2, 7)
 plot_motif_comparison(pairwise_distances_df, lower_body_pairs, upper_body_pairs, 2, 7)
@@ -609,7 +640,7 @@ head_gaze_pairs = [
 plot_motif_comparison(pairwise_distances_df, lower_body_pairs, head_gaze_pairs, 6, 9)
 # %%
 '''
-# motif 1 (Stretch One Body Part) vs. Motif 8 (Examine/Interact with Objects)
+# Motif 1 (Stretch One Body Part) vs. Motif 8 (Examine/Interact with Objects)
 Why this comparison?
 Stretching involves large, slow, deliberate limb movements, while interacting involves precise hand movements with possible head/eye coordination.
 

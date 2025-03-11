@@ -291,7 +291,7 @@ for med in top_5_normalized_meds:
     # Select BD subjects who are taking this medication
     bd_meds_data[med] = bd_all_data[bd_all_data["video"].isin(medication_df[medication_df[med] == 1]["video"])].copy()
 # %%
-
+from statsmodels.stats.multitest import multipletests
 # Initialize dictionary to store test results
 test_results = {}
 
@@ -322,6 +322,19 @@ for feature in bd_all_data.columns[2:]:
             bd_no_meds_values) > 1 and len(bd_all_meds_values) > 1 else None,
     }
 
+    # Filter out None values
+    valid_p_values = {key: p for key, p in p_values.items() if p is not None}
+
+    # Apply Benjamini-Hochberg correction
+    if valid_p_values:
+        _, p_corrected, _, _ = multipletests(list(valid_p_values.values()), method='fdr_bh')
+
+        # Update p_values with corrected values
+        corrected_p_values = dict(zip(valid_p_values.keys(), p_corrected))
+        p_values.update(corrected_p_values)
+
+
+
     # # Perform tests for each BD medication group
     # for med, med_df in bd_med_groups.items():
     #     med_values = med_df[feature].dropna()
@@ -332,12 +345,12 @@ for feature in bd_all_data.columns[2:]:
 
     # Store results
     test_results[feature] = p_values
-
+#%%
 # Convert results to DataFrame
 test_results_df = pd.DataFrame.from_dict(test_results, orient="index")
 test_results_df = test_results_df.round(3)
-save_path = rf'{onedrive_path}\Data\Behavior_VAE_data\medication_effect_stat_test.csv'
-# test_results_df.to_csv(save_path)
+save_path = rf'{onedrive_path}\Data\Behavior_VAE_data\medication_effect_stat_test_BH.csv'
+test_results_df.to_csv(save_path)
 
 # Count how many times values in other columns are < 0.05 when p_bd_vs_hc is also < 0.05
 significant_counts = (test_results_df.loc[test_results_df["p_bd_vs_hc"] < 0.05] < 0.05).sum()
