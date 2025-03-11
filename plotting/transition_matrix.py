@@ -206,9 +206,11 @@ def count_transition_frequency(adjacent_matrix):
 def count_zeros(transition_m):
     transition = transition_m.copy()
     zero_rows = np.all(transition == 0, axis=1)
-    zero_rows_i = np.where(zero_rows == True)
     zero_cols = np.all(transition == 0, axis=0)
-    return len(zero_rows_i[0]), np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
+    # Find indices where both the row and column are zero
+    zero_rows_cols_i = np.where(np.logical_and(zero_rows, zero_cols))[0]
+
+    return len(zero_rows_cols_i), np.count_nonzero(transition == 1), np.count_nonzero(transition == 0)
 
 
 def add_self_transition(transition_m, last_state):
@@ -829,6 +831,7 @@ for j in range(len(transition_group)):
         BD.replace(-np.inf, np.nan, inplace=True)
         HC.dropna(inplace=True)
         BD.dropna(inplace=True)
+
         CP = np.asarray(HC)
         BD = np.asarray(BD)
         corr_HAM_D_score = scipy.stats.pearsonr(np.append(CP, BD), HAM_D_score)
@@ -997,7 +1000,7 @@ for i in idx:
 
 metric_names = ['distribution of entropy',
                 'distribution of stationary entropy',
-                'distribution of #empty state',
+                'distribution of #stuck state',
                 'distribution of #p(state) = 1',
                 'distribution of #p(state) = 0',
                 'is_BD']
@@ -1080,11 +1083,12 @@ metric_names = ['distribution of entropy',
                 'distribution of stationary entropy',
                 'distribution of #empty state',
                 'distribution of #p(state) = 1',
-                'distribution of #p(state) = 0',
-                'is_BD']
+                'distribution of #p(state) != 0',
+                'is_BD',
+                ]
 
 num_metrics = len(metric_names) - 1
-lims = [[-2, 4], [-2, 4], [-5, 15], [-4, 8], [2, 5]]
+lims = [[-2, 4], [-2, 4], [-2, 10], [-4, 8], [2, 100]]
 CP_idx = np.zeros(n_subject_in_population)
 BD_idx = np.ones(n_subject_in_population)
 
@@ -1112,9 +1116,9 @@ for epoch in range(1, 4):
                 axis=0).reshape(-1, 1),
             np.concatenate((CP_idx, BD_idx), 0).reshape(-1, 1)), 1),
             columns=metric_names)
-
+        latent_ds['Subject_ID'] = control_videos + BD_videos
         latent_ds.replace([np.inf, -np.inf], np.nan, inplace=True)
-        latent_ds.dropna(inplace=True)
+        # latent_ds.dropna(inplace=True)
 
         # Add epoch and transition group info
         latent_ds['Epoch'] = epoch
@@ -1125,6 +1129,10 @@ for epoch in range(1, 4):
 # Combine all epoch data into a single DataFrame
 combined_data = pd.concat(all_epochs_data, ignore_index=True)
 
+combined_data.to_csv(
+    rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\transition_epochs_combined_data_with_nan.csv',
+    index=False)
+# %%
 # Plot separate figures for each metric
 for i in range(num_metrics):
     print(metric_names[i])
@@ -1143,8 +1151,8 @@ for i in range(num_metrics):
     fname = f"L0-measures-box{metric_names[i].replace(' ', '_')}.png"
     fname_pdf = f"L0-measures-box{metric_names[i].replace(' ', '_')}.pdf"
     #
-    # fig.savefig(os.path.join(pwd, fname), transparent=True)
-    # fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
+    fig.savefig(os.path.join(pwd, fname), transparent=True)
+    fig.savefig(os.path.join(pwd, fname_pdf), transparent=True)
 
     plt.show()
 
@@ -1161,6 +1169,10 @@ for i in range(num_metrics):
             t_stat, p_value = stats.ttest_ind(cp_values, bd_values)
             print(p_value)
 
+        np.save(
+            rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\Epoch{epoch + 1}_{metric_names[i]}.npy',
+            data_epoch)
+
 
 # %% Effective number stat test
 def statistic(x, y, axis):
@@ -1169,6 +1181,8 @@ def statistic(x, y, axis):
 
 for epoch in range(1, 4):
     effective_num_usage_ = np.asarray(eval("Epoch{}_Effective_num_every_state".format(epoch)))
+    np.save(rf'{onedrive_path}\Behavior_VAE_data\{project_name}\data\stat_tests\effective_num_usage_{epoch}.npy',
+            effective_num_usage_)
 
     print("Epoch {}".format(epoch))
     for i in range(n_cluster):
